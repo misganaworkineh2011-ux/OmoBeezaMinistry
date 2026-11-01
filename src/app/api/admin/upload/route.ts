@@ -1,13 +1,15 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import { issueSignedToken } from "@vercel/blob";
+import { handleUpload, handleUploadPresigned, type HandleUploadBody, type HandleUploadPresignedBody } from "@vercel/blob/client";
 import { getCurrentUser } from "@/lib/auth";
 import { ALLOWED_UPLOAD_TYPES, MAX_UPLOAD_BYTES, uploadMode } from "@/lib/uploads";
 import { json } from "@/lib/ratelimit";
 
 // Dashboard uploads (signed-in admins only).
-//  • Vercel Blob: the browser asks this route for a short-lived token, then
+//  • Vercel Blob: the browser asks this route for a short-lived token (or a
+//    presigned URL when Blob is connected via BLOB_STORE_ID), then
 //    uploads straight to Blob storage (so large videos never pass through
 //    the server).
 //  • Local development: the file is posted here and saved to public/uploads.
@@ -32,6 +34,32 @@ export async function POST(request: Request): Promise<Response> {
           addRandomSuffix: true,
         }),
         onUploadCompleted: async () => {},
+      });
+      return Response.json(result);
+    } catch (err) {
+      return json(400, { error: err instanceof Error ? err.message : "upload_failed" });
+    }
+  }
+
+  if (mode === "presigned") {
+    try {
+      const body = (await request.json()) as HandleUploadPresignedBody;
+      const result = await handleUploadPresigned({
+        body,
+        request,
+        getSignedToken: async (pathname) => ({
+          token: await issueSignedToken({
+            pathname,
+            operations: ["put"],
+            allowedContentTypes: ALLOWED_UPLOAD_TYPES,
+            maximumSizeInBytes: MAX_UPLOAD_BYTES,
+          }),
+          urlOptions: {
+            allowedContentTypes: ALLOWED_UPLOAD_TYPES,
+            maximumSizeInBytes: MAX_UPLOAD_BYTES,
+            addRandomSuffix: true,
+          },
+        }),
       });
       return Response.json(result);
     } catch (err) {

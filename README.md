@@ -124,7 +124,7 @@ chatbot's documents. It also has a form **Inbox**, prayer counts, and privacy-fr
    Neon). Copy the *pooled* connection string into the Vercel environment variable
    `DATABASE_URL`. Tables are created automatically on first use.
 2. **File storage:** Vercel → Storage → **Blob** → create a store and connect it to the project.
-   This adds `BLOB_READ_WRITE_TOKEN` automatically.
+   This adds `BLOB_STORE_ID` (or, for older stores, `BLOB_READ_WRITE_TOKEN`) automatically.
 3. Make sure `GEMINI_API_KEY` is set too, then redeploy.
 4. Open `https://<your-site>/admin`. The first visit asks you to create the first admin
    account. Add other admins later under **Admins**.

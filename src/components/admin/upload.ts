@@ -1,8 +1,8 @@
 "use client";
 
-import { upload } from "@vercel/blob/client";
+import { upload, uploadPresigned } from "@vercel/blob/client";
 
-export type UploadMode = "blob" | "local" | "none";
+export type UploadMode = "blob" | "presigned" | "local" | "none";
 
 export interface Uploaded {
   url: string;
@@ -21,8 +21,9 @@ export async function uploadFile(
   if (mode === "none") throw new Error("Uploads are not configured (connect Vercel Blob).");
   const safe = name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
 
-  if (mode === "blob") {
-    const blob = await upload(`${folder}/${safe}`, file, {
+  if (mode === "blob" || mode === "presigned") {
+    const send = mode === "blob" ? upload : uploadPresigned;
+    const blob = await send(`${folder}/${safe}`, file, {
       access: "public",
       handleUploadUrl: "/api/admin/upload",
       onUploadProgress: (e) => onProgress?.(e.percentage),

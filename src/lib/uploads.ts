@@ -1,13 +1,16 @@
 import "server-only";
 
 // Where dashboard uploads go:
-//  • "blob"  — Vercel Blob (BLOB_READ_WRITE_TOKEN set): production.
-//  • "local" — public/uploads on this computer: local development only.
-//  • "none"  — production without Blob configured: uploads are disabled.
-export type UploadMode = "blob" | "local" | "none";
+//  • "blob"      — Vercel Blob with a read-write token (BLOB_READ_WRITE_TOKEN).
+//  • "presigned" — Vercel Blob connected the newer way (BLOB_STORE_ID; Vercel
+//                  provides the sign-in token automatically).
+//  • "local"     — public/uploads on this computer: local development only.
+//  • "none"      — production without Blob configured: uploads are disabled.
+export type UploadMode = "blob" | "presigned" | "local" | "none";
 
 export function uploadMode(): UploadMode {
   if (process.env.BLOB_READ_WRITE_TOKEN) return "blob";
+  if (process.env.BLOB_STORE_ID) return "presigned";
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) return "local";
   return "none";
 }

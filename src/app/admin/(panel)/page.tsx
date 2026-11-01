@@ -74,7 +74,7 @@ export default async function Overview() {
           <Icon name="info" />
           <span>
             {mode === "none"
-              ? "Uploads are disabled: connect Vercel Blob storage to this project (it adds BLOB_READ_WRITE_TOKEN) and redeploy."
+              ? "Uploads are disabled: connect a Vercel Blob store to this project (it adds BLOB_STORE_ID or BLOB_READ_WRITE_TOKEN) and redeploy."
               : "Local development: uploads are saved in public/uploads on this computer. On Vercel, connect Blob storage."}
           </span>
         </p>
