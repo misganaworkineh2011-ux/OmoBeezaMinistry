@@ -6644,6 +6644,11 @@ legend {
   overflow-wrap: anywhere;
 }
 
+.chat__langs {
+  font-size: 0.84rem;
+  color: var(--muted, #6b7280);
+}
+
 .chat__msg--bot .chat__bubble {
   border-bottom-left-radius: 6px;
   background: var(--white);

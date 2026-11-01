@@ -115,7 +115,7 @@ export async function POST(request: Request): Promise<Response> {
     "X-Chat-Sources": encodeURIComponent(JSON.stringify(index.topSources(searchText))),
   });
 
-  const key = messages.length === 1 ? cacheKey(locale, question) : null;
+  const key = messages.length === 1 && /[\p{L}\p{N}]/u.test(question) ? cacheKey(locale, question) : null;
   const hit = key ? cache.get(key) : undefined;
   if (hit && Date.now() - hit.at < CACHE_TTL) return textStream(hit.text, headers);
 

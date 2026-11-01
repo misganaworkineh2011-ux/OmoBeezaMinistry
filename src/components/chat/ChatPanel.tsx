@@ -192,6 +192,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
         <div className="chat__msg chat__msg--bot">
           <div className="chat__bubble">
             <p>{t("welcome")}</p>
+            <p className="chat__langs">{t("languages")}</p>
           </div>
         </div>
 
@@ -210,7 +211,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
           m.role === "assistant" && !m.content ? null : (
             <div key={i} className={`chat__msg chat__msg--${m.role === "user" ? "user" : "bot"}`}>
               <span className="sr-only">{m.role === "user" ? t("you") : t("bot")}:</span>
-              <div className="chat__bubble">
+              <div className="chat__bubble" dir="auto">
                 {m.role === "assistant" ? <RichText text={m.content} /> : <p>{m.content}</p>}
               </div>
               {m.role === "assistant" && m.sources && m.sources.length > 0 ? (
@@ -257,6 +258,7 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
           {t("placeholder")}
         </label>
         <textarea
+          dir="auto"
           id="chat-input"
           ref={inputRef}
           rows={1}

@@ -107,6 +107,18 @@ class KnowledgeIndex {
     if (this.totalChars <= SEND_ALL_UNDER) return this.passages;
     const q = tokenize(question);
     const ranked = this.passages.map((p, i) => ({ p, i, score: this.score(q, i) })).sort((a, b) => b.score - a.score);
+    // No keyword overlap, e.g. a question in Afaan Oromoo or French about
+    // documents written in English: give the model as much as fits, in order.
+    if ((ranked[0]?.score ?? 0) <= 0) {
+      const picked: Passage[] = [];
+      let used = 0;
+      for (const p of this.passages) {
+        if (used + p.text.length > BUDGET && picked.length >= 3) break;
+        picked.push(p);
+        used += p.text.length;
+      }
+      return picked;
+    }
     const picked: { p: Passage; i: number }[] = [];
     let used = 0;
     for (const { p, i, score } of ranked) {
