@@ -1,0 +1,423 @@
+{
+  "luka": [
+    {
+      "slug": "adam",
+      "name": "Adam",
+      "portrait": {
+        "src": "/img/gallery/luka/adam.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/adam-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "adinew",
+      "name": "Adinew",
+      "portrait": {
+        "src": "/img/gallery/luka/adinew.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/adinew-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "ankaso",
+      "name": "Ankaso",
+      "portrait": {
+        "src": "/img/gallery/luka/ankaso.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/ankaso-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "awno",
+      "name": "Awno",
+      "portrait": {
+        "src": "/img/gallery/luka/awno.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/awno-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "ayke",
+      "name": "Ayke",
+      "portrait": {
+        "src": "/img/gallery/luka/ayke.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/ayke-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "bare",
+      "name": "Bare",
+      "portrait": {
+        "src": "/img/gallery/luka/bare.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/bare-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "eyob",
+      "name": "Eyob",
+      "portrait": {
+        "src": "/img/gallery/luka/eyob.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/eyob-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "gora",
+      "name": "Gora",
+      "portrait": {
+        "src": "/img/gallery/luka/gora.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/gora-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "kole",
+      "name": "Kole",
+      "portrait": {
+        "src": "/img/gallery/luka/kole.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/kole-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "male",
+      "name": "Male",
+      "portrait": {
+        "src": "/img/gallery/luka/male.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/male-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "melese",
+      "name": "Melese",
+      "portrait": {
+        "src": "/img/gallery/luka/melese.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/melese-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "mihret",
+      "name": "Mihret",
+      "portrait": {
+        "src": "/img/gallery/luka/mihret.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/mihret-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "shada",
+      "name": "Shada",
+      "portrait": {
+        "src": "/img/gallery/luka/shada.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/shada-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "sike",
+      "name": "Sike",
+      "portrait": {
+        "src": "/img/gallery/luka/sike.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/sike-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "soto",
+      "name": "Soto",
+      "portrait": {
+        "src": "/img/gallery/luka/soto.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/soto-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "wado",
+      "name": "Wado",
+      "portrait": {
+        "src": "/img/gallery/luka/wado.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/wado-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    },
+    {
+      "slug": "yohanes",
+      "name": "Yohanes",
+      "portrait": {
+        "src": "/img/gallery/luka/yohanes.jpg",
+        "w": 602,
+        "h": 904
+      },
+      "card": {
+        "src": "/img/gallery/luka/yohanes-card.jpg",
+        "w": 1280,
+        "h": 904
+      }
+    }
+  ],
+  "albums": {
+    "carnival": [
+      {
+        "src": "/img/gallery/carnival/001.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/002.jpg",
+        "w": 1440,
+        "h": 2560
+      },
+      {
+        "src": "/img/gallery/carnival/003.jpg",
+        "w": 1440,
+        "h": 2560
+      },
+      {
+        "src": "/img/gallery/carnival/004.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/005.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/006.jpg",
+        "w": 960,
+        "h": 1280
+      },
+      {
+        "src": "/img/gallery/carnival/007.jpg",
+        "w": 1280,
+        "h": 960
+      },
+      {
+        "src": "/img/gallery/carnival/008.jpg",
+        "w": 1280,
+        "h": 960
+      },
+      {
+        "src": "/img/gallery/carnival/009.jpg",
+        "w": 960,
+        "h": 1280
+      },
+      {
+        "src": "/img/gallery/carnival/010.jpg",
+        "w": 1800,
+        "h": 1012
+      },
+      {
+        "src": "/img/gallery/carnival/011.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/012.jpg",
+        "w": 1800,
+        "h": 1012
+      },
+      {
+        "src": "/img/gallery/carnival/013.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/014.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/015.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/016.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/017.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/018.jpg",
+        "w": 1800,
+        "h": 1012
+      },
+      {
+        "src": "/img/gallery/carnival/019.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/020.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/021.jpg",
+        "w": 1800,
+        "h": 999
+      },
+      {
+        "src": "/img/gallery/carnival/022.jpg",
+        "w": 959,
+        "h": 719
+      },
+      {
+        "src": "/img/gallery/carnival/023.jpg",
+        "w": 1280,
+        "h": 960
+      },
+      {
+        "src": "/img/gallery/carnival/024.jpg",
+        "w": 960,
+        "h": 1280
+      },
+      {
+        "src": "/img/gallery/carnival/025.jpg",
+        "w": 1800,
+        "h": 1013
+      },
+      {
+        "src": "/img/gallery/carnival/026.jpg",
+        "w": 1800,
+        "h": 1013
+      }
+    ],
+    "vision": [
+      {
+        "src": "/img/gallery/vision/001.jpg",
+        "w": 1800,
+        "h": 1200
+      },
+      {
+        "src": "/img/gallery/vision/002.jpg",
+        "w": 1800,
+        "h": 1200
+      },
+      {
+        "src": "/img/gallery/vision/003.jpg",
+        "w": 1800,
+        "h": 1200
+      },
+      {
+        "src": "/img/gallery/vision/004.jpg",
+        "w": 1800,
+        "h": 1200
+      },
+      {
+        "src": "/img/gallery/vision/005.jpg",
+        "w": 1800,
+        "h": 1200
+      },
+      {
+        "src": "/img/gallery/vision/006.jpg",
+        "w": 1800,
+        "h": 1202
+      },
+      {
+        "src": "/img/gallery/vision/007.jpg",
+        "w": 1800,
+        "h": 1202
+      },
+      {
+        "src": "/img/gallery/vision/008.jpg",
+        "w": 1800,
+        "h": 1202
+      },
+      {
+        "src": "/img/gallery/vision/009.jpg",
+        "w": 1800,
+        "h": 1089
+      }
+    ]
+  }
+}

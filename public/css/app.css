@@ -1,0 +1,635 @@
+/* ==========================================================================
+   app.css — additions for the Next.js rebuild (loaded after style.css).
+   Reveal animations, language switcher, and styling for the new components
+   and pages (programs, stories, blog, careers, donate, contact forms).
+   Uses the brand palette variables defined in style.css :root.
+   ========================================================================== */
+
+/* ---- Scroll reveal (replaces WOW.js + animate.css) ---- */
+.ul-reveal {
+  opacity: 0;
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: opacity, transform;
+}
+.ul-reveal--up { transform: translateY(40px); }
+.ul-reveal--down { transform: translateY(-40px); }
+.ul-reveal--left { transform: translateX(40px); }
+.ul-reveal--right { transform: translateX(-40px); }
+.ul-reveal.is-visible {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ul-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---- Language switcher (dropdown) ---- */
+.ul-lang-switcher {
+  position: relative;
+  display: inline-flex;
+  font-family: var(--font-quicksand);
+  font-weight: 600;
+}
+.ul-lang-switcher-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(30, 74, 124, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ul-black);
+  cursor: pointer;
+  transition: border-color 0.25s ease, color 0.25s ease;
+}
+.ul-lang-switcher-toggle:hover { border-color: var(--ul-primary); color: var(--ul-primary); }
+.ul-lang-switcher-toggle i {
+  font-size: 10px;
+  line-height: 1;
+  transition: transform 0.25s ease;
+}
+.ul-lang-switcher-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
+.ul-lang-switcher-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 150px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--white);
+  border: 1px solid rgba(30, 74, 124, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(8, 23, 43, 0.16);
+}
+.ul-lang-switcher-menu li { list-style: none; }
+.ul-lang-switcher-menu a {
+  display: flex;
+  align-items: center;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--ul-black);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.ul-lang-switcher-menu a:hover { background: rgba(30, 74, 124, 0.06); color: var(--ul-primary); }
+.ul-lang-switcher-menu a.active {
+  background: var(--ul-primary);
+  color: var(--white);
+}
+.ul-sidebar-lang { margin-top: 18px; }
+
+/* Language switcher hidden for now (single language live). Delete this block to
+   restore it in the header bar + the off-canvas menu. */
+.ul-lang-switcher,
+.ul-sidebar-lang { display: none; }
+
+/* ---- Floating glass header (centered, rounded, frosted) ---- */
+.ul-header-bottom { padding-top: 18px; background: transparent; }
+.ul-header-bottom.sticky {
+  background: transparent;
+  box-shadow: none;
+  padding-top: 12px;
+}
+/* the floating pill itself (logo / nav / actions live inside) */
+.ul-header-bottom-wrapper.ul-header-container {
+  max-width: clamp(320px, 94vw, 1180px);
+  margin: 0 auto;
+  gap: clamp(12px, 1.8vw, 30px);
+  padding: 12px 8px 12px 18px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 34px rgba(8, 23, 43, 0.18);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.ul-header-bottom.sticky .ul-header-bottom-wrapper.ul-header-container {
+  background: rgba(255, 255, 255, 0.68);
+  border-color: rgba(30, 74, 124, 0.1);
+  box-shadow: 0 8px 26px rgba(8, 23, 43, 0.12);
+}
+/* readable dark text/icons inside the light glass pill (both states) */
+.ul-header-bottom .ul-header-nav a,
+.ul-header-bottom.sticky .ul-header-nav a {
+  color: var(--ul-black);
+  font-size: 16px;
+}
+.ul-header-bottom .ul-header-nav a:hover { color: var(--ul-primary); }
+.ul-header-bottom .ul-header-nav a[aria-current="page"] { color: var(--ul-primary); }
+.ul-header-bottom .ul-header-actions button { color: var(--ul-black); }
+/* restore the previous logo design: a full-size mark sitting on the white blob
+   that pops out below the bar (legacy .logo-container::before/::after in style.css). */
+.ul-header .logo-container .logo { max-width: clamp(120px, 11vw, 180px); height: auto; }
+
+/* Slim the bar: the legacy nav uses an ~86px line-height and the Donate button is
+   45-56px tall — both bloat the pill. Collapse them so the bar is thin. */
+.ul-header-bottom .ul-header-nav > * { line-height: 1.2; }
+.ul-header-bottom .ul-header-actions .ul-btn {
+  height: 46px;
+  font-size: 13px;
+  min-width: 168px;
+  /* match the hero "Make Donation" look: icon hugs the left, label follows,
+     with the extra width as trailing space (base .ul-btn centers its content). */
+  justify-content: flex-start;
+  padding-left: clamp(6px, 0.47vw, 9px);
+  padding-right: clamp(20px, 1.6vw, 30px);
+}
+.ul-header-bottom .ul-header-actions .ul-header-sidebar-opener { font-size: 16px; }
+.ul-header-bottom .ul-lang-switcher-toggle { padding: 5px 12px; }
+
+/* Mobile: the language toggle and Donate button both move into the off-canvas
+   menu, so the bar only holds the logo + the hamburger — no overflow. */
+@media (max-width: 991px) {
+  .ul-header-bottom-wrapper.ul-header-container {
+    gap: 8px;
+    padding: 8px 8px 8px 14px;
+  }
+  .ul-header-bottom .ul-header-actions { gap: 8px; }
+  .ul-header-bottom .ul-header-actions .ul-header-sidebar-opener { font-size: 18px; }
+}
+
+/* ---- Generic section helpers used by new pages ---- */
+.w-100 { width: 100%; }
+.ul-section-heading .left.text-center { text-align: center; }
+
+/* Clip stray horizontal overflow without making a scroll container, so
+   position: sticky descendants still pin to the viewport. The legacy stylesheet
+   set `overflow-x: hidden` on <body>, which forces overflow-y to `auto` and turns
+   <body> into a nested scroll container — that silently breaks position: sticky.
+   `clip` clips the same way without creating a scroll container. */
+body { overflow-x: clip; }
+.ul-main { overflow-x: clip; }
+
+/* ---- About: Mission/Vision/History scroll-stacking cards ----
+   A full-bleed backdrop is pinned (sticky) so it stays perfectly still while the
+   cards stack over it; the cards are full-viewport sticky figures (pinned at
+   top:0, card centered) so each one rises and covers the previous. One viewport
+   of scroll per card; once the last card is on top, the backdrop releases and
+   the whole section scrolls away normally. */
+.ul-stack { display: block; position: relative; }
+.ul-stack-bg {
+  position: sticky;
+  top: 0;
+  z-index: 0;
+  height: 100vh;
+  width: 100vw;               /* full-bleed (break out of the container) */
+  margin-left: calc(50% - 50vw);
+  margin-bottom: -100vh;      /* occupy no layout height; sit behind the cards */
+  background-color: var(--ul-black);
+  pointer-events: none;
+  isolation: isolate;         /* contain the texture blend to this layer */
+}
+/* same topographic texture as the .ul-events section, kept on the pinned layer
+   so the background design still shows while staying perfectly still. */
+.ul-stack-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url(../img/stats-events-bg-shape.svg) no-repeat center bottom / cover;
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+}
+.ul-stack-fig {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+}
+.ul-stack-card {
+  width: min(720px, 92vw);
+  margin-inline: auto;
+  min-height: clamp(380px, 52vh, 560px);
+  border-radius: 24px;
+  padding: clamp(32px, 3.4vw, 52px);
+  display: grid;
+  align-content: center;
+  gap: clamp(10px, 0.9vw, 16px);
+  box-shadow: 0 28px 64px rgba(8, 23, 43, 0.40);
+}
+.ul-stack-card-title {
+  font-family: var(--font-quicksand);
+  font-size: clamp(26px, 2vw, 36px);
+  font-weight: 700;
+  margin: 0;
+}
+.ul-stack-card-descr {
+  font-size: clamp(16px, 1.05vw, 19px);
+  line-height: 1.55;
+  margin: 0;
+}
+.ul-stack-card-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.ul-stack-card-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: clamp(15px, 1vw, 18px);
+  font-weight: 500;
+}
+.ul-stack-card-list li::before {
+  content: "";
+  flex-shrink: 0;
+  margin-top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  opacity: 0.55;
+}
+/* Brand palette — one card colour each; the stack overlaps as you scroll. */
+.ul-stack-card--1 { background: #1e4a7c; color: #ffffff; transform: rotate(-3deg); }
+.ul-stack-card--1 .ul-stack-card-descr { color: rgba(255, 255, 255, 0.86); }
+.ul-stack-card--2 { background: #99ccff; color: #143456; }
+.ul-stack-card--3 { background: #ede6d9; color: #444444; transform: rotate(3deg); }
+.ul-stack-card--4 { background: #444444; color: #ffffff; transform: rotate(-2deg); }
+
+/* larger type on the first two cards (Mission & Vision) — least text, most room */
+.ul-stack-card--1 .ul-stack-card-title,
+.ul-stack-card--2 .ul-stack-card-title { font-size: clamp(32px, 2.6vw, 46px); }
+.ul-stack-card--1 .ul-stack-card-descr,
+.ul-stack-card--2 .ul-stack-card-descr { font-size: clamp(18px, 1.3vw, 24px); }
+.ul-stack-card--1 .ul-stack-card-list li,
+.ul-stack-card--2 .ul-stack-card-list li { font-size: clamp(16px, 1.15vw, 21px); }
+
+/* Core Values, merged into a single stacked card */
+.ul-stack-values { display: grid; gap: clamp(14px, 1.5vw, 24px); }
+.ul-stack-value { display: flex; align-items: flex-start; gap: 14px; }
+.ul-stack-value-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 17px;
+  color: #ffffff;
+}
+.ul-stack-value-title {
+  margin: 0 0 3px;
+  font-family: var(--font-quicksand);
+  font-size: clamp(16px, 1.1vw, 19px);
+  font-weight: 700;
+}
+.ul-stack-value-descr {
+  margin: 0;
+  font-size: clamp(13px, 0.85vw, 15px);
+  line-height: 1.5;
+  color: #e6e6e6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ul-stack-card { transform: none !important; }
+}
+
+/* ---- Programs preview cards (home) ---- */
+.ul-program-card,
+.ul-value-card,
+.ul-benefit-card {
+  height: 100%;
+  background: var(--white);
+  border: 1px solid #e8eef5;
+  border-radius: 16px;
+  padding: 32px 26px;
+  text-align: center;
+  box-shadow: 0px 4px 40px rgba(30, 74, 124, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.ul-program-card:hover,
+.ul-value-card:hover,
+.ul-benefit-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0px 10px 50px rgba(30, 74, 124, 0.12);
+}
+.ul-program-card-icon,
+.ul-value-card-icon,
+.ul-benefit-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 70px;
+  height: 70px;
+  margin-bottom: 18px;
+  border-radius: 50%;
+  background: var(--ul-c3);
+  color: var(--ul-primary);
+  font-size: 30px;
+}
+.ul-program-card-title,
+.ul-value-card-title,
+.ul-benefit-card-title {
+  font-family: var(--font-quicksand);
+  font-size: 21px;
+  margin-bottom: 10px;
+  color: var(--ul-black);
+}
+.ul-program-card-descr,
+.ul-value-card-descr,
+.ul-benefit-card-descr {
+  color: var(--ul-p);
+  margin: 0;
+}
+.mt-4 { margin-top: 1.5rem; }
+
+/* ---- Donations lead text ----
+   The section's right side holds a decorative image (.ul-donations::before,
+   width clamp(0px, 46.56vw, 886px)). Cap the paragraph width to the space left
+   of the image so the text never runs over it. */
+.ul-donations-lead .ul-section-descr { max-width: min(900px, calc(100% - 49vw)); }
+/* On desktop the image spans the full section height (behind the title too), so
+   keep the heading clear of it as well. On mobile the image is pushed down
+   (top: 20–35%), leaving the title clear — so don't squeeze it there. */
+@media (min-width: 992px) {
+  .ul-donations-heading .left { max-width: min(660px, calc(100% - 49vw)); }
+}
+
+/* ---- Programs page (alternating rows) ---- */
+.ul-programs-list { margin-top: 50px; display: flex; flex-direction: column; gap: 60px; }
+.ul-program-row--reverse { flex-direction: row-reverse; }
+.ul-program-img img { width: 100%; border-radius: 18px; object-fit: cover; }
+.ul-program-detail-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background: var(--ul-c3);
+  color: var(--ul-primary);
+  font-size: 28px;
+  margin-bottom: 16px;
+}
+.ul-program-detail-title { font-family: var(--font-quicksand); font-size: 28px; margin-bottom: 12px; }
+.ul-program-detail-points { margin-top: 16px; padding-left: 0; list-style: none; }
+.ul-program-detail-points li { position: relative; padding-left: 28px; margin-bottom: 10px; }
+.ul-program-detail-points li::before {
+  content: "\f10f";
+  font-family: flaticon_charitics;
+  position: absolute;
+  left: 0;
+  color: var(--ul-primary);
+}
+
+/* ---- Stories / gallery ---- */
+.ul-stories-grid {
+  margin-top: 40px;
+  columns: 3;
+  column-gap: 20px;
+}
+@media (max-width: 991px) { .ul-stories-grid { columns: 2; } }
+@media (max-width: 575px) { .ul-stories-grid { columns: 1; } }
+.ul-story-card {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.ul-story-card img { width: 100%; display: block; }
+.ul-story-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 18px 16px 14px;
+  color: var(--white);
+  font-family: var(--font-quicksand);
+  font-weight: 500;
+  background: linear-gradient(180deg, rgba(30, 74, 124, 0) 0%, rgba(30, 74, 124, 0.85) 100%);
+}
+.ul-testimonial {
+  margin-top: 50px;
+  text-align: center;
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 40px 30px;
+  border-radius: 18px;
+  background: var(--ul-c4);
+}
+.ul-testimonial-quote { font-size: 38px; color: var(--ul-primary); display: block; margin-bottom: 14px; }
+.ul-testimonial-text { font-size: 22px; line-height: 1.6; font-style: italic; margin-bottom: 16px; }
+.ul-testimonial-author { font-weight: 600; color: var(--ul-primary); }
+
+/* ---- Blog ---- */
+.ul-blog-card {
+  height: 100%;
+  background: var(--white);
+  border: 1px solid #e8eef5;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0px 4px 40px rgba(30, 74, 124, 0.06);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.ul-blog-card:hover { transform: translateY(-6px); box-shadow: 0px 10px 50px rgba(30, 74, 124, 0.12); }
+.ul-blog-card-img { display: block; aspect-ratio: 16 / 10; overflow: hidden; }
+.ul-blog-card-img img { width: 100%; height: 100%; object-fit: cover; }
+.ul-blog-card-body { padding: 22px 24px 26px; }
+.ul-blog-card-date { color: var(--ul-secondary); font-weight: 600; font-size: 14px; }
+.ul-blog-card-title { font-family: var(--font-quicksand); font-size: 20px; margin: 8px 0 10px; }
+.ul-blog-card-title a { color: var(--ul-black); }
+.ul-blog-card-title a:hover { color: var(--ul-primary); }
+.ul-blog-card-excerpt { color: var(--ul-p); margin-bottom: 14px; }
+.ul-blog-card-more { color: var(--ul-primary); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.ul-blog-details-container { max-width: 860px; }
+.ul-blog-details-meta { display: flex; gap: 18px; color: var(--ul-secondary); font-weight: 600; margin-bottom: 16px; }
+.ul-blog-details-cover { border-radius: 18px; overflow: hidden; margin-bottom: 28px; }
+.ul-blog-details-cover img { width: 100%; }
+.ul-blog-details-content { line-height: 1.8; color: var(--ul-p); }
+.ul-blog-details-content h2 { font-family: var(--font-quicksand); font-size: 26px; margin: 28px 0 12px; color: var(--ul-black); }
+.ul-blog-details-content blockquote {
+  margin: 22px 0;
+  padding: 16px 22px;
+  border-left: 4px solid var(--ul-primary);
+  background: var(--ul-c4);
+  font-style: italic;
+}
+.ul-blog-details-content ul { padding-left: 22px; margin: 14px 0; }
+.ul-blog-details-content a { color: var(--ul-primary); text-decoration: underline; }
+.ul-blog-fallback-notice {
+  padding: 10px 16px;
+  background: var(--ul-c3);
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+.ul-blog-details .ul-btn { margin-top: 30px; }
+
+/* ---- Careers ---- */
+.ul-careers-subhead { font-family: var(--font-quicksand); font-size: 26px; margin: 50px 0 24px; }
+.ul-careers-empty {
+  padding: 22px 24px;
+  border: 1px dashed var(--ul-secondary);
+  border-radius: 12px;
+  color: var(--ul-p);
+  background: #f7fafd;
+}
+
+/* ---- Generic forms ---- */
+.ul-form { max-width: 640px; }
+.ul-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 575px) { .ul-form-grid { grid-template-columns: 1fr; } }
+.ul-form-row { display: flex; flex-direction: column; margin-bottom: 18px; }
+.ul-form-row label { font-weight: 600; margin-bottom: 6px; color: var(--ul-black); }
+.ul-form input,
+.ul-form select,
+.ul-form textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d6dee7;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 15px;
+  background: var(--white);
+  color: var(--ul-black);
+}
+.ul-form input:focus,
+.ul-form select:focus,
+.ul-form textarea:focus {
+  outline: none;
+  border-color: var(--ul-primary);
+  box-shadow: 0 0 0 3px rgba(30, 74, 124, 0.15);
+}
+.ul-form-success {
+  padding: 18px 22px;
+  background: var(--ul-c4);
+  border-radius: 12px;
+  border-left: 4px solid var(--ul-primary);
+}
+.ul-form-success a { color: var(--ul-primary); font-weight: 600; }
+
+/* ---- Contact ---- */
+.ul-contact-named-list { list-style: none; padding: 0; margin: 20px 0 0; }
+.ul-contact-named-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid #e8eef5;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.ul-contact-named-name { font-weight: 600; color: var(--ul-black); }
+.ul-contact-named-list a { color: var(--ul-primary); font-weight: 600; }
+.ul-contact-formbox {
+  background: var(--white);
+  border: 1px solid #e8eef5;
+  border-radius: 18px;
+  padding: 34px 30px;
+  box-shadow: 0px 10px 50px rgba(30, 74, 124, 0.08);
+}
+.ul-contact-formbox .ul-section-title { font-size: 28px; margin-bottom: 20px; }
+
+/* ---- Donate form ---- */
+.ul-donate-card {
+  background: var(--white);
+  border: 1px solid #e8eef5;
+  border-radius: 18px;
+  padding: 34px 30px;
+  box-shadow: 0px 10px 50px rgba(30, 74, 124, 0.08);
+}
+.ul-donate-card-title { font-family: var(--font-quicksand); font-size: 24px; margin-bottom: 22px; }
+.ul-donate fieldset { border: 0; padding: 0; margin: 0 0 24px; }
+.ul-donate legend { font-weight: 600; margin-bottom: 12px; color: var(--ul-black); }
+.ul-donate-freq-options { display: flex; gap: 12px; }
+.ul-donate-freq-option {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  border: 1px solid #d6dee7;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.ul-donate-freq-option.active { border-color: var(--ul-primary); background: var(--ul-primary); color: var(--white); }
+.ul-donate-freq-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ul-donate-tiers-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+@media (max-width: 480px) { .ul-donate-tiers-grid { grid-template-columns: repeat(2, 1fr); } }
+.ul-donate-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 12px;
+  border: 1px solid #d6dee7;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.ul-donate-tier.active { border-color: var(--ul-primary); box-shadow: 0 0 0 2px rgba(30, 74, 124, 0.18); }
+.ul-donate-tier input { position: absolute; opacity: 0; width: 0; height: 0; }
+.ul-donate-tier-amount { font-family: var(--font-quicksand); font-size: 22px; font-weight: 700; color: var(--ul-primary); }
+.ul-donate-tier-impact { font-size: 12.5px; color: var(--ul-p); line-height: 1.4; }
+.ul-donate-custom { margin-top: 16px; }
+.ul-donate-custom label { display: block; font-weight: 600; margin-bottom: 6px; }
+.ul-donate-custom-input { display: flex; align-items: center; border: 1px solid #d6dee7; border-radius: 10px; overflow: hidden; }
+.ul-donate-custom-input span { padding: 0 14px; font-weight: 700; color: var(--ul-primary); background: var(--ul-c4); align-self: stretch; display: flex; align-items: center; }
+.ul-donate-custom-input input { border: 0; padding: 12px 14px; width: 100%; font-size: 16px; }
+.ul-donate-custom-input input:focus { outline: none; }
+.ul-donate-note { font-size: 13.5px; color: var(--ul-p); background: var(--ul-c4); padding: 12px 16px; border-radius: 10px; }
+.ul-donate-success { margin-top: 16px; padding: 14px 18px; border-radius: 10px; background: #eef5fb; border-left: 4px solid var(--ul-primary); }
+.ul-donate-success a { color: var(--ul-primary); font-weight: 600; }
+.ul-donate-trust { list-style: none; padding: 0; margin: 26px 0 0; }
+.ul-donate-trust li { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 16px; }
+.ul-donate-trust-icon {
+  flex-shrink: 0;
+  width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 10px; background: var(--ul-c3); color: var(--ul-primary); font-size: 20px;
+}
+.ul-donate-trust-txt strong { display: block; color: var(--ul-black); }
+.ul-donate-trust-txt span { color: var(--ul-p); }
+
+.ul-donate-bank { margin-top: 28px; padding-top: 24px; border-top: 1px solid #e3e9f0; }
+.ul-donate-bank-title { font-family: var(--font-quicksand); font-size: 19px; margin-bottom: 6px; color: var(--ul-black); }
+.ul-donate-bank-intro { font-size: 14px; color: var(--ul-p); margin-bottom: 16px; }
+.ul-donate-bank-card {
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  padding: 18px 20px; border: 1px solid #d6dee7; border-radius: 12px; background: var(--ul-c4);
+}
+.ul-donate-bank-logo { width: 120px; height: auto; flex-shrink: 0; }
+.ul-donate-bank-details { margin: 0; display: grid; gap: 12px; }
+.ul-donate-bank-details dt { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ul-p); margin-bottom: 2px; }
+.ul-donate-bank-details dd { margin: 0; font-weight: 700; color: var(--ul-black); }
+.ul-donate-bank-acct { font-family: var(--font-quicksand); font-size: 19px; letter-spacing: 0.06em; color: var(--ul-primary); }
+@media (max-width: 480px) { .ul-donate-bank-card { gap: 14px; } }
+
+/* ---- 404 image (orange PNG -> brand blue via hue-rotate, stopgap) ---- */
+.ul-404-img img { filter: hue-rotate(192deg) saturate(0.9); }
+
+/* ---- Breadcrumb with background image ---- */
+.ul-breadcrumb--img { min-height: 320px; display: flex; align-items: center; }
+.ul-breadcrumb--img .ul-breadcrumb-title,
+.ul-breadcrumb--img .ul-breadcrumb-nav,
+.ul-breadcrumb--img .ul-breadcrumb-nav a,
+.ul-breadcrumb--img .ul-breadcrumb-nav li { color: var(--white); }
+
+/* ---- Footer tweaks ---- */
+/* Quick Links: lay the (now full) nav out in two columns. */
+.ul-footer-quicklinks {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  column-gap: clamp(28px, 3vw, 56px);
+  row-gap: clamp(12px, 0.95vw, 16px);
+}
+/* Tighten the gap so the copyright + terms/privacy bar sits close to the footer. */
+.ul-footer-middle { padding-bottom: clamp(28px, 2.6vw, 48px); }
+.ul-footer-bottom { padding: clamp(8px, 0.7vw, 12px) 0; }

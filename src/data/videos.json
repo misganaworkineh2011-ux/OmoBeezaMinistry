@@ -1,0 +1,70 @@
+{
+  "videos": [
+    {
+      "id": "documentary",
+      "source": "Omo Beeza Documentary.mp4|166335733|v3",
+      "kind": "film",
+      "src": "/media/videos/documentary.mp4",
+      "preview": "/media/videos/documentary-preview.mp4",
+      "poster": "/media/videos/documentary.jpg",
+      "w": 1920,
+      "h": 828,
+      "duration": 81
+    },
+    {
+      "id": "logo",
+      "source": "Omo Beeza Logo.mp4|16102169|v3",
+      "kind": "logo",
+      "src": "/media/videos/logo.mp4",
+      "preview": "/media/videos/logo-preview.mp4",
+      "poster": "/media/videos/logo.jpg",
+      "w": 1920,
+      "h": 1080,
+      "duration": 10
+    },
+    {
+      "id": "mission",
+      "source": "Omo Mission Trip Video.mov|305224568|v3",
+      "kind": "reel",
+      "src": "/media/videos/mission.mp4",
+      "preview": "/media/videos/mission-preview.mp4",
+      "poster": "/media/videos/mission.jpg",
+      "w": 720,
+      "h": 1280,
+      "duration": 161
+    },
+    {
+      "id": "playground",
+      "source": "Playground Construction for Omo Beeza Childeren.mov|25114068|v3",
+      "kind": "reel",
+      "src": "/media/videos/playground.mp4",
+      "preview": "/media/videos/playground-preview.mp4",
+      "poster": "/media/videos/playground.jpg",
+      "w": 720,
+      "h": 720,
+      "duration": 13
+    },
+    {
+      "id": "short2",
+      "source": "Omo Beeza Short Movie 2.mov|24848451|v3",
+      "kind": "reel",
+      "src": "/media/videos/short2.mp4",
+      "preview": "/media/videos/short2-preview.mp4",
+      "poster": "/media/videos/short2.jpg",
+      "w": 720,
+      "h": 1280,
+      "duration": 13
+    },
+    {
+      "id": "short1",
+      "source": "Omo Beeza Short Movie.mov|39085124|v3",
+      "kind": "reel",
+      "src": "/media/videos/short1.mp4",
+      "preview": "/media/videos/short1-preview.mp4",
+      "poster": "/media/videos/short1.jpg",
+      "w": 720,
+      "h": 1280,
+      "duration": 13
+    }
+  ]
+}

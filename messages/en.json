@@ -1,0 +1,1153 @@
+{
+  "common": {
+    "skip": "Skip to main content",
+    "donate": "Donate",
+    "giveNow": "Give Now",
+    "learnMore": "Learn more",
+    "readMore": "Read more",
+    "getInvolved": "Get Involved",
+    "contactUs": "Contact Us",
+    "home": "Home",
+    "menu": "Menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "language": "Language",
+    "backToTop": "Back to top",
+    "close": "Close",
+    "previous": "Previous",
+    "next": "Next",
+    "copy": "Copy",
+    "copied": "Copied",
+    "share": "Share",
+    "copyLink": "Copy link",
+    "minRead": "{minutes} min read",
+    "optional": "(optional)",
+    "call": "Call",
+    "play": "Play",
+    "pause": "Pause"
+  },
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "programs": "Programs",
+    "involved": "Get Involved",
+    "stories": "Stories",
+    "blog": "Blog",
+    "careers": "Careers",
+    "faq": "FAQ",
+    "contact": "Contact",
+    "donate": "Donate",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use",
+    "followUs": "Follow us",
+    "gallery": "Gallery",
+    "videos": "Videos"
+  },
+  "topbar": {
+    "verse": "“Let the little children come to me.” — Matthew 19:14"
+  },
+  "meta": {
+    "siteName": "Omo Beeza Ministry",
+    "home": {
+      "title": "Omo Beeza Ministry — A Transformed Generation in South Omo",
+      "description": "A Christ-centered children's ministry in Luqa, South Omo, Ethiopia — sheltering, educating, and discipling vulnerable children since 2022."
+    },
+    "about": {
+      "title": "About Us",
+      "description": "Our story, mission, vision, and values — how Omo Beeza Ministry began in Tsemay (Luqa) in 2022 with sixteen children."
+    },
+    "programs": {
+      "title": "Programs",
+      "description": "Education, nutrition & care, and joy & community — how we care for the whole child at Omo Beeza."
+    },
+    "involved": {
+      "title": "Get Involved",
+      "description": "Pray, give, serve, or partner with Omo Beeza Ministry to raise a transformed generation in South Omo."
+    },
+    "stories": {
+      "title": "Stories",
+      "description": "Moments of hope from everyday life at Omo Beeza Ministry."
+    },
+    "blog": {
+      "title": "Blog",
+      "description": "News, prayer updates, and stories from the heart of Omo Beeza Ministry."
+    },
+    "careers": {
+      "title": "Careers",
+      "description": "Serve with Omo Beeza Ministry — a calling to love and raise vulnerable children in the name of Christ."
+    },
+    "donations": {
+      "title": "Donate",
+      "description": "Give once or monthly to provide food, shelter, education, and Christ-centered care for children in South Omo."
+    },
+    "contact": {
+      "title": "Contact",
+      "description": "Call, email, or message the Omo Beeza Ministry team in Jinka, Ethiopia."
+    },
+    "faq": {
+      "title": "Frequently Asked Questions",
+      "description": "Answers to common questions about Omo Beeza Ministry, giving, and getting involved."
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "description": "How Omo Beeza Ministry handles the information you share with us."
+    },
+    "terms": {
+      "title": "Terms of Use",
+      "description": "The terms that apply when you use the Omo Beeza Ministry website."
+    },
+    "gallery": {
+      "title": "Gallery",
+      "description": "Photo albums from Omo Beeza Ministry — the children of the Luka site, Children's Carnival Day, and Vision Sharing Day at ACLA Church."
+    },
+    "videos": {
+      "title": "Videos",
+      "description": "Watch the Omo Beeza documentary, our mission trip, the new playground, and short films from South Omo."
+    }
+  },
+  "home": {
+    "hero": {
+      "badge": "Serving South Omo since September 2022",
+      "title": "A transformed generation for <em>holistic change</em> of community",
+      "lead": "Omo Beeza Ministry shelters, educates, and disciples vulnerable children from the pastoralist communities of South Omo, Ethiopia — so they can grow into Christ-like agents of change.",
+      "donate": "Make a Donation",
+      "story": "Our Story",
+      "imageAlt": "Children of the Omo Beeza Home Center sitting together in front of the center",
+      "note": "Our family in Luqa!",
+      "seal": "OMO BEEZA MINISTRY • SINCE 2022 • ",
+      "cardLabel": "children loved & sheltered",
+      "trust": "A home, a school, and a family for children of South Omo"
+    },
+    "stats": [
+      {
+        "value": 33,
+        "suffix": "",
+        "label": "Children sheltered in Luka & Bodi"
+      },
+      {
+        "value": 22,
+        "suffix": "",
+        "label": "Children at Beeza Kindergarten"
+      },
+      {
+        "value": 16,
+        "suffix": "",
+        "label": "Children in our founding cohort"
+      },
+      {
+        "value": 2022,
+        "suffix": "",
+        "label": "Year the ministry began"
+      }
+    ],
+    "about": {
+      "eyebrow": "Who We Are",
+      "title": "How our ministry <em>started</em>",
+      "descr": "Beeza is a humble children's center located in Tsemay. The center started on September 28, 2022 in Tsemay (Luqa) by bringing sixteen children from scattered pastoralist settlements of different backgrounds into the center, with the help of missionaries.",
+      "list": [
+        "Founded September 28, 2022 in Tsemay (Luqa).",
+        "Began with sixteen children from scattered pastoralist communities.",
+        "Rooted in the Gospel — discipling children within their own context."
+      ],
+      "explore": "Explore Our Story",
+      "callTitle": "Call any time",
+      "badgeValue": "Since 2022",
+      "badgeLabel": "Rooted in Luqa, South Omo"
+    },
+    "need": {
+      "eyebrow": "Why We Exist",
+      "title": "Every child is a gift — <em>none is a curse</em>",
+      "lead": "South Omo is a region of rich cultural diversity and natural resources, yet it faces significant socio-economic challenges. In parts of the region, the traditional belief known as Mingi has labelled some children as cursed, leaving them abandoned or at risk.",
+      "response": "We respond with the love of Christ: a safe home, daily care, education, and a family where every child is known by name.",
+      "challenges": [
+        {
+          "title": "Children at risk",
+          "descr": "Children affected by Mingi and other hardships need safety, belonging, and a future.",
+          "icon": "shield"
+        },
+        {
+          "title": "Educational gaps",
+          "descr": "Many children from pastoralist settlements have limited access to schooling.",
+          "icon": "graduation"
+        },
+        {
+          "title": "Limited native leadership",
+          "descr": "The region needs a new generation of local, Christ-like leaders for the Church and society.",
+          "icon": "users"
+        }
+      ],
+      "visionLabel": "Our Vision",
+      "vision": "To raise a generation in South Omo, discipled within their own context and holistically developed to serve as Christ-like, socially responsible agents of change in their communities."
+    },
+    "programs": {
+      "eyebrow": "What We Do",
+      "title": "Caring for the <em>whole child</em>",
+      "lead": "Our work is holistic — meeting the spiritual, educational, and physical needs of every child God brings to us.",
+      "cta": "Explore Our Programs"
+    },
+    "gratitude": {
+      "eyebrow": "Points of Gratitude",
+      "title": "Our blessings and <em>achievements</em>",
+      "lead": "We give thanks to God for His faithfulness in every season.",
+      "items": [
+        {
+          "title": "Dedicated Young Graduates",
+          "descr": "Many young graduates have a passion to serve among the unreached, dedicating their lives and volunteering."
+        },
+        {
+          "title": "Successful Farming Initiative",
+          "descr": "On our 0.7-hectare land, with the help of community believers, the land is ploughed and sowed with corn."
+        },
+        {
+          "title": "New Addition to Our Family",
+          "descr": "We are blessed with one more child the Lord sent to us — to save a life and to bless our home."
+        },
+        {
+          "title": "Community Support",
+          "descr": "We are grateful for the overwhelming support of our local community and international partners who help us serve and protect vulnerable children."
+        }
+      ]
+    },
+    "ways": {
+      "eyebrow": "Get Involved",
+      "title": "Ways you can <em>make a difference</em>",
+      "lead": "Whether you pray, give, serve, or partner with us — you become part of a child's story of redemption."
+    },
+    "needs": {
+      "eyebrow": "Current Needs",
+      "title": "How to support our <em>mission</em>",
+      "lead": "These are the projects and prayer needs on our hearts right now.",
+      "cta": "Support a Project"
+    },
+    "testimonial": {
+      "eyebrow": "A Child's Voice",
+      "quote": "Before Omo Beeza, I had nothing — no food, no school, no family. Now I have all of that and more. I have God's love, and I have a future.",
+      "author": "A child at Omo Beeza, age 12"
+    },
+    "blog": {
+      "eyebrow": "News & Updates",
+      "title": "From the <em>ministry</em>",
+      "all": "View All Posts"
+    },
+    "marquee": [
+      "Hope",
+      "Faith",
+      "Family",
+      "Education",
+      "Discipleship",
+      "Redemption",
+      "Joy",
+      "Care"
+    ]
+  },
+  "ways": [
+    {
+      "id": "pray",
+      "title": "Pray",
+      "descr": "Stand with our children and staff in prayer. Prayer is the foundation of everything we do.",
+      "icon": "handHeart",
+      "href": "/get-involved#pray",
+      "cta": "See prayer requests"
+    },
+    {
+      "id": "give",
+      "title": "Give",
+      "descr": "Provide food, shelter, schooling, and care through a one-time or monthly gift.",
+      "icon": "gift",
+      "href": "/donations",
+      "cta": "Make a donation"
+    },
+    {
+      "id": "serve",
+      "title": "Serve",
+      "descr": "Use your gifts in teaching, healthcare, administration, or outreach.",
+      "icon": "briefcase",
+      "href": "/careers",
+      "cta": "Serve with us"
+    },
+    {
+      "id": "partner",
+      "title": "Partner",
+      "descr": "Churches, ministries, and organizations can walk alongside us for lasting impact.",
+      "icon": "church",
+      "href": "/get-involved#partner",
+      "cta": "Become a partner"
+    }
+  ],
+  "needs": [
+    {
+      "id": "home-center",
+      "title": "Building our Home Center",
+      "icon": "home",
+      "intro": "Build essential infrastructure, including:",
+      "list": [
+        "Dormitories: separate accommodations for boys and girls to ensure safety and comfort.",
+        "Classrooms: dedicated spaces for academic learning and vocational training.",
+        "Recreational areas: playgrounds and sports facilities for physical health and social interaction.",
+        "Common areas: spaces for meals, devotionals, and community gatherings."
+      ]
+    },
+    {
+      "id": "kindergarten",
+      "title": "Building our Kindergarten",
+      "icon": "book",
+      "intro": "Equip Beeza Kindergarten with:",
+      "list": [
+        "First aid kit",
+        "Furniture",
+        "Staff support for our teachers",
+        "Learning materials",
+        "Play materials"
+      ]
+    }
+  ],
+  "prayer": [
+    "For our children to grow into Christlikeness, and for the mature engagement of all staff.",
+    "For rain for our farm, and for the Lord's provision.",
+    "For God to give us staff who can help the children grow into His likeness.",
+    "For Sami, one of our beloved children taken from us against his will — for his safety, well-being, and safe return home."
+  ],
+  "scripture": {
+    "quote": "“Let the little children come to me, and do not hinder them, for the kingdom of heaven belongs to such as these.”",
+    "cite": "Matthew 19:14"
+  },
+  "cta": {
+    "title": "Every child deserves to be known, loved, and raised in hope.",
+    "text": "Your prayers and gifts make a real difference in the lives of children in South Omo.",
+    "donate": "Donate Today",
+    "involved": "Other Ways to Help"
+  },
+  "about": {
+    "hero": {
+      "title": "About Omo Beeza Ministry",
+      "lead": "A Christ-centered ministry in South Omo, raising children in a safe and loving environment where they can grow physically, emotionally, and spiritually."
+    },
+    "story": {
+      "eyebrow": "Our Story",
+      "title": "Light for those living in <em>darkness</em>",
+      "descr": "Omo Beeza Ministry is a Christ-centered initiative based in the South Omo region of Southern Ethiopia. We raise generations in a safe and loving environment where they can grow physically, emotionally, and spiritually.",
+      "nameTitle": "What's in a name?",
+      "name": "“Omo” refers to the local people, while “Beza” means “light” in the Tsemay language — our prayer that the gospel will bring light to those living in darkness.",
+      "callTitle": "Call any time"
+    },
+    "mission": {
+      "title": "Our Mission",
+      "descr": "Equip the youth of South Omo through holistic education and spiritual discipleship by:",
+      "list": [
+        "Equip: Educating South Omo’s youth through scriptural foundations, academic excellence, and vocational skills.",
+        "Enlighten: Nurturing a biblical worldview and a mission-driven heart for unreached peoples.",
+        "Train: Developing the next generation of leaders to serve both the Church and the wider community."
+      ]
+    },
+    "vision": {
+      "title": "Our Vision",
+      "descr": "To raise a generation in South Omo, discipled within their own context and holistically developed to serve as Christ-like, socially responsible agents of change in their communities.",
+      "list": [
+        "Christ-centered discipleship rooted in each child's own context.",
+        "Holistic growth — spiritual, academic, and social.",
+        "A generation equipped to transform their communities through the Gospel."
+      ]
+    },
+    "mvEyebrow": "Mission & Vision",
+    "mvTitle": "What we are <em>called</em> to do",
+    "values": {
+      "eyebrow": "Our Core Values",
+      "title": "What <em>guides</em> us",
+      "items": [
+        {
+          "title": "Gospel Centrality",
+          "descr": "We center our ministry on the true gospel of Christ — holistic development for children through discipleship and care for orphans.",
+          "icon": "cross"
+        },
+        {
+          "title": "Bible-Based Ministry",
+          "descr": "We affirm the supremacy of God’s Word, guiding our teachings and practices to reveal God’s desire for worship among all peoples.",
+          "icon": "book"
+        },
+        {
+          "title": "Partnership",
+          "descr": "We collaborate with churches, ministries, and organizations that share our vision to reach all people with the gospel.",
+          "icon": "users"
+        }
+      ]
+    },
+    "history": {
+      "eyebrow": "Our History",
+      "title": "A journey of <em>faithfulness</em>",
+      "lead": "From sixteen children and a step of faith, to a growing family across Luka and Bodi.",
+      "items": [
+        {
+          "when": "September 28, 2022",
+          "title": "The beginning",
+          "descr": "The Beeza Children's Center was established in the Tsemay area. Our first step was welcoming sixteen children from various pastoralist communities, in collaboration with missionary organizations.",
+          "icon": "flag"
+        },
+        {
+          "when": "Where we serve",
+          "title": "Luqa — a strategic location",
+          "descr": "Luqa, 63 kilometers from Jinka, is home to a significant concentration of Tsemay natives alongside a diverse population including the Banna people.",
+          "icon": "pin"
+        },
+        {
+          "when": "Growing roots",
+          "title": "Kindergarten & farm",
+          "descr": "Beeza Kindergarten opened its doors to young learners, and community believers helped plough and sow our 0.7-hectare farm with corn.",
+          "icon": "sprout"
+        },
+        {
+          "when": "Today",
+          "title": "A growing family",
+          "descr": "We now shelter 33 children in Luka and Bodi, with 22 children learning at Beeza Kindergarten — and we are praying toward a permanent Home Center.",
+          "icon": "home"
+        }
+      ]
+    },
+    "region": {
+      "eyebrow": "About South Omo",
+      "title": "Rich in heritage, <em>hungry for hope</em>",
+      "paragraphs": [
+        "The South Omo region, while rich in cultural heritage and natural resources, faces significant socio-economic challenges.",
+        "Despite missionary engagement spanning over six decades, the region still experiences limitations in community leadership and spiritual maturity — alongside cultural challenges, educational deficiencies, and poverty."
+      ]
+    }
+  },
+  "programs": {
+    "hero": {
+      "title": "Caring for the Whole Child",
+      "lead": "Our work is holistic — meeting the spiritual, educational, and physical needs of every child God brings to us."
+    },
+    "helpCta": "Support this program",
+    "items": [
+      {
+        "id": "education",
+        "title": "Education",
+        "descr": "We believe education opens doors. Children receive structured schooling, tutoring, and vocational training rooted in a Biblical worldview.",
+        "points": [
+          "Academic excellence and supplementary tutoring",
+          "Vocational and life skills",
+          "Christian discipleship woven into learning"
+        ],
+        "icon": "graduation",
+        "image": "/img/photos/classroom.jpg"
+      },
+      {
+        "id": "care",
+        "title": "Nutrition & Care",
+        "descr": "Every child deserves to be safe, fed, and well. We provide shelter, nutritious meals, medical care, and emotional support.",
+        "points": [
+          "Safe and loving shelter",
+          "Nutritious daily meals",
+          "Healthcare and psychological support"
+        ],
+        "icon": "meal",
+        "image": "/img/photos/gathering.jpg"
+      },
+      {
+        "id": "community",
+        "title": "Joy & Community",
+        "descr": "Children flourish where they belong. Through worship, prayer, play, and family life, they grow in the love of Christ.",
+        "points": [
+          "Daily prayer and worship",
+          "Play and belonging",
+          "Spiritual growth and discipleship"
+        ],
+        "icon": "smile",
+        "image": "/img/photos/drawings.jpg"
+      }
+    ],
+    "pillars": {
+      "eyebrow": "Our Approach",
+      "title": "Growing in <em>every</em> way",
+      "lead": "Like Jesus, who “grew in wisdom and stature, and in favor with God and man” (Luke 2:52), we nurture every part of a child's life.",
+      "items": [
+        {
+          "title": "Spiritual",
+          "descr": "Discipleship, prayer, and the Word of God at the heart of daily life.",
+          "icon": "cross"
+        },
+        {
+          "title": "Academic",
+          "descr": "Schooling, tutoring, and a love for learning that opens doors.",
+          "icon": "book"
+        },
+        {
+          "title": "Physical",
+          "descr": "Shelter, nutrition, and healthcare so every child can thrive.",
+          "icon": "heart"
+        },
+        {
+          "title": "Social",
+          "descr": "Family, belonging, and the skills to serve their communities.",
+          "icon": "users"
+        }
+      ]
+    },
+    "places": {
+      "eyebrow": "Where It Happens",
+      "title": "Our <em>home</em> and our <em>classroom</em>",
+      "items": [
+        {
+          "title": "The Home Center",
+          "descr": "Our children live together as a family, sheltered in Luka and Bodi. We are building a permanent Home Center with dormitories, classrooms, recreational spaces, and common areas.",
+          "stat": "33",
+          "statLabel": "children sheltered",
+          "icon": "home"
+        },
+        {
+          "title": "Beeza Kindergarten",
+          "descr": "Our kindergarten gives young learners a strong start — with learning materials, play, and caring teachers who model the love of Christ.",
+          "stat": "22",
+          "statLabel": "children learning",
+          "icon": "book"
+        }
+      ]
+    }
+  },
+  "involved": {
+    "hero": {
+      "title": "Get Involved",
+      "lead": "There are many ways to stand with the children of South Omo. Find the one that fits your heart."
+    },
+    "pray": {
+      "eyebrow": "Pray With Us",
+      "title": "Prayer is our <em>foundation</em>",
+      "lead": "We depend on God for everything. Please join us in bringing these requests before the Lord.",
+      "formTitle": "Share a prayer or encouragement",
+      "formText": "Send our team a prayer, a word of encouragement, or ask us to pray for you."
+    },
+    "give": {
+      "eyebrow": "Give",
+      "title": "Projects you can <em>support</em>",
+      "lead": "Every gift goes toward caring for children and building spaces where they can grow."
+    },
+    "serve": {
+      "eyebrow": "Serve",
+      "title": "Use your gifts for <em>His kingdom</em>",
+      "lead": "We welcome people with a heart for children and a calling to serve — in teaching, healthcare, administration, and outreach.",
+      "points": [
+        "Serve on-site with our children and staff",
+        "Offer professional skills from wherever you are",
+        "Mobilize your church or small group"
+      ],
+      "cta": "See Opportunities"
+    },
+    "partner": {
+      "eyebrow": "Partner",
+      "title": "Walk with us as a <em>church or organization</em>",
+      "lead": "We collaborate with churches, ministries, and organizations that share our vision to reach all people with the gospel. Together we can do far more than alone.",
+      "points": [
+        "Adopt a project such as the Home Center or Kindergarten",
+        "Commit to regular prayer and support",
+        "Share skills, resources, and expertise"
+      ],
+      "cta": "Start a Conversation"
+    },
+    "spread": {
+      "eyebrow": "Spread the Word",
+      "title": "Tell others about the children of South Omo",
+      "lead": "Follow us and share our story with your friends, family, and church."
+    }
+  },
+  "stories": {
+    "hero": {
+      "title": "Moments of Hope",
+      "lead": "Glimpses of everyday life at Omo Beeza — joy, belonging, and transformation in the love of Christ."
+    },
+    "filters": {
+      "all": "All",
+      "family": "Family",
+      "learning": "Learning",
+      "joy": "Joy"
+    },
+    "gallery": [
+      {
+        "image": "/img/photos/group.jpg",
+        "caption": "Our Home Center family together.",
+        "tag": "family",
+        "w": 1280,
+        "h": 960
+      },
+      {
+        "image": "/img/photos/smile.jpg",
+        "caption": "Joy fills the Omo Beeza home every day.",
+        "tag": "joy",
+        "w": 960,
+        "h": 1280
+      },
+      {
+        "image": "/img/photos/classroom.jpg",
+        "caption": "Learning together, growing together.",
+        "tag": "learning",
+        "w": 708,
+        "h": 1029
+      },
+      {
+        "image": "/img/photos/family.jpg",
+        "caption": "Loved, known, and protected.",
+        "tag": "family",
+        "w": 1280,
+        "h": 720
+      },
+      {
+        "image": "/img/photos/drawings.jpg",
+        "caption": "Proud artists sharing their drawings.",
+        "tag": "joy",
+        "w": 1062,
+        "h": 1125
+      },
+      {
+        "image": "/img/photos/gathering.jpg",
+        "caption": "Gathered for a day of learning and care.",
+        "tag": "learning",
+        "w": 983,
+        "h": 1125
+      }
+    ],
+    "storiesEyebrow": "From the Blog",
+    "storiesTitle": "Stories of <em>God's faithfulness</em>"
+  },
+  "blog": {
+    "hero": {
+      "title": "News & Updates",
+      "lead": "Stories, prayer updates, and news from the heart of Omo Beeza."
+    },
+    "featured": "Latest Story",
+    "more": "More Stories",
+    "readMore": "Read more",
+    "readStory": "Read the Story",
+    "empty": "No posts yet. Please check back soon.",
+    "by": "by",
+    "fallbackNotice": "This post is not yet available in your language; showing the English version.",
+    "backToBlog": "Back to Blog",
+    "related": "Keep reading",
+    "shareTitle": "Share this story"
+  },
+  "careers": {
+    "hero": {
+      "title": "Join the Mission",
+      "lead": "Serving at Omo Beeza is more than a job — it is a calling to love and raise vulnerable children in the name of Christ."
+    },
+    "whyEyebrow": "Why Serve With Us",
+    "whyTitle": "A calling, not just a <em>career</em>",
+    "why": [
+      {
+        "title": "Meaningful Mission",
+        "descr": "Serve vulnerable children who need love and safety.",
+        "icon": "heart"
+      },
+      {
+        "title": "Caring Community",
+        "descr": "Join a collaborative, faith-based team.",
+        "icon": "users"
+      },
+      {
+        "title": "Lasting Impact",
+        "descr": "Help transform lives across generations.",
+        "icon": "star"
+      },
+      {
+        "title": "Personal Growth",
+        "descr": "Grow spiritually and professionally.",
+        "icon": "trending"
+      },
+      {
+        "title": "Faith in Action",
+        "descr": "Serve God's most vulnerable children.",
+        "icon": "handHeart"
+      },
+      {
+        "title": "Diverse Opportunities",
+        "descr": "Roles in teaching, healthcare, administration, and outreach.",
+        "icon": "briefcase"
+      }
+    ],
+    "openTitle": "Open Positions",
+    "openEmptyTitle": "No open positions right now",
+    "openEmpty": "There are no open positions at this time. We invite you to check back later or submit a general-interest application below.",
+    "formTitle": "General Interest Application",
+    "formText": "Tell us about yourself and how you'd like to serve. We'll keep your details on file and reach out when a fitting role opens.",
+    "form": {
+      "name": "Full name",
+      "email": "Email address",
+      "phone": "Phone number",
+      "area": "Area of interest",
+      "areaPlaceholder": "Select an area",
+      "areas": {
+        "teaching": "Teaching",
+        "healthcare": "Healthcare",
+        "administration": "Administration",
+        "outreach": "Outreach",
+        "volunteer": "Volunteering"
+      },
+      "message": "Tell us how you'd like to serve",
+      "submit": "Submit Application"
+    }
+  },
+  "donations": {
+    "hero": {
+      "title": "Give to Rescue and Raise a Child",
+      "lead": "Your gift provides food, shelter, education, and Christ-centered care for children rescued from the practice of Mingi."
+    },
+    "eyebrow": "Your Gift Matters",
+    "title": "Every gift makes a <em>lasting difference</em>",
+    "lead": "Whether one-time or monthly, your generosity meets real, daily needs — and points children to the love of Christ.",
+    "cardTitle": "Make a Donation",
+    "secure": "Safe & private",
+    "trust": [
+      {
+        "title": "Private",
+        "descr": "We never store your payment details on this website.",
+        "icon": "shield"
+      },
+      {
+        "title": "Accountable",
+        "descr": "Transparent stewardship of every gift.",
+        "icon": "check"
+      },
+      {
+        "title": "Flexible",
+        "descr": "Give once or monthly — change anytime.",
+        "icon": "calendar"
+      }
+    ],
+    "tiersTitle": "What your gift can do",
+    "frequencyLegend": "Choose a frequency",
+    "frequency": {
+      "once": "One-time",
+      "monthly": "Monthly"
+    },
+    "amountLegend": "Choose an amount (USD)",
+    "impact": {
+      "25": "Feeds a child for one month",
+      "50": "Covers school supplies & uniforms",
+      "100": "Provides medical care for a child",
+      "250": "Supports a child's full term",
+      "500": "Helps build our home center"
+    },
+    "impactCustom": "Every gift, of any size, helps care for a child.",
+    "customLabel": "Other amount",
+    "customShort": "Other",
+    "name": "Your name",
+    "email": "Email address",
+    "dedication": "Dedicate your gift or leave a note",
+    "note": "Online card payment is coming soon. When you submit, your email app opens with your pledge so our team can follow up with the best way to complete your gift.",
+    "submit": "Give {amount} {frequency}",
+    "submitOnce": "now",
+    "submitMonthly": "monthly",
+    "successTitle": "Thank you for your generosity!",
+    "successText": "Your pledge of {amount} ({frequency}) is ready in your email app. If it didn't open, email us at",
+    "successAgain": "Make another gift",
+    "bankTitle": "Give by Bank Transfer",
+    "bankIntro": "Donors in Ethiopia can give directly to our bank account:",
+    "accountNameLabel": "Account Name",
+    "accountNumberLabel": "Account Number",
+    "bankNameLabel": "Bank",
+    "faqEyebrow": "Questions",
+    "faqTitle": "Giving <em>FAQ</em>",
+    "faqAll": "See all FAQs",
+    "successSaved": "We've received your pledge of {amount} ({frequency}). Our team will contact you soon with the best way to complete your gift."
+  },
+  "contact": {
+    "hero": {
+      "title": "Contact Us",
+      "lead": "We'd love to hear from you — whether you have a question, want to visit, or would like to partner with us."
+    },
+    "phoneTitle": "Phone",
+    "emailTitle": "Email",
+    "addressTitle": "Office",
+    "address": "Jinka, Ethiopia",
+    "hours": "We reply as soon as we can.",
+    "namedTitle": "Talk to our team",
+    "namedIntro": "Reach out directly to a member of our team for a quick response.",
+    "socialTitle": "Follow our journey",
+    "formTitle": "Send us a message",
+    "formText": "Fill in the form and your email app will open with your message ready to send.",
+    "mapTitle": "Map of Jinka, Ethiopia",
+    "form": {
+      "name": "Full name",
+      "email": "Email address",
+      "subject": "Subject",
+      "subjectPlaceholder": "Choose a topic",
+      "subjects": {
+        "general": "General question",
+        "giving": "Giving & donations",
+        "partner": "Church or organization partnership",
+        "visit": "Visiting the ministry",
+        "media": "Media & stories"
+      },
+      "message": "Your message",
+      "submit": "Send Message"
+    }
+  },
+  "forms": {
+    "required": "This field is required.",
+    "invalidEmail": "Please enter a valid email address.",
+    "invalidAmount": "Please enter an amount of at least 1.",
+    "successTitle": "Thank you!",
+    "successText": "Your email app should now be open with your message ready to send. If it didn't open, please write to us at",
+    "sendAnother": "Send another message",
+    "prayer": {
+      "name": "Your name",
+      "email": "Email address",
+      "type": "This is a…",
+      "types": {
+        "request": "Prayer request",
+        "encouragement": "Word of encouragement",
+        "commitment": "Commitment to pray"
+      },
+      "message": "Your message",
+      "submit": "Send to Our Team"
+    },
+    "sentText": "Your message has reached our team. We will get back to you soon."
+  },
+  "newsletter": {
+    "title": "Prayer & news updates",
+    "text": "Receive stories and prayer requests from Omo Beeza.",
+    "placeholder": "Your email address",
+    "submit": "Subscribe",
+    "success": "Thank you! Your email app will open to confirm.",
+    "saved": "Thank you — you're subscribed to our updates!"
+  },
+  "faq": {
+    "hero": {
+      "title": "Frequently Asked Questions",
+      "lead": "Answers to common questions about our ministry, giving, and getting involved."
+    },
+    "groups": [
+      {
+        "id": "ministry",
+        "title": "About the Ministry",
+        "icon": "info",
+        "items": [
+          {
+            "q": "What is Omo Beeza Ministry?",
+            "a": "Omo Beeza Ministry is a locally established, Christ-centered ministry dedicated to the holistic development of vulnerable children and youth in South Omo, Ethiopia. The ministry began on September 28, 2022, in Tsemay (Luqa) with sixteen children from scattered pastoralist settlements."
+          },
+          {
+            "q": "What does “Omo Beeza” mean?",
+            "a": "“Omo” refers to the local people, while “Beza” means “light” in the Tsemay language — our prayer that the gospel will bring light to those living in darkness."
+          },
+          {
+            "q": "Where do you work?",
+            "a": "Our work is centered in Luqa, about 63 kilometers from Jinka in the Tsemay area of South Omo. Our children are sheltered in Luka and Bodi, and our office is in Jinka."
+          },
+          {
+            "q": "What is Mingi?",
+            "a": "Mingi is a traditional belief in parts of South Omo under which certain children are considered cursed. Such children have historically been abandoned or put at risk. We believe every child is a gift from God, and we provide a safe, loving home for children in need."
+          },
+          {
+            "q": "What do you provide for the children?",
+            "a": "We care for the whole child: shelter, nutritious meals, healthcare and emotional support, schooling and vocational skills, and Christian discipleship within a loving family."
+          }
+        ]
+      },
+      {
+        "id": "giving",
+        "title": "Giving",
+        "icon": "gift",
+        "items": [
+          {
+            "q": "How can I give?",
+            "a": "Donors in Ethiopia can give directly by bank transfer to our Berhan Bank account (Omo Beeza Ministry, 1601160116595). You can also use the donation form on our Donate page — your email app opens with your pledge and our team follows up with the best way to complete your gift."
+          },
+          {
+            "q": "Can I give from outside Ethiopia?",
+            "a": "Yes. Online card payment is coming soon. In the meantime, please submit the donation form or email us at info@omobeezaministry.com and we will help you find the best way to give."
+          },
+          {
+            "q": "Can I give monthly?",
+            "a": "Yes — choose “Monthly” on the donation form. Regular gifts help us plan ahead and provide consistent care for the children."
+          },
+          {
+            "q": "How will my gift be used?",
+            "a": "Gifts provide food, shelter, education, and medical care for the children, and help build our Home Center and equip Beeza Kindergarten. We are committed to transparent, accountable stewardship of every gift."
+          }
+        ]
+      },
+      {
+        "id": "involved",
+        "title": "Getting Involved",
+        "icon": "handHeart",
+        "items": [
+          {
+            "q": "How can I pray for the ministry?",
+            "a": "Our current prayer requests are listed on the Get Involved page. You can also subscribe to updates at the bottom of any page to receive news and prayer requests."
+          },
+          {
+            "q": "Can I volunteer or work with you?",
+            "a": "We welcome people with a heart for children in teaching, healthcare, administration, and outreach. Visit our Careers page to see openings or submit a general-interest application."
+          },
+          {
+            "q": "Can my church or organization partner with you?",
+            "a": "Yes! We collaborate with churches, ministries, and organizations that share our vision. Please contact us to start a conversation."
+          },
+          {
+            "q": "Can I visit?",
+            "a": "Visits are arranged in advance with our team so that the children's routines and wellbeing are protected. Please contact us before planning a trip."
+          }
+        ]
+      }
+    ],
+    "help": {
+      "title": "Still have questions?",
+      "text": "Our team is happy to help.",
+      "cta": "Contact Us"
+    }
+  },
+  "legal": {
+    "updatedLabel": "Last updated",
+    "updated": "October 31, 2026",
+    "privacy": {
+      "title": "Privacy Policy",
+      "intro": "Omo Beeza Ministry respects your privacy. This policy explains what information we receive through this website and how we use it.",
+      "sections": [
+        {
+          "title": "Information you share with us",
+          "body": [
+            "Our contact, prayer, application, newsletter, and donation forms do not store your information on this website. When you submit a form, your own email app opens with a pre-filled message, and the information reaches us only if you choose to send that email.",
+            "When you email or call us, we receive the details you choose to share, such as your name, email address, phone number, and message."
+          ]
+        },
+        {
+          "title": "How we use your information",
+          "body": [
+            "We use your information only to respond to you, to process and acknowledge gifts, to send updates you have asked for, and to consider applications to serve with us. We do not sell or rent your personal information."
+          ]
+        },
+        {
+          "title": "Cookies and third-party services",
+          "body": [
+            "This website does not use advertising or analytics cookies. The map on our Contact page is provided by Google Maps, and links to social networks lead to services with their own privacy policies."
+          ]
+        },
+        {
+          "title": "Children's privacy",
+          "body": [
+            "Protecting the children in our care is a priority. We share images and stories thoughtfully and avoid publishing details that could identify a child's location or put them at risk."
+          ]
+        },
+        {
+          "title": "Your choices",
+          "body": [
+            "You may ask us at any time to update or delete the information you have shared with us, or to stop sending you updates, by emailing info@omobeezaministry.com."
+          ]
+        }
+      ]
+    },
+    "terms": {
+      "title": "Terms of Use",
+      "intro": "By using the Omo Beeza Ministry website, you agree to these terms.",
+      "sections": [
+        {
+          "title": "Use of this website",
+          "body": [
+            "This website shares information about our ministry and ways to support it. Please use it lawfully and respectfully."
+          ]
+        },
+        {
+          "title": "Content and images",
+          "body": [
+            "Text, photographs, and logos on this website belong to Omo Beeza Ministry unless stated otherwise. Out of care for the children we serve, please do not copy or republish photographs without our written permission."
+          ]
+        },
+        {
+          "title": "Donations",
+          "body": [
+            "Gifts are voluntary and support the ministry's work with children in South Omo. Our team will confirm the details of your gift with you directly. If you have any question about a gift, please contact us."
+          ]
+        },
+        {
+          "title": "External links",
+          "body": [
+            "Links to other websites are provided for convenience. We are not responsible for the content or practices of those websites."
+          ]
+        },
+        {
+          "title": "Changes and contact",
+          "body": [
+            "We may update these terms from time to time. Questions can be sent to info@omobeezaministry.com."
+          ]
+        }
+      ]
+    }
+  },
+  "footer": {
+    "motto": "A Transformed Generation for Holistic Change of Community",
+    "ministry": "Ministry",
+    "involve": "Get Involved",
+    "contact": "Contact",
+    "rights": "Omo Beeza Ministry. All rights reserved.",
+    "made": "Made with love for the children of South Omo."
+  },
+  "notFound": {
+    "title": "This page couldn't be found",
+    "descr": "Sorry about that — the page you're looking for may have moved or no longer exists.",
+    "back": "Back to Home",
+    "contact": "Contact Us"
+  },
+  "gallery": {
+    "hero": {
+      "title": "Gallery",
+      "lead": "Faces, places, and moments of God's faithfulness across our ministry."
+    },
+    "albumsEyebrow": "Photo Albums",
+    "albumsTitle": "Moments worth <em>remembering</em>",
+    "photos": "{count, plural, =0 {Photos coming soon} one {# photo} other {# photos}}",
+    "children": "{count} children",
+    "open": "Open album",
+    "soonTitle": "Photos coming soon",
+    "soonText": "We're gathering the photos from this day. Please check back soon!",
+    "allAlbums": "All albums",
+    "otherAlbums": "More albums",
+    "strip": "Glimpses from the field",
+    "luka": {
+      "title": "Children of the Luka Site",
+      "tag": "Pray for a child",
+      "descr": "Meet the children of our Luka site. Every card carries a prayer — turn a card over and pray for a child by name.",
+      "eyebrow": "Pray for a Child",
+      "wallTitle": "Every face has a <em>name</em>",
+      "wallLead": "Tap a card to turn it over and read the prayer. Then commit to pray for that child — our team would love to know you're standing with them.",
+      "countLabel": "children to pray for",
+      "prayedCount": "You're praying for {count}",
+      "random": "Pray for a child at random",
+      "flip": "Turn {name}'s card over to read the prayer",
+      "photoAlt": "Portrait of {name}",
+      "tapToPray": "Tap to pray",
+      "prayFor": "Pray for {name}",
+      "prayer": "Lord, plant an unshakable faith in their heart. May they become a future leader who reaches their people with the light of the gospel, makes disciples, and transforms South Omo. We ask the same for all the children of South Omo living in brokenness. Amen!",
+      "commit": "I'll pray",
+      "prayedFor": "Praying",
+      "viewCard": "View card",
+      "back": "Back to photo",
+      "cardOf": "Prayer card — {name}",
+      "note": "Each prayer card was made by our team. The child's name and age are written on the card in Amharic.",
+      "homeEyebrow": "Pray for a Child",
+      "homeTitle": "Pray for the children of <em>Luka</em>",
+      "homeLead": "{count} faces, {count} names, {count} futures. Meet the children of our Luka site and lift one of them up in prayer today.",
+      "homeCta": "Meet the Children",
+      "praying": "{count, plural, =0 {Be the first to pray} one {# person is praying} other {# people are praying}}",
+      "thanks": "Thank you for praying for {name}!"
+    },
+    "carnival": {
+      "title": "Children's Carnival Day",
+      "tag": "A day of joy",
+      "descr": "Games, music, laughter, and celebration — a day set apart for the children to play and rejoice together."
+    },
+    "vision": {
+      "title": "Vision Sharing Day at ACLA Church",
+      "tag": "Sharing the vision",
+      "descr": "Our team shared the vision of Omo Beeza with the church family at ACLA, inviting them to pray, give, and partner with us."
+    },
+    "stories": {
+      "title": "Life at Omo Beeza",
+      "tag": "Everyday moments",
+      "descr": "Joy, learning, and belonging — glimpses of everyday life with our children."
+    }
+  },
+  "videos": {
+    "hero": {
+      "title": "Watch",
+      "lead": "Films and moments from South Omo — the children, the land, and the people who serve them."
+    },
+    "film": {
+      "eyebrow": "Watch Our Story",
+      "title": "See the story of <em>Omo Beeza</em>",
+      "lead": "A short documentary about the children of South Omo and the hope God is writing into their lives.",
+      "play": "Play the film",
+      "seal": "WATCH OUR STORY • OMO BEEZA • ",
+      "more": "More videos"
+    },
+    "reels": {
+      "eyebrow": "Stories from the Field",
+      "title": "Moments in <em>motion</em>",
+      "lead": "Short clips from mission trips, playground days, and life with our children. Tap a clip to watch it with sound.",
+      "watch": "Watch",
+      "prev": "Previous videos",
+      "next": "More videos"
+    },
+    "logo": {
+      "eyebrow": "Our Mark",
+      "title": "A circle of <em>hope</em>",
+      "lead": "Our logo tells our story in one simple picture.",
+      "replay": "Replay",
+      "points": [
+        {
+          "icon": "sun",
+          "title": "The sun",
+          "descr": "Light rising over South Omo — our prayer that the gospel brings light to those living in darkness."
+        },
+        {
+          "icon": "cross",
+          "title": "The cross",
+          "descr": "Christ standing at the center of everything we do."
+        },
+        {
+          "icon": "waves",
+          "title": "The waters",
+          "descr": "The Omo and its people — the communities we are called to love and serve."
+        }
+      ]
+    },
+    "items": {
+      "documentary": {
+        "title": "Omo Beeza — Documentary",
+        "tag": "Documentary · English"
+      },
+      "logo": {
+        "title": "The Omo Beeza Mark",
+        "tag": "Brand film"
+      },
+      "mission": {
+        "title": "Mission Trip to South Omo",
+        "tag": "Mission trip"
+      },
+      "playground": {
+        "title": "A Playground for Our Children",
+        "tag": "Building together"
+      },
+      "short1": {
+        "title": "Caring Hands",
+        "tag": "Short film · Amharic"
+      },
+      "short2": {
+        "title": "A Heart for South Omo",
+        "tag": "Short film · Amharic"
+      }
+    },
+    "close": "Close video",
+    "card": {
+      "tag": "Watch",
+      "title": "Films & Videos",
+      "descr": "Our documentary, a mission trip, the new playground, and short films from the field.",
+      "meta": "{count} videos"
+    }
+  },
+  "chat": {
+    "launcher": "Ask about Omo Beeza",
+    "nudge": "Questions about Omo Beeza? Ask me!",
+    "title": "Omo Beeza Assistant",
+    "subtitle": "Ask your questions about Omo Beeza Ministry",
+    "welcome": "Selam! I can answer your questions about Omo Beeza Ministry — our story, the children, our programs, and how you can help.",
+    "placeholder": "Ask a question…",
+    "send": "Send",
+    "stop": "Stop",
+    "reset": "New conversation",
+    "close": "Close chat",
+    "suggestionsLabel": "Try asking",
+    "suggestions": [
+      "What is Omo Beeza Ministry?",
+      "Where do you work?",
+      "How can I donate?",
+      "How can I pray for the children?"
+    ],
+    "sources": "Source",
+    "error": "Something went wrong. Please try again.",
+    "rateLimited": "You are sending messages quickly. Please wait a moment and try again.",
+    "notConfigured": "The assistant isn't available right now. Please contact us at",
+    "retry": "Try again",
+    "disclaimer": "Answers are generated by AI from our documents and may be imperfect. For anything important, please contact our team.",
+    "typing": "The assistant is typing",
+    "you": "You",
+    "bot": "Assistant"
+  }
+}

@@ -1,0 +1,143 @@
+// Database tables. Every statement is idempotent, so the list is simply run
+// on the first query of each server process (see src/lib/db/index.ts).
+// To change a table later, append an `alter table … add column if not exists …`.
+
+export const SCHEMA: string[] = [
+  `create table if not exists users (
+    id serial primary key,
+    email text unique not null,
+    name text not null,
+    password_hash text not null,
+    created_at timestamptz not null default now(),
+    last_login timestamptz
+  )`,
+  `create table if not exists sessions (
+    id text primary key,
+    user_id int not null references users(id) on delete cascade,
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+  )`,
+  // Site text: one row per locale + message namespace (e.g. en/home), layered
+  // over messages/<locale>.json.
+  `create table if not exists content (
+    locale text not null,
+    ns text not null,
+    data jsonb not null,
+    updated_at timestamptz not null default now(),
+    updated_by text,
+    primary key (locale, ns)
+  )`,
+  `create table if not exists settings (
+    key text primary key,
+    data jsonb not null,
+    updated_at timestamptz not null default now()
+  )`,
+  `create table if not exists posts (
+    id serial primary key,
+    slug text unique not null,
+    date date not null default current_date,
+    cover text not null default '',
+    author text not null default 'Omo Beeza Ministry',
+    title_en text not null,
+    title_am text not null default '',
+    excerpt_en text not null default '',
+    excerpt_am text not null default '',
+    body_en text not null default '',
+    body_am text not null default '',
+    published boolean not null default true,
+    updated_at timestamptz not null default now()
+  )`,
+  `create table if not exists children (
+    id serial primary key,
+    slug text unique not null,
+    name text not null,
+    portrait text not null,
+    portrait_w int not null default 600,
+    portrait_h int not null default 900,
+    card text,
+    card_w int,
+    card_h int,
+    sort int not null default 0,
+    active boolean not null default true,
+    prayers int not null default 0
+  )`,
+  `create table if not exists prayer_log (
+    id serial primary key,
+    child_slug text not null,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists albums (
+    id text primary key,
+    title_en text not null,
+    title_am text not null default '',
+    tag_en text not null default '',
+    tag_am text not null default '',
+    descr_en text not null default '',
+    descr_am text not null default '',
+    icon text not null default 'sparkles',
+    sort int not null default 0,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists photos (
+    id serial primary key,
+    album_id text not null references albums(id) on delete cascade,
+    src text not null,
+    w int not null,
+    h int not null,
+    caption text not null default '',
+    sort int not null default 0
+  )`,
+  `create table if not exists videos (
+    id text primary key,
+    kind text not null default 'reel',
+    src text not null,
+    preview text not null default '',
+    poster text not null default '',
+    w int not null,
+    h int not null,
+    duration int not null default 0,
+    title_en text not null default '',
+    title_am text not null default '',
+    tag_en text not null default '',
+    tag_am text not null default '',
+    sort int not null default 0,
+    active boolean not null default true
+  )`,
+  `create table if not exists knowledge_docs (
+    id serial primary key,
+    title text not null,
+    file_url text,
+    chars int not null default 0,
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists knowledge_chunks (
+    id serial primary key,
+    doc_id int not null references knowledge_docs(id) on delete cascade,
+    part int not null,
+    text text not null
+  )`,
+  `create table if not exists submissions (
+    id serial primary key,
+    type text not null,
+    name text not null default '',
+    email text not null default '',
+    data jsonb not null,
+    status text not null default 'new',
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists chat_logs (
+    id serial primary key,
+    question text not null,
+    locale text not null default 'en',
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists analytics (
+    day date not null,
+    path text not null,
+    event text not null,
+    count int not null default 0,
+    primary key (day, path, event)
+  )`,
+  `create index if not exists submissions_created on submissions (created_at desc)`,
+  `create index if not exists chat_logs_created on chat_logs (created_at desc)`,
+];
