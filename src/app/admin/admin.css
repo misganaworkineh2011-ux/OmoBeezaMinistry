@@ -1251,3 +1251,80 @@
     opacity: 1;
   }
 }
+
+/* ---------------------------------------------------------------- Conversations */
+.filter-search {
+  margin-left: auto;
+}
+
+.filter-search input {
+  min-width: 220px;
+  padding: 6px 12px;
+  border: 1px solid var(--a-line);
+  border-radius: 999px;
+  background: var(--a-white);
+  font-size: 0.88rem;
+}
+
+.convo {
+  display: grid;
+  gap: 12px;
+}
+
+.convo__msg {
+  display: grid;
+  gap: 4px;
+  max-width: min(680px, 92%);
+}
+
+.convo__msg--user {
+  justify-self: end;
+}
+
+.convo__who {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--a-muted);
+}
+
+.convo__msg--user .convo__who {
+  justify-content: flex-end;
+}
+
+.convo__bubble {
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--a-bg);
+  color: var(--a-ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.convo__msg--user .convo__bubble {
+  border-bottom-right-radius: 4px;
+  background: var(--a-blue);
+  color: #fff;
+}
+
+.convo__msg--assistant .convo__bubble {
+  border-bottom-left-radius: 4px;
+}
+
+.convo__teach {
+  margin-top: 6px;
+  justify-self: start;
+}
+
+div.convo__teach {
+  justify-self: stretch;
+  padding: 12px;
+  border: 1px dashed var(--a-gold);
+  border-radius: 10px;
+  background: var(--a-gold-100);
+}

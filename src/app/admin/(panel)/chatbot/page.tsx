@@ -1,3 +1,4 @@
+import Link from "next/link";
 import knowledge from "@/data/knowledge.json";
 import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
@@ -27,6 +28,8 @@ export default async function ChatbotPage() {
           <h1>Chatbot</h1>
           <p>
             The assistant answers only from these documents. {asked} question{asked === 1 ? "" : "s"} in the last 30 days.
+{" "}
+            <Link href="/admin/conversations">See full conversations and the questions it couldn’t answer →</Link>
             {process.env.GEMINI_API_KEY ? "" : " ⚠ GEMINI_API_KEY is not set, so the assistant is offline."}
           </p>
         </div>

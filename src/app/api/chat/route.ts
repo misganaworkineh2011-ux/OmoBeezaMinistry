@@ -2,6 +2,7 @@ import { getKnowledgeIndex } from "@/lib/chat/retrieval";
 import { getSite } from "@/lib/data/site";
 import { hasDb, query } from "@/lib/db";
 import { systemInstruction } from "@/lib/chat/prompt";
+import { conversationId, logExchange, MARKER_HOLDBACK, stripMarkers, type AnswerFlag } from "@/lib/chat/log";
 
 // POST /api/chat — the website assistant.
 //
@@ -41,7 +42,7 @@ function rateLimited(ip: string): boolean {
 }
 
 // ---- Answer cache for first questions (many visitors ask the same things) ----
-const cache = new Map<string, { text: string; at: number }>();
+const cache = new Map<string, { text: string; flag: AnswerFlag; at: number }>();
 let cacheIndex: unknown = null;
 function cacheKey(locale: string, question: string): string {
   return `${locale}|${question.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim()}`;
@@ -54,9 +55,9 @@ function json(status: number, body: Record<string, unknown>): Response {
   });
 }
 
-function parseBody(body: unknown): { messages: ChatMessage[]; locale: string } | null {
+function parseBody(body: unknown): { messages: ChatMessage[]; locale: string; id: string; page: string } | null {
   if (typeof body !== "object" || body === null) return null;
-  const { messages, locale } = body as { messages?: unknown; locale?: unknown };
+  const { messages, locale, conversationId: id, page } = body as { messages?: unknown; locale?: unknown; conversationId?: unknown; page?: unknown };
   if (!Array.isArray(messages) || messages.length === 0) return null;
   const clean: ChatMessage[] = [];
   for (const m of messages.slice(-MAX_TURNS)) {
@@ -69,7 +70,12 @@ function parseBody(body: unknown): { messages: ChatMessage[]; locale: string } |
   // Gemini expects the conversation to start with the user and end with the question.
   while (clean[0]?.role === "assistant") clean.shift();
   if (clean.length === 0 || clean[clean.length - 1].role !== "user") return null;
-  return { messages: clean, locale: locale === "am" ? "am" : "en" };
+  return {
+    messages: clean,
+    locale: locale === "am" ? "am" : "en",
+    id: conversationId(id),
+    page: typeof page === "string" && page.startsWith("/") ? page : "",
+  };
 }
 
 function textStream(text: string, headers: Headers): Response {
@@ -90,7 +96,7 @@ export async function POST(request: Request): Promise<Response> {
     parsed = null;
   }
   if (!parsed) return json(400, { error: "bad_request" });
-  const { messages, locale } = parsed;
+  const { messages, locale, id, page } = parsed;
 
   const question = messages[messages.length - 1].content;
   // Include the previous question so follow-ups ("and how do I give?") retrieve well.
@@ -117,7 +123,10 @@ export async function POST(request: Request): Promise<Response> {
 
   const key = messages.length === 1 && /[\p{L}\p{N}]/u.test(question) ? cacheKey(locale, question) : null;
   const hit = key ? cache.get(key) : undefined;
-  if (hit && Date.now() - hit.at < CACHE_TTL) return textStream(hit.text, headers);
+  if (hit && Date.now() - hit.at < CACHE_TTL) {
+    void logExchange({ id, locale, page, question, answer: hit.text, flag: hit.flag });
+    return textStream(hit.text, headers);
+  }
 
   const passages = index.retrieve(searchText);
   const site = await getSite();
@@ -155,6 +164,7 @@ export async function POST(request: Request): Promise<Response> {
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let full = "";
+  let sent = 0; // characters of `full` already sent to the visitor
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
@@ -180,22 +190,32 @@ export async function POST(request: Request): Promise<Response> {
                 .join("");
               if (text) {
                 full += text;
-                controller.enqueue(encoder.encode(text));
+                // Hold back the tail: it may be the start of a review marker.
+                const safe = full.length - MARKER_HOLDBACK;
+                if (safe > sent && !full.slice(sent, safe).includes("[[")) {
+                  controller.enqueue(encoder.encode(full.slice(sent, safe)));
+                  sent = safe;
+                }
               }
             } catch {
               // Ignore keep-alives / partial lines.
             }
           }
         }
-        if (!full.trim()) {
+        const { text: answer, flag } = stripMarkers(full);
+        if (answer.length > sent) controller.enqueue(encoder.encode(answer.slice(sent)));
+        if (!answer.trim()) {
           const fallback =
             locale === "am"
               ? "ይቅርታ፣ አሁን መልስ መስጠት አልቻልኩም። እባክዎ እንደገና ይሞክሩ።"
               : "Sorry, I couldn't answer that just now. Please try again.";
           controller.enqueue(encoder.encode(fallback));
-        } else if (key) {
-          if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
-          cache.set(key, { text: full, at: Date.now() });
+        } else {
+          if (key) {
+            if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
+            cache.set(key, { text: answer, flag, at: Date.now() });
+          }
+          await logExchange({ id, locale, page, question, answer, flag });
         }
         controller.close();
       } catch (err) {

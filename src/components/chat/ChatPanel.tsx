@@ -16,7 +16,22 @@ type Status = "idle" | "streaming";
 type ErrorKind = "error" | "rateLimited" | "notConfigured" | null;
 
 const STORAGE_KEY = "ob-chat";
+const ID_KEY = "ob-chat-id";
 const MAX_LEN = 1000;
+
+/** One id per conversation (per tab), so the dashboard can show whole conversations. */
+function conversationId(): string {
+  try {
+    let id = sessionStorage.getItem(ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      sessionStorage.setItem(ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return "";
+  }
+}
 
 function load(): Message[] {
   try {
@@ -92,6 +107,8 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             locale,
+            conversationId: conversationId(),
+            page: window.location.pathname,
             messages: next.map(({ role, content }) => ({ role, content })),
           }),
           signal: controller.signal,
@@ -158,6 +175,11 @@ export default function ChatPanel({ onClose }: { onClose: () => void }) {
     setMessages([]);
     setError(null);
     save([]);
+    try {
+      sessionStorage.removeItem(ID_KEY);
+    } catch {
+      // Storage unavailable: a new id is made per request instead.
+    }
     inputRef.current?.focus();
   };
 

@@ -144,6 +144,29 @@ export const SCHEMA: string[] = [
     url text not null,
     created_at timestamptz not null default now()
   )`,
+  // Chatbot conversations, for reviewing what visitors ask and spotting
+  // answers the assistant couldn't give (flag = 'no_info' / 'off_topic').
+  `create table if not exists chat_conversations (
+    id text primary key,
+    locale text not null default 'en',
+    page text not null default '',
+    started_at timestamptz not null default now(),
+    last_at timestamptz not null default now(),
+    turns int not null default 0,
+    unanswered int not null default 0,
+    reviewed boolean not null default false
+  )`,
+  `create table if not exists chat_messages (
+    id serial primary key,
+    conversation_id text not null references chat_conversations(id) on delete cascade,
+    role text not null,
+    content text not null,
+    flag text not null default '',
+    created_at timestamptz not null default now()
+  )`,
+  `alter table chat_messages add column if not exists resolved boolean not null default false`,
+  `create index if not exists chat_messages_conv on chat_messages (conversation_id, id)`,
+  `create index if not exists chat_conversations_last on chat_conversations (last_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,
   `create index if not exists chat_logs_created on chat_logs (created_at desc)`,
 ];
