@@ -53,10 +53,10 @@
 }
 
 [lang="am"] {
-  --font-display: var(--font-ethiopic), serif;
-  --font-sans: var(--font-ethiopic), sans-serif;
-  --font-ui: var(--font-ethiopic), sans-serif;
-  --font-script: var(--font-ethiopic), sans-serif;
+  --font-display: var(--font-ethiopic), var(--font-fraunces), serif;
+  --font-sans: var(--font-ethiopic), var(--font-source-sans), sans-serif;
+  --font-ui: var(--font-ethiopic), var(--font-montserrat), sans-serif;
+  --font-script: var(--font-ethiopic), var(--font-caveat), sans-serif;
 }
 
 /* ------------------------------------------------------------------ Base */
