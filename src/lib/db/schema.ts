@@ -138,6 +138,12 @@ export const SCHEMA: string[] = [
     count int not null default 0,
     primary key (day, path, event)
   )`,
+  // Bundled media files copied to Blob storage: original path → Blob URL.
+  `create table if not exists media_map (
+    path text primary key,
+    url text not null,
+    created_at timestamptz not null default now()
+  )`,
   `create index if not exists submissions_created on submissions (created_at desc)`,
   `create index if not exists chat_logs_created on chat_logs (created_at desc)`,
 ];

@@ -6,8 +6,12 @@ import { dailySeries, total } from "@/lib/admin/stats";
 import Icon from "@/components/Icon";
 import BarChart from "@/components/admin/BarChart";
 import ImportButton from "@/components/admin/ImportButton";
+import MediaMover from "@/components/admin/MediaMover";
+import { mediaStatus } from "@/app/admin/actions/media";
 
 export const metadata = { title: "Overview" };
+// The media move (a server action on this page) runs in ~35 s batches.
+export const maxDuration = 60;
 
 const TYPE_LABEL: Record<string, string> = {
   contact: "Contact",
@@ -36,6 +40,7 @@ export default async function Overview() {
 
   const needsImport = !(await queryOne("select 1 from settings where key = 'knowledge_managed'")) || posts === 0;
   const mode = uploadMode();
+  const toMove = !needsImport && (mode === "blob" || mode === "presigned") ? await mediaStatus() : 0;
 
   const cards = [
     { href: "/admin/inbox", icon: "mail", value: unread, label: "Unread messages" },
@@ -69,7 +74,22 @@ export default async function Overview() {
         </section>
       ) : null}
 
-      {mode !== "blob" ? (
+      {toMove > 0 ? (
+        <section className="panel" style={{ marginBottom: 18 }}>
+          <div className="panel__head">
+            <div>
+              <h2>Move media to cloud storage</h2>
+              <p>
+                The imported photos and videos are still served from the website&apos;s built-in files. Copy them to Vercel
+                Blob so all media is managed in one place. Large videos take a little while; you can leave this page open.
+              </p>
+            </div>
+          </div>
+          <MediaMover remaining={toMove} />
+        </section>
+      ) : null}
+
+      {mode === "local" || mode === "none" ? (
         <p className={`notice ${mode === "none" ? "notice--error" : "notice--warn"}`} style={{ marginBottom: 18 }}>
           <Icon name="info" />
           <span>
