@@ -51,7 +51,7 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
           <h1>{donor ? donor.name : "Add a donor"}</h1>
           <p>
             {donor
-              ? `${displayPhone(donor.phone)} · registered ${new Date(donor.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} via ${donor.source === "admin" ? "the dashboard" : "the website"}`
+              ? `${displayPhone(donor.phone)} · registered ${new Date(donor.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} via ${({ admin: "the dashboard", app: "the app", telegram: "the Telegram bot" } as Record<string, string>)[donor.source] ?? "the website"}`
               : "For people who committed in person or by phone. They will get the weekly reminder too."}
           </p>
         </div>

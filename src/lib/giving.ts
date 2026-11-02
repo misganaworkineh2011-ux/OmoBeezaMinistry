@@ -18,6 +18,8 @@ export interface GivingSettings {
   telegramEnabled: boolean;
   /** For donors reached on Telegram, don't also send the SMS (saves SMS costs). */
   telegramReplacesSms: boolean;
+  /** Reach donors who haven't connected the bot from the ministry's Telegram account (by @username or phone). */
+  telegramUserEnabled: boolean;
   reminderEn: string;
   reminderAm: string;
   welcomeEn: string;
@@ -34,6 +36,7 @@ export const DEFAULT_GIVING: GivingSettings = {
   skipIfPaid: true,
   telegramEnabled: true,
   telegramReplacesSms: true,
+  telegramUserEnabled: true,
   reminderEn: "Hi {name}, your weekly {amount} birr gift for the children of Omo Beeza: {link} Stop reminders: {stop}",
   reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች የዚህ ሳምንት የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
   welcomeEn: "Thank you {name}! You now give {amount} birr weekly to Omo Beeza. We'll remind you every {day}. Give: {link}",

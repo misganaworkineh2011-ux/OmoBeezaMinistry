@@ -10,6 +10,7 @@ import { readGivingNow } from "@/lib/data/giving";
 import { DEFAULT_GIVING, DONOR_STATUSES, normalizePhone, normalizeTelegram, type DonorStatus, type GivingSettings } from "@/lib/giving";
 import { donorMessage, giveButton, runReminders, type DonorForSms, type ReminderRun } from "@/lib/reminders";
 import { botUsername, sendTelegram, telegramConfigured, tg, webhookSecret } from "@/lib/telegram";
+import { accountConfigured, accountInfo } from "@/lib/telegram-user";
 import { sendSms } from "@/lib/sms";
 
 type Result = { ok: boolean; error?: string; id?: number };
@@ -128,6 +129,7 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
     skipIfPaid: Boolean(input.skipIfPaid),
     telegramEnabled: Boolean(input.telegramEnabled),
     telegramReplacesSms: Boolean(input.telegramReplacesSms),
+    telegramUserEnabled: Boolean(input.telegramUserEnabled),
     reminderEn: s(input.reminderEn, 900) || DEFAULT_GIVING.reminderEn,
     reminderAm: s(input.reminderAm, 900) || DEFAULT_GIVING.reminderAm,
     welcomeEn: s(input.welcomeEn, 900) || DEFAULT_GIVING.welcomeEn,
@@ -200,7 +202,7 @@ export async function connectTelegramBot(): Promise<Result> {
   const res = await tg("setWebhook", {
     url: `https://${host}/api/telegram/webhook`,
     secret_token: webhookSecret(),
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
     drop_pending_updates: true,
   });
   if (!res.ok) return { ok: false, error: `Telegram: ${res.description ?? "failed"}` };
@@ -232,4 +234,56 @@ export async function sendTelegramTest(donorId: number): Promise<Result> {
   });
   done();
   return res;
+}
+
+// ---------------------------------------------------------------- Telegram invitations by SMS
+
+const INVITE_WHERE = `status = 'active' and telegram_chat_id is null and telegram_invited_at is null`;
+
+export async function inviteCounts(): Promise<{ withUsername: number; all: number }> {
+  await requireUser();
+  const row = await queryOne<{ u: number; a: number }>(
+    `select count(*) filter (where telegram_username <> '')::int as u, count(*)::int as a from donors where ${INVITE_WHERE}`,
+  );
+  return { withUsername: row?.u ?? 0, all: row?.a ?? 0 };
+}
+
+/**
+ * Texts donors who haven't connected the bot their one-tap link, once each.
+ * scope "username": only donors who gave a Telegram username; "all": everyone.
+ */
+export async function inviteToTelegram(scope: "username" | "all"): Promise<Result & { sent?: number; failed?: number }> {
+  await requireUser();
+  const bot = await botUsername();
+  if (!bot) return { ok: false, error: "Set up the Telegram bot first (TELEGRAM_BOT_TOKEN)." };
+  const donors = await query<{ id: number; name: string; phone: string; locale: string; token: string }>(
+    `select id, name, phone, locale, token from donors where ${INVITE_WHERE} ${scope === "username" ? "and telegram_username <> ''" : ""}
+     order by id limit 200`,
+  );
+  let sent = 0;
+  let failed = 0;
+  for (const d of donors) {
+    const first = d.name.trim().split(/\s+/)[0] ?? d.name;
+    const link = `https://t.me/${bot}?start=${d.token}`;
+    const message =
+      d.locale === "am"
+        ? `ሰላም ${first}፣ ሳምንታዊ የኦሞ ቤዛ የስጦታ ማሳሰቢያዎን በነፃ በቴሌግራም ያግኙ። ለመገናኘት ይጫኑ፦ ${link}`
+        : `Hi ${first}, get your weekly Omo Beeza giving reminders free on Telegram. Tap to connect: ${link}`;
+    const res = await sendSms({ to: d.phone, message, kind: "manual", donorId: d.id });
+    if (res.ok) {
+      sent++;
+      await query("update donors set telegram_invited_at = now() where id = $1", [d.id]);
+    } else {
+      failed++;
+      if (failed >= 3 && sent === 0) break; // SMS isn't working: don't burn through the list.
+    }
+  }
+  done();
+  return { ok: failed === 0, sent, failed, error: failed ? `${failed} SMS failed (see the message log).` : undefined };
+}
+
+export async function telegramAccountStatus(): Promise<{ configured: boolean; ok: boolean; name?: string; username?: string; phone?: string; error?: string }> {
+  await requireUser();
+  if (!accountConfigured()) return { configured: false, ok: false };
+  return { configured: true, ...(await accountInfo()) };
 }

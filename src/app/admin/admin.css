@@ -60,10 +60,10 @@
   color: var(--a-blue);
 }
 
-.admin-body button,
-.admin-body input,
-.admin-body select,
-.admin-body textarea {
+:where(.admin-body) button,
+:where(.admin-body) input,
+:where(.admin-body) select,
+:where(.admin-body) textarea {
   font: inherit;
   color: inherit;
 }

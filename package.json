@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "videos": "node scripts/prepare-videos.mjs",
     "knowledge": "node scripts/build-knowledge.mjs",
-    "import-content": "tsx --conditions=react-server --env-file=.env.local scripts/import-content.ts"
+    "import-content": "tsx --conditions=react-server --env-file=.env.local scripts/import-content.ts",
+    "telegram-login": "node --env-file-if-exists=.env.local scripts/telegram-login.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.14",
@@ -28,6 +29,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "server-only": "^0.0.1",
+    "telegram": "^2.26.22",
     "unpdf": "^1.9.1"
   },
   "devDependencies": {

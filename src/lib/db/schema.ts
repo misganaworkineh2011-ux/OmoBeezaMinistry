@@ -214,6 +214,19 @@ export const SCHEMA: string[] = [
   `alter table donors add column if not exists telegram_chat_id text`,
   `alter table donors add column if not exists telegram_linked_at timestamptz`,
   `alter table sms_log add column if not exists channel text not null default 'sms'`,
+  // When the donor was sent the SMS invitation to the bot, and what happened
+  // when the ministry's Telegram account tried to reach them ('ok',
+  // 'not_on_telegram', 'blocked', ...).
+  `alter table donors add column if not exists telegram_invited_at timestamptz`,
+  `alter table donors add column if not exists telegram_user_status text not null default ''`,
+  `alter table donors add column if not exists telegram_user_checked_at timestamptz`,
+  // Step-by-step sign-up inside the Telegram bot (one row per chat).
+  `create table if not exists telegram_sessions (
+    chat_id text primary key,
+    step text not null,
+    data jsonb not null default '{}',
+    updated_at timestamptz not null default now()
+  )`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,

@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: __dirname,
   // The local development database (WebAssembly Postgres) and the document
   // parsers are loaded at runtime rather than bundled.
-  serverExternalPackages: ["@electric-sql/pglite", "unpdf", "mammoth"],
+  serverExternalPackages: ["@electric-sql/pglite", "unpdf", "mammoth", "telegram"],
   // Ship the original blog files with the server so the dashboard's
   // "import existing content" step can read them on Vercel too.
   outputFileTracingIncludes: {

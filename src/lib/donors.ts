@@ -20,7 +20,9 @@ export interface RegisterInput {
   locale?: unknown;
   notes?: unknown;
   telegram?: unknown;
-  source: "website" | "app";
+  source: "website" | "app" | "telegram";
+  /** Skip the welcome SMS (e.g. the bot welcomes them on Telegram instead). */
+  noWelcomeSms?: boolean;
 }
 
 export type RegisterResult =
@@ -73,7 +75,7 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
 
   // Welcome new (or returning) donors only, not someone updating their amount.
   // A failed SMS doesn't undo the registration; it shows in the SMS log.
-  if (giving.welcomeEnabled && !wasActive) {
+  if (giving.welcomeEnabled && !wasActive && !input.noWelcomeSms) {
     await sendSms({ to: donor.phone, message: donorMessage("welcome", donor, giving), kind: "welcome", donorId: donor.id });
   }
   return { ok: true, donor, created, link: giving.yebunaUrl, telegramLink: await connectLink(donor.token) };

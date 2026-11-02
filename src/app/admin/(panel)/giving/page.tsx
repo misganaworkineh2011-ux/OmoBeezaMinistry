@@ -5,7 +5,8 @@ import { readGivingNow } from "@/lib/data/giving";
 import { displayPhone, ethiopiaWeekday } from "@/lib/giving";
 import { publicOrigin, smsConfig } from "@/lib/sms";
 import GivingSettingsForm from "@/components/admin/GivingSettingsForm";
-import { telegramStatus } from "@/app/admin/actions/donors";
+import { inviteCounts, telegramStatus } from "@/app/admin/actions/donors";
+import { accountConfigured } from "@/lib/telegram-user";
 
 export const metadata = { title: "Giving & SMS" };
 export const dynamic = "force-dynamic";
@@ -27,7 +28,7 @@ interface LogRow {
 
 export default async function GivingPage() {
   await requireUser();
-  const [giving, due, log, totals, telegram] = await Promise.all([
+  const [giving, due, log, totals, telegram, invites] = await Promise.all([
     readGivingNow(),
     queryOne<{ n: number }>(
       `select count(*)::int as n from donors where status = 'active' and reminder_day = $1
@@ -43,6 +44,7 @@ export default async function GivingPage() {
        from sms_log where created_at > now() - interval '30 days'`,
     ),
     telegramStatus(),
+    inviteCounts(),
   ]);
 
   return (
@@ -54,7 +56,10 @@ export default async function GivingPage() {
         </div>
       </div>
 
-      <GivingSettingsForm initial={giving} origin={publicOrigin()} sms={smsConfig()} dueToday={due?.n ?? 0} telegram={telegram} />
+      <GivingSettingsForm initial={giving} origin={publicOrigin()} sms={smsConfig()} dueToday={due?.n ?? 0} telegram={telegram}
+        invites={invites}
+        accountConfigured={accountConfigured()}
+      />
 
       <section className="panel">
         <div className="panel__head">

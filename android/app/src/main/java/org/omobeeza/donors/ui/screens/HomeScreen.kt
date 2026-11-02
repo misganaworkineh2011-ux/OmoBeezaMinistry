@@ -315,6 +315,7 @@ internal fun DonorDetails(d: Donor, afroStep: Boolean, onAfro: () -> Unit, onUnd
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill(d.status, if (d.status == "active") Brand.GreenSoft else Color(0xFFEDEBE7), if (d.status == "active") Brand.Green else Brand.Muted)
                     if (d.source == "app") Pill("via the app", Color(0xFFE3ECF8), Brand.Blue)
+                    if (d.source == "telegram") Pill("via Telegram", Color(0xFFE6F4FB), Color(0xFF1A7FB0))
                 }
             }
         }

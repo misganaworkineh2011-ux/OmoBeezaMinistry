@@ -2,7 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { connectTelegramBot, runRemindersNow, saveGiving, sendTestSms, type TelegramStatus } from "@/app/admin/actions/donors";
+import {
+  connectTelegramBot,
+  inviteToTelegram,
+  runRemindersNow,
+  saveGiving,
+  sendTestSms,
+  telegramAccountStatus,
+  type TelegramStatus,
+} from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
 import { DAYS_EN, dayName, fillTemplate, smsSegments, type GivingSettings } from "@/lib/giving";
 
@@ -24,12 +32,17 @@ export default function GivingSettingsForm({
   sms,
   dueToday,
   telegram,
+  invites,
+  accountConfigured,
 }: {
   initial: GivingSettings;
   origin: string;
   sms: { token: boolean; identifier: boolean; sender: string };
   dueToday: number;
   telegram: TelegramStatus;
+  /** Donors not on the bot and not yet invited: with a username / all. */
+  invites: { withUsername: number; all: number };
+  accountConfigured: boolean;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(initial);
@@ -40,6 +53,16 @@ export default function GivingSettingsForm({
   const [testMsg, setTestMsg] = useState<Msg>(null);
   const [runMsg, setRunMsg] = useState<Msg>(null);
   const [tgMsg, setTgMsg] = useState<Msg>(null);
+  const [inviteMsg, setInviteMsg] = useState<Msg>(null);
+  const [accountMsg, setAccountMsg] = useState<Msg>(null);
+
+  const invite = (scope: "username" | "all", n: number) =>
+    confirm(`Send ${n} SMS invitation${n === 1 ? "" : "s"} with each donor's personal Telegram link?`) &&
+    start(async () => {
+      const res = await inviteToTelegram(scope);
+      setInviteMsg(res.ok ? { ok: true, text: `Sent ${res.sent} invitation${res.sent === 1 ? "" : "s"}.` } : { ok: false, text: res.error ?? "Not sent." });
+      router.refresh();
+    });
 
   const set = <K extends keyof GivingSettings>(key: K, value: GivingSettings[K]) => setForm((f) => ({ ...f, [key]: value }));
   const sample = (locale: string) => ({
@@ -107,6 +130,10 @@ export default function GivingSettingsForm({
           <label className="a-check">
             <input type="checkbox" checked={form.telegramReplacesSms} onChange={(e) => set("telegramReplacesSms", e.target.checked)} /> For donors
             reached on Telegram, don’t also send the SMS (saves SMS costs)
+          </label>
+          <label className="a-check">
+            <input type="checkbox" checked={form.telegramUserEnabled} onChange={(e) => set("telegramUserEnabled", e.target.checked)} /> For
+            donors who haven’t connected the bot, try the ministry’s Telegram account (by @username or phone) before SMS
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.welcomeEnabled} onChange={(e) => set("welcomeEnabled", e.target.checked)} /> Send a welcome SMS when
@@ -243,6 +270,72 @@ export default function GivingSettingsForm({
             >
               <Icon name="send" /> {telegram.connected ? "Reconnect the bot" : "Connect the bot"}
             </button>
+          )}
+        </section>
+
+        <section className="panel">
+          <div className="panel__head">
+            <h2>Invite donors to Telegram</h2>
+          </div>
+          <p className="a-hint" style={{ marginBottom: 10 }}>
+            A one-time SMS with each donor’s personal link: one tap in Telegram connects them, and their reminders come there for free from then on.
+            Each donor is only invited once.
+          </p>
+          <Notice msg={inviteMsg} />
+          <div className="btn-group">
+            <button
+              type="button"
+              className="a-btn a-btn--sm"
+              disabled={pending || !telegram.bot || !sms.token || invites.withUsername === 0}
+              onClick={() => invite("username", invites.withUsername)}
+            >
+              Invite {invites.withUsername} with a Telegram username
+            </button>
+            <button
+              type="button"
+              className="a-btn a-btn--ghost a-btn--sm"
+              disabled={pending || !telegram.bot || !sms.token || invites.all === 0}
+              onClick={() => invite("all", invites.all)}
+            >
+              Invite all {invites.all} not on Telegram yet
+            </button>
+          </div>
+          {!telegram.bot ? <p className="a-hint" style={{ marginTop: 8 }}>Set up the bot first.</p> : null}
+        </section>
+
+        <section className="panel">
+          <div className="panel__head">
+            <h2>Ministry Telegram account</h2>
+          </div>
+          <p className="a-hint" style={{ marginBottom: 10 }}>
+            Reaches donors who never pressed Start on the bot, by their @username or phone number. Use a dedicated ministry number:
+            Telegram limits accounts that message many people, so at most 80 are sent per day, spaced out, and it switches to SMS if Telegram asks
+            to slow down.
+          </p>
+          <Notice msg={accountMsg} />
+          {accountConfigured ? (
+            <button
+              type="button"
+              className="a-btn a-btn--ghost a-btn--sm"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const res = await telegramAccountStatus();
+                  setAccountMsg(
+                    res.ok
+                      ? { ok: true, text: `Connected as ${res.name}${res.username ? ` (@${res.username})` : ""} ${res.phone ?? ""}.` }
+                      : { ok: false, text: res.error ?? "Could not connect." },
+                  );
+                })
+              }
+            >
+              Check the account connection
+            </button>
+          ) : (
+            <p className="a-hint">
+              Not set up. On a computer, run <code>npm run telegram-login</code> in the project folder and add the printed TELEGRAM_API_ID,
+              TELEGRAM_API_HASH and TELEGRAM_SESSION in Vercel.
+            </p>
           )}
         </section>
 

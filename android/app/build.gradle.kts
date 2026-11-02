@@ -20,8 +20,8 @@ android {
         applicationId = "org.omobeeza.donors"
         minSdk = 24
         targetSdk = 34
-        versionCode = 6
-        versionName = "1.1.0"
+        versionCode = 7
+        versionName = "1.1.1"
         // The ministry website the app talks to (can be changed on the sign-in screen).
         buildConfigField("String", "DEFAULT_SITE", "\"https://omo-beeza-ministry-seven.vercel.app\"")
         buildConfigField("String", "DEFAULT_AFRO_URL", "\"https://app.afromessage.com\"")

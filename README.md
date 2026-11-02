@@ -171,6 +171,19 @@ website's thank-you page), by the @username saved with their registration, or by
 phone number with the bot. After that the daily reminder job sends their reminder on Telegram
 (and, by default, skips the SMS for them).
 
+**Signing up in the bot:** people who aren't registered can sign up right in the bot: they share
+their phone number, give their name (one tap uses their Telegram name), weekly amount, reminder
+day and language, and confirm. They appear in Dashboard → Donors "via Telegram".
+
+**Reaching donors who never pressed Start:**
+- *SMS invitation*: Dashboard → Giving & SMS → "Invite donors to Telegram" texts each one their
+  personal link, once.
+- *Ministry Telegram account* (optional): reminders are sent from a real Telegram account by
+  @username or phone number. Use a dedicated ministry number. Get an API ID/hash at
+  https://my.telegram.org, run `npm run telegram-login`, and add the printed `TELEGRAM_API_ID`,
+  `TELEGRAM_API_HASH` and `TELEGRAM_SESSION` in Vercel. At most 80 such messages are sent per day,
+  spaced out; on a Telegram "slow down" signal the rest get SMS.
+
 **Setup:** in Telegram open **@BotFather** → `/newbot` → choose a name and a username ending in
 `bot`. Add the token as `TELEGRAM_BOT_TOKEN` in Vercel, redeploy, then click **Connect the bot**
 in Dashboard → Giving & SMS. Bot commands: `/start`, `/status`, `/stop`.
