@@ -33,8 +33,10 @@ export async function POST(request: Request): Promise<Response> {
     amount: body.amount,
     day: body.day,
     locale: body.locale,
+    telegram: body.telegram,
     source: "website",
   });
   if (!res.ok) return json(res.error === "save_failed" ? 500 : 400, { error: res.error });
-  return json(200, { ok: true, link: res.link });
+  // The personal Telegram link connects this donor to the reminder bot in one tap.
+  return json(200, { ok: true, link: res.link, telegram: res.telegramLink ? res.donor.token : "" });
 }

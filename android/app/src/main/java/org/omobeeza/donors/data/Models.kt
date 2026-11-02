@@ -7,10 +7,12 @@ data class User(val id: Int, val name: String, val email: String) {
 }
 
 data class GivingSettings(
-    val amounts: List<Int> = listOf(50, 100, 250, 500),
+    val amounts: List<Int> = listOf(50, 100, 250, 500, 1000, 2000, 5000, 10000),
     val minAmount: Int = 10,
     val defaultDay: Int = 0,
     val yebunaUrl: String = "",
+    /** The reminder bot's @username ("" when the bot isn't set up). */
+    val telegramBot: String = "",
 )
 
 data class Stats(
@@ -36,6 +38,10 @@ data class Donor(
     val afroContactAt: String?,
     val lastPaid: String?,
     val total: Int,
+    val telegramUsername: String = "",
+    val telegramLinked: Boolean = false,
+    /** One-tap link that connects this donor to the reminder bot. */
+    val telegramLink: String = "",
 ) {
     val afroDone: Boolean get() = afroContactAt != null
 
@@ -55,6 +61,9 @@ data class Donor(
             afroContactAt = o.optStringOrNull("afro_contact_at"),
             lastPaid = o.optStringOrNull("last_paid"),
             total = o.optInt("total"),
+            telegramUsername = o.optString("telegram_username"),
+            telegramLinked = o.optBoolean("telegram_linked"),
+            telegramLink = o.optString("telegram_link"),
         )
     }
 }
@@ -68,6 +77,7 @@ data class NewDonor(
     val day: Int,
     val locale: String,
     val notes: String,
+    val telegram: String = "",
 )
 
 internal fun JSONObject.optStringOrNull(key: String): String? =

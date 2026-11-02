@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { runRemindersNow, saveGiving, sendTestSms } from "@/app/admin/actions/donors";
+import { connectTelegramBot, runRemindersNow, saveGiving, sendTestSms, type TelegramStatus } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
 import { DAYS_EN, dayName, fillTemplate, smsSegments, type GivingSettings } from "@/lib/giving";
 
@@ -23,11 +23,13 @@ export default function GivingSettingsForm({
   origin,
   sms,
   dueToday,
+  telegram,
 }: {
   initial: GivingSettings;
   origin: string;
   sms: { token: boolean; identifier: boolean; sender: string };
   dueToday: number;
+  telegram: TelegramStatus;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(initial);
@@ -37,6 +39,7 @@ export default function GivingSettingsForm({
   const [test, setTest] = useState({ phone: "", message: "" });
   const [testMsg, setTestMsg] = useState<Msg>(null);
   const [runMsg, setRunMsg] = useState<Msg>(null);
+  const [tgMsg, setTgMsg] = useState<Msg>(null);
 
   const set = <K extends keyof GivingSettings>(key: K, value: GivingSettings[K]) => setForm((f) => ({ ...f, [key]: value }));
   const sample = (locale: string) => ({
@@ -72,7 +75,7 @@ export default function GivingSettingsForm({
           <div className="form-grid">
             <div className="a-field">
               <label htmlFor="g-amounts">Suggested weekly amounts (birr)</label>
-              <input id="g-amounts" value={amounts} onChange={(e) => setAmounts(e.target.value)} placeholder="50, 100, 250, 500" />
+              <input id="g-amounts" value={amounts} onChange={(e) => setAmounts(e.target.value)} placeholder="50, 100, 250, 500, 1000, 2000, 5000, 10000" />
             </div>
             <div className="a-field">
               <label htmlFor="g-min">Minimum amount (birr)</label>
@@ -96,6 +99,14 @@ export default function GivingSettingsForm({
           <label className="a-check">
             <input type="checkbox" checked={form.skipIfPaid} onChange={(e) => set("skipIfPaid", e.target.checked)} /> Don’t remind donors who already
             have a payment recorded in the last 6 days
+          </label>
+          <label className="a-check">
+            <input type="checkbox" checked={form.telegramEnabled} onChange={(e) => set("telegramEnabled", e.target.checked)} /> Send reminders on
+            Telegram to donors who connected the bot
+          </label>
+          <label className="a-check">
+            <input type="checkbox" checked={form.telegramReplacesSms} onChange={(e) => set("telegramReplacesSms", e.target.checked)} /> For donors
+            reached on Telegram, don’t also send the SMS (saves SMS costs)
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.welcomeEnabled} onChange={(e) => set("welcomeEnabled", e.target.checked)} /> Send a welcome SMS when
@@ -181,6 +192,62 @@ export default function GivingSettingsForm({
 
         <section className="panel">
           <div className="panel__head">
+            <h2>Telegram bot</h2>
+          </div>
+          <Notice msg={tgMsg} />
+          <ul className="q-log" style={{ marginTop: 0 }}>
+            <li>
+              <span>Bot token (TELEGRAM_BOT_TOKEN)</span>
+              <span className={`pill ${telegram.configured ? "pill--ok" : "pill--new"}`}>{telegram.configured ? "Set" : "Missing"}</span>
+            </li>
+            <li>
+              <span>Bot</span>
+              <span className="pill">
+                {telegram.bot ? (
+                  <a href={`https://t.me/${telegram.bot}`} target="_blank" rel="noopener">
+                    @{telegram.bot}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </li>
+            <li>
+              <span>Connected to this website</span>
+              <span className={`pill ${telegram.connected ? "pill--ok" : "pill--new"}`}>{telegram.connected ? "Yes" : "No"}</span>
+            </li>
+            <li>
+              <span>Donors on Telegram</span>
+              <span className="pill">{telegram.linkedDonors}</span>
+            </li>
+          </ul>
+          {telegram.lastError ? <p className="a-hint">Last Telegram error: {telegram.lastError}</p> : null}
+          {!telegram.configured ? (
+            <p className="a-hint" style={{ marginTop: 10 }}>
+              Create a bot with @BotFather in Telegram (/newbot), then add its token as TELEGRAM_BOT_TOKEN in Vercel → Settings → Environment
+              Variables and redeploy.
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="a-btn"
+              style={{ marginTop: 10 }}
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const res = await connectTelegramBot();
+                  setTgMsg(res.ok ? { ok: true, text: "Connected. Donors can now press Start on the bot." } : { ok: false, text: res.error ?? "Not connected." });
+                  router.refresh();
+                })
+              }
+            >
+              <Icon name="send" /> {telegram.connected ? "Reconnect the bot" : "Connect the bot"}
+            </button>
+          )}
+        </section>
+
+        <section className="panel">
+          <div className="panel__head">
             <h2>Send a test SMS</h2>
           </div>
           <Notice msg={testMsg} />
@@ -220,7 +287,7 @@ export default function GivingSettingsForm({
           <button
             type="button"
             className="a-btn a-btn--ghost"
-            disabled={pending || !sms.token || dueToday === 0}
+            disabled={pending || (!sms.token && !telegram.connected) || dueToday === 0}
             onClick={() =>
               confirm(`Send today’s reminder to ${dueToday} donor(s) now?`) &&
               start(async () => {
@@ -228,7 +295,10 @@ export default function GivingSettingsForm({
                 setRunMsg(
                   run.disabled
                     ? { ok: false, text: "Automatic reminders are turned off above." }
-                    : { ok: run.failed === 0, text: `Sent ${run.sent}, skipped ${run.skippedPaid} (already paid), failed ${run.failed}.` },
+                    : {
+                        ok: run.failed === 0,
+                        text: `Sent ${run.sent} SMS and ${run.telegram} Telegram, skipped ${run.skippedPaid} (already paid), failed ${run.failed}.`,
+                      },
                 );
                 router.refresh();
               })

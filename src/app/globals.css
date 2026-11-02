@@ -7641,3 +7641,72 @@ button.text-link {
 .thanks-ticket__give {
   margin-top: 14px;
 }
+
+/* Weekly giving: scrollable row of suggested amounts */
+.amount-scroll {
+  display: flex;
+  gap: 10px;
+  margin-inline: -4px;
+  padding: 4px 4px 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-300) transparent;
+  -webkit-overflow-scrolling: touch;
+  /* fade the edges so it's clear the row scrolls */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, transparent 0, #000 8px, #000 calc(100% - 16px), transparent);
+}
+
+.amount-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.amount-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--gold-300);
+}
+
+.amount--chip {
+  flex: 0 0 auto;
+  /* narrow enough that part of the next amount always peeks out */
+  min-width: 78px;
+  min-height: 64px;
+  padding: 8px 12px;
+  scroll-snap-align: start;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.amount--chip small {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.amount--chip.is-active small {
+  color: var(--gold-300);
+}
+
+.amount-other--wide {
+  margin-top: 10px;
+}
+
+.amount-other--wide input {
+  padding-left: 16px;
+}
+
+.amount-other--wide input::placeholder {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.thanks-ticket__telegram {
+  --btn-bg: #229ed9;
+  --btn-fg: #fff;
+}

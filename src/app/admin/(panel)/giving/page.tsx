@@ -5,6 +5,7 @@ import { readGivingNow } from "@/lib/data/giving";
 import { displayPhone, ethiopiaWeekday } from "@/lib/giving";
 import { publicOrigin, smsConfig } from "@/lib/sms";
 import GivingSettingsForm from "@/components/admin/GivingSettingsForm";
+import { telegramStatus } from "@/app/admin/actions/donors";
 
 export const metadata = { title: "Giving & SMS" };
 export const dynamic = "force-dynamic";
@@ -21,11 +22,12 @@ interface LogRow {
   status: string;
   error: string;
   created_at: string;
+  channel: string;
 }
 
 export default async function GivingPage() {
   await requireUser();
-  const [giving, due, log, totals] = await Promise.all([
+  const [giving, due, log, totals, telegram] = await Promise.all([
     readGivingNow(),
     queryOne<{ n: number }>(
       `select count(*)::int as n from donors where status = 'active' and reminder_day = $1
@@ -33,13 +35,14 @@ export default async function GivingPage() {
       [ethiopiaWeekday()],
     ),
     query<LogRow>(
-      `select l.id, l.donor_id, d.name, l.to_phone, l.message, l.kind, l.status, l.error, l.created_at
+      `select l.id, l.donor_id, d.name, l.to_phone, l.message, l.kind, l.status, l.error, l.created_at, l.channel
        from sms_log l left join donors d on d.id = l.donor_id order by l.created_at desc limit 100`,
     ),
     queryOne<{ sent: number; failed: number }>(
       `select count(*) filter (where status = 'sent')::int as sent, count(*) filter (where status = 'failed')::int as failed
        from sms_log where created_at > now() - interval '30 days'`,
     ),
+    telegramStatus(),
   ]);
 
   return (
@@ -51,11 +54,11 @@ export default async function GivingPage() {
         </div>
       </div>
 
-      <GivingSettingsForm initial={giving} origin={publicOrigin()} sms={smsConfig()} dueToday={due?.n ?? 0} />
+      <GivingSettingsForm initial={giving} origin={publicOrigin()} sms={smsConfig()} dueToday={due?.n ?? 0} telegram={telegram} />
 
       <section className="panel">
         <div className="panel__head">
-          <h2>SMS log</h2>
+          <h2>Message log (SMS &amp; Telegram)</h2>
           <p>
             Last 30 days: {totals?.sent ?? 0} sent, {totals?.failed ?? 0} failed
           </p>
@@ -82,9 +85,11 @@ export default async function GivingPage() {
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {m.donor_id && m.name ? <Link href={`/admin/donors/${m.donor_id}`}>{m.name}</Link> : null}
-                      <div className="a-hint">{displayPhone(m.to_phone)}</div>
+                      <div className="a-hint">{m.channel === "telegram" ? "Telegram" : displayPhone(m.to_phone)}</div>
                     </td>
-                    <td>{m.kind}</td>
+                    <td>
+                      {m.channel === "telegram" ? "Telegram" : "SMS"} · {m.kind}
+                    </td>
                     <td>
                       <span className={`pill ${m.status === "sent" ? "pill--ok" : "pill--new"}`}>{m.status}</span>
                     </td>

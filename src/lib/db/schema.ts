@@ -208,6 +208,12 @@ export const SCHEMA: string[] = [
   // Set when the donor was added (and verified) in AfroMessage contacts from
   // the Android app's guided step — only needed while AfroMessage is in beta.
   `alter table donors add column if not exists afro_contact_at timestamptz`,
+  // Telegram reminders: the donor's @username (optional) and, once they press
+  // Start on the bot, the chat the bot may message.
+  `alter table donors add column if not exists telegram_username text not null default ''`,
+  `alter table donors add column if not exists telegram_chat_id text`,
+  `alter table donors add column if not exists telegram_linked_at timestamptz`,
+  `alter table sms_log add column if not exists channel text not null default 'sms'`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,

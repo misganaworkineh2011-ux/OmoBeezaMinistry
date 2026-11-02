@@ -37,10 +37,11 @@ class Api(baseUrl: String, private val token: String?) {
         return Triple(
             user(o.getJSONObject("user")),
             GivingSettings(
-                amounts = amounts.ifEmpty { listOf(50, 100, 250, 500) },
+                amounts = amounts.ifEmpty { GivingSettings().amounts },
                 minAmount = s.optInt("minAmount", 10),
                 defaultDay = s.optInt("defaultDay", 0),
                 yebunaUrl = s.optString("yebunaUrl"),
+                telegramBot = s.optString("telegramBot"),
             ),
             Stats(
                 active = st.optInt("active"),
@@ -64,7 +65,7 @@ class Api(baseUrl: String, private val token: String?) {
         val body = JSONObject()
             .put("name", d.name).put("phone", d.phone).put("email", d.email)
             .put("amount", d.amount).put("day", d.day).put("locale", d.locale)
-            .put("notes", d.notes).put("consent", true)
+            .put("notes", d.notes).put("telegram", d.telegram).put("consent", true)
         val o = request("POST", "/api/mobile/donors", body)
         return Donor.from(o.getJSONObject("donor")) to o.optBoolean("created", true)
     }

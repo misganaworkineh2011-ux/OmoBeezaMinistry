@@ -27,6 +27,12 @@ fun localPhone(e164: String): String {
     return "0$a$b $c $d"
 }
 
+/** "@Abebe_K" / "t.me/abebe_k" → "abebe_k"; null when not a valid Telegram username. */
+fun normalizeTelegram(input: String): String? {
+    val v = input.trim().replace(Regex("^(https?://)?(t\\.me|telegram\\.me)/", RegexOption.IGNORE_CASE), "").removePrefix("@")
+    return if (Regex("^[A-Za-z][A-Za-z0-9_]{4,31}$").matches(v)) v.lowercase() else null
+}
+
 fun birr(n: Int): String = NumberFormat.getIntegerInstance(Locale.US).format(n)
 
 /** "2026-11-02T09:30:00.000Z" or "2026-11-02" → "2 Nov 2026". */
@@ -59,6 +65,7 @@ fun errorText(code: String, min: Int? = null): String = when (code) {
     "invalid_email" -> "Enter a valid email, or leave it empty."
     "invalid_amount" -> "The weekly amount must be at least ${min ?: 10} birr."
     "invalid_day" -> "Choose a reminder day."
+    "invalid_telegram" -> "That doesn't look like a Telegram username (like @abebe_k)."
     "consent_required" -> "Confirm that the donor agreed to SMS reminders."
     "not_found" -> "The website doesn't have the app connection yet. Deploy the latest website update, or check the website address."
     "not_api" -> "That address didn't answer like the Omo Beeza website. Check the website address on the sign-in screen."

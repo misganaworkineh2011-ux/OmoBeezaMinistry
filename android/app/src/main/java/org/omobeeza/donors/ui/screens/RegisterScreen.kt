@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -60,6 +63,8 @@ import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.NewDonor
 import org.omobeeza.donors.data.birr
 import org.omobeeza.donors.data.normalizePhone
+import org.omobeeza.donors.data.normalizeTelegram
+import androidx.compose.material.icons.automirrored.rounded.Send
 import org.omobeeza.donors.ui.components.Field
 import org.omobeeza.donors.ui.components.GoldButton
 import org.omobeeza.donors.ui.components.SectionLabel
@@ -85,6 +90,7 @@ fun RegisterScreen(
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
+    var telegram by rememberSaveable { mutableStateOf("") }
     var consent by rememberSaveable { mutableStateOf(false) }
     var tried by rememberSaveable { mutableStateOf(false) }
 
@@ -92,6 +98,7 @@ fun RegisterScreen(
     val nameError = if (tried && name.isBlank()) "Enter the donor's name." else null
     val phoneError = if (tried && normalizePhone(phone) == null) "Enter a valid Ethiopian mobile number (09… or 07…)." else null
     val emailError = if (tried && email.isNotBlank() && !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) "Enter a valid email, or leave it empty." else null
+    val telegramError = if (tried && telegram.isNotBlank() && normalizeTelegram(telegram) == null) "Like @abebe_k: 5–32 letters, numbers or _." else null
     val amountError = if (tried && weekly < settings.minAmount) "At least ${settings.minAmount} birr." else null
     val consentError = tried && !consent
 
@@ -111,11 +118,10 @@ fun RegisterScreen(
         ) {
             SectionLabel("Weekly gift")
             Spacer(Modifier.height(10.dp))
-            // 4 amounts → one row of 4; 3, 5 or 6 → rows of 3, so no tile is stretched alone.
-            val perRow = if (settings.amounts.size == 4) 4 else 3
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), maxItemsInEachRow = perRow) {
-                settings.amounts.forEach { a ->
-                    AmountTile(a, selected = custom.isEmpty() && amount == a, modifier = Modifier.weight(1f)) {
+            // Suggested amounts in a row that scrolls sideways.
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(end = 24.dp)) {
+                items(settings.amounts) { a ->
+                    AmountTile(a, selected = custom.isEmpty() && amount == a, modifier = Modifier.width(96.dp)) {
                         amount = a
                         custom = ""
                     }
@@ -149,6 +155,11 @@ fun RegisterScreen(
             Field(phone, { v -> phone = v.filter { it.isDigit() || it in "+ -" }.take(18) }, "Mobile number", Icons.Rounded.Call, placeholder = "09… or 07…", keyboard = KeyboardType.Phone, error = phoneError)
             Spacer(Modifier.height(8.dp))
             Field(email, { email = it }, "Email (optional)", Icons.Rounded.Email, keyboard = KeyboardType.Email, error = emailError)
+            Spacer(Modifier.height(8.dp))
+            Field(
+                telegram, { telegram = it.trim().take(40) }, "Telegram username (optional)", Icons.AutoMirrored.Rounded.Send,
+                placeholder = "@username", keyboard = KeyboardType.Email, error = telegramError,
+            )
             Spacer(Modifier.height(8.dp))
             Field(notes, { notes = it }, "Notes (optional)", Icons.Rounded.Create, singleLine = false, minLines = 2, placeholder = "Church, how you met, …")
 
@@ -198,8 +209,9 @@ fun RegisterScreen(
                 onClick = {
                     tried = true
                     val ok = name.isNotBlank() && normalizePhone(phone) != null && weekly >= settings.minAmount && consent &&
-                        (email.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim()))
-                    if (ok) onSave(NewDonor(name.trim(), phone, email.trim(), weekly, day, locale, notes.trim()))
+                        (email.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) &&
+                        (telegram.isBlank() || normalizeTelegram(telegram) != null)
+                    if (ok) onSave(NewDonor(name.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim()))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Rounded.Check,

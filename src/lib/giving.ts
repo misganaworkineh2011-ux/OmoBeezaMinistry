@@ -14,6 +14,10 @@ export interface GivingSettings {
   welcomeEnabled: boolean;
   /** Skip the reminder when a payment was recorded in the last 6 days. */
   skipIfPaid: boolean;
+  /** Send weekly reminders on Telegram to donors who connected the bot. */
+  telegramEnabled: boolean;
+  /** For donors reached on Telegram, don't also send the SMS (saves SMS costs). */
+  telegramReplacesSms: boolean;
   reminderEn: string;
   reminderAm: string;
   welcomeEn: string;
@@ -22,12 +26,14 @@ export interface GivingSettings {
 
 export const DEFAULT_GIVING: GivingSettings = {
   yebunaUrl: "",
-  amounts: [50, 100, 250, 500],
+  amounts: [50, 100, 250, 500, 1000, 2000, 5000, 10000],
   minAmount: 10,
   defaultDay: 0,
   remindersEnabled: true,
   welcomeEnabled: true,
   skipIfPaid: true,
+  telegramEnabled: true,
+  telegramReplacesSms: true,
   reminderEn: "Hi {name}, your weekly {amount} birr gift for the children of Omo Beeza: {link} Stop reminders: {stop}",
   reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች የዚህ ሳምንት የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
   welcomeEn: "Thank you {name}! You now give {amount} birr weekly to Omo Beeza. We'll remind you every {day}. Give: {link}",
@@ -73,6 +79,12 @@ export function smsSegments(text: string): { chars: number; segments: number; un
   const multi = unicode ? 67 : 153;
   const chars = [...text].length;
   return { chars, unicode, segments: chars <= single ? 1 : Math.ceil(chars / multi) };
+}
+
+/** "@Abebe_K" / "t.me/abebe_k" → "abebe_k"; null when it isn't a valid Telegram username. */
+export function normalizeTelegram(input: string): string | null {
+  const v = input.trim().replace(/^(https?:\/\/)?(t\.me|telegram\.me)\//i, "").replace(/^@/, "");
+  return /^[A-Za-z][A-Za-z0-9_]{4,31}$/.test(v) ? v.toLowerCase() : null;
 }
 
 /** Today's weekday in Ethiopia (UTC+3, no daylight saving). */

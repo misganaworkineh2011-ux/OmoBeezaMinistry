@@ -56,6 +56,7 @@ import org.omobeeza.donors.ui.components.GoldButton
 import org.omobeeza.donors.ui.components.Pill
 import org.omobeeza.donors.ui.components.SectionLabel
 import org.omobeeza.donors.ui.components.SoftCard
+import org.omobeeza.donors.ui.components.TelegramConnectCard
 import org.omobeeza.donors.ui.theme.Brand
 
 private data class Confetto(val angle: Float, val speed: Float, val size: Float, val color: Color, val spin: Float)
@@ -135,6 +136,11 @@ fun SavedScreen(
                     Pill("Every ${dayName(donor.reminderDay)}", Color(0xFFEEF3FA), Brand.Blue)
                     Pill(if (donor.locale == "am") "አማርኛ SMS" else "English SMS", Color(0xFFEDEBE7), Brand.Body)
                 }
+            }
+
+            if (donor.telegramLink.isNotBlank() || donor.telegramLinked) {
+                Spacer(Modifier.height(16.dp))
+                TelegramConnectCard(donor)
             }
 
             if (afroStep && !donor.afroDone) {

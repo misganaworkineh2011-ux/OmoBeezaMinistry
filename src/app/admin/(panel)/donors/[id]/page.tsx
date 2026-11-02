@@ -6,13 +6,14 @@ import { readGivingNow } from "@/lib/data/giving";
 import { displayPhone } from "@/lib/giving";
 import { donorMessage, type DonorForSms } from "@/lib/reminders";
 import { smsConfigured } from "@/lib/sms";
+import { connectLink } from "@/lib/telegram";
 import type { DonorInput } from "@/app/admin/actions/donors";
 import DonorEditor, { type PaymentRow, type SmsRow } from "@/components/admin/DonorEditor";
 
 export const metadata = { title: "Donor" };
 export const dynamic = "force-dynamic";
 
-const EMPTY: DonorInput = { name: "", phone: "", email: "", amount: 100, reminder_day: 0, status: "active", locale: "en", notes: "" };
+const EMPTY: DonorInput = { name: "", phone: "", email: "", amount: 100, reminder_day: 0, status: "active", locale: "en", notes: "", telegram_username: "" };
 
 export default async function DonorPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -20,13 +21,13 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
   const isNew = id === "new";
   const giving = await readGivingNow();
 
-  let donor: (DonorInput & { token: string; source: string; created_at: string }) | null = null;
+  let donor: (DonorInput & { token: string; source: string; created_at: string; telegram_linked: boolean }) | null = null;
   let payments: PaymentRow[] = [];
   let sms: SmsRow[] = [];
   if (!isNew) {
     if (!/^\d+$/.test(id)) notFound();
     donor = await queryOne(
-      "select id, name, phone, email, amount, reminder_day, status, locale, notes, token, source, created_at from donors where id = $1",
+      "select id, name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, telegram_chat_id is not null as telegram_linked, token, source, created_at from donors where id = $1",
       [Number(id)],
     );
     if (!donor) notFound();
@@ -62,6 +63,7 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
         sms={sms}
         reminderPreview={preview}
         smsReady={smsConfigured()}
+        telegram={donor ? { linked: donor.telegram_linked, link: await connectLink(donor.token) } : null}
       />
     </>
   );

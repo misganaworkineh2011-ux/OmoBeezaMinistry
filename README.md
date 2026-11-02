@@ -163,6 +163,18 @@ totals, the "Not paid in 7 days" list, and (optionally) skipping reminders for p
 The SMS texts (English and Amharic) are editable on the same page, with a live preview and SMS
 count. Amharic uses 70 characters per SMS, so keep those messages short.
 
+## Telegram reminders
+Donors can also get their weekly reminder on Telegram, from the ministry's own bot.
+Telegram only lets a bot message people who pressed **Start** on it, so each donor connects
+once: by the personal link / QR code (shown in the app after registering, and on the
+website's thank-you page), by the @username saved with their registration, or by sharing their
+phone number with the bot. After that the daily reminder job sends their reminder on Telegram
+(and, by default, skips the SMS for them).
+
+**Setup:** in Telegram open **@BotFather** → `/newbot` → choose a name and a username ending in
+`bot`. Add the token as `TELEGRAM_BOT_TOKEN` in Vercel, redeploy, then click **Connect the bot**
+in Dashboard → Giving & SMS. Bot commands: `/start`, `/status`, `/stop`.
+
 ## Editing content (in code)
 - **Text / translations:** `messages/en.json` and `messages/am.json`. Any key missing from
   `am.json` automatically falls back to English (the Privacy/Terms bodies currently do).

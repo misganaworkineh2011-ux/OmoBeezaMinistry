@@ -92,6 +92,7 @@ import org.omobeeza.donors.ui.components.GoldButton
 import org.omobeeza.donors.ui.components.Pill
 import org.omobeeza.donors.ui.components.SectionLabel
 import org.omobeeza.donors.ui.components.SoftCard
+import org.omobeeza.donors.ui.components.TelegramConnectCard
 import org.omobeeza.donors.ui.components.WaveHeader
 import org.omobeeza.donors.ui.theme.Brand
 
@@ -335,6 +336,12 @@ internal fun DonorDetails(d: Donor, afroStep: Boolean, onAfro: () -> Unit, onUnd
             DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
             DetailLine(Icons.Rounded.Info, "Registered", prettyDate(d.createdAt), last = d.notes.isBlank())
             if (d.notes.isNotBlank()) DetailLine(Icons.Rounded.Info, "Notes", d.notes, last = true)
+        }
+        if (d.status == "active" && (d.telegramLinked || d.telegramLink.isNotBlank())) {
+            Spacer(Modifier.height(16.dp))
+            SectionLabel("Telegram")
+            Spacer(Modifier.height(6.dp))
+            TelegramConnectCard(d)
         }
         if (afroStep && d.status == "active") {
             Spacer(Modifier.height(16.dp))

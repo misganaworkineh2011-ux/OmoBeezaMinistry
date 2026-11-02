@@ -6,6 +6,7 @@ import { pageMetadata } from "@/lib/metadata";
 import { richEm } from "@/lib/rich";
 import { dayName } from "@/lib/giving";
 import { getGiving } from "@/lib/data/giving";
+import { botUsername } from "@/lib/telegram";
 import Icon, { isIconName } from "@/components/Icon";
 import Reveal from "@/components/Reveal";
 import ShareButtons from "@/components/ShareButtons";
@@ -29,7 +30,7 @@ interface Step {
   descr: string;
 }
 
-type Search = Promise<{ name?: string; amount?: string; day?: string; kind?: string }>;
+type Search = Promise<{ name?: string; amount?: string; day?: string; kind?: string; tg?: string }>;
 
 // Rising sparks in the hero: fixed positions so server and browser agree.
 const SPARKS = Array.from({ length: 16 }, (_, i) => ({
@@ -52,6 +53,9 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
   const day = Number(sp.day);
   const weekly = sp.kind === "weekly" && amount > 0 && day >= 0 && day <= 6;
   const { yebunaUrl } = await getGiving();
+  // One-tap link to the reminder bot (only for a valid personal token).
+  const bot = weekly && /^[A-Za-z0-9_-]{8,40}$/.test(sp.tg ?? "") ? await botUsername() : "";
+  const telegramLink = bot ? `https://t.me/${bot}?start=${sp.tg}` : "";
   const steps = t.raw("impact.steps") as Step[];
   const body = t.raw("letter.body") as string[];
   const captions = t.raw("letter.captions") as string[];
@@ -97,6 +101,11 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
                       <span>{t("ticket.every", { day: dayName(day, locale) })}</span>
                     </strong>
                     <p>{t("ticket.sms", { day: dayName(day, locale) })}</p>
+                    {telegramLink ? (
+                      <a className="btn btn--sm thanks-ticket__give thanks-ticket__telegram" href={telegramLink} target="_blank" rel="noopener">
+                        <Icon name="telegram" /> {t("ticket.telegram")}
+                      </a>
+                    ) : null}{" "}
                     {yebunaUrl ? (
                       <a className="btn btn--gold btn--sm thanks-ticket__give" href={yebunaUrl} target="_blank" rel="noopener">
                         <Icon name="heart" /> {t("ticket.giveNow")} <Icon name="arrowRight" />

@@ -7,6 +7,18 @@ import org.omobeeza.donors.BuildConfig
 class Prefs(context: Context) {
     private val sp = context.getSharedPreferences("omobeeza", Context.MODE_PRIVATE)
 
+    init {
+        // Earlier versions defaulted to addresses that aren't the ministry's live
+        // site; forget those once so the current default is used.
+        if (sp.getInt("siteVersion", 1) < 3) {
+            val saved = sp.getString("site", null).orEmpty()
+            if (saved.contains("omobeezaministry.com") || saved.trimEnd('/').endsWith("://omo-beeza-ministry.vercel.app")) {
+                sp.edit().remove("site").apply()
+            }
+            sp.edit().putInt("siteVersion", 3).apply()
+        }
+    }
+
     var site: String
         get() = sp.getString("site", null) ?: BuildConfig.DEFAULT_SITE
         set(v) = sp.edit().putString("site", v.trim().trimEnd('/')).apply()

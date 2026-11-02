@@ -1,13 +1,15 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
+import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { refresh } from "@/lib/data/cache";
 import { readGivingNow } from "@/lib/data/giving";
-import { DEFAULT_GIVING, DONOR_STATUSES, normalizePhone, type DonorStatus, type GivingSettings } from "@/lib/giving";
-import { donorMessage, runReminders, type DonorForSms, type ReminderRun } from "@/lib/reminders";
+import { DEFAULT_GIVING, DONOR_STATUSES, normalizePhone, normalizeTelegram, type DonorStatus, type GivingSettings } from "@/lib/giving";
+import { donorMessage, giveButton, runReminders, type DonorForSms, type ReminderRun } from "@/lib/reminders";
+import { botUsername, sendTelegram, telegramConfigured, tg, webhookSecret } from "@/lib/telegram";
 import { sendSms } from "@/lib/sms";
 
 type Result = { ok: boolean; error?: string; id?: number };
@@ -24,6 +26,7 @@ export interface DonorInput {
   status: DonorStatus;
   locale: string;
   notes: string;
+  telegram_username: string;
 }
 
 export async function saveDonor(input: DonorInput): Promise<Result> {
@@ -39,24 +42,26 @@ export async function saveDonor(input: DonorInput): Promise<Result> {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false, error: "Enter a valid email address or leave it empty." };
   if (!(amount > 0)) return { ok: false, error: "Enter the weekly amount in birr." };
   if (!(day >= 0 && day <= 6)) return { ok: false, error: "Choose a reminder day." };
+  const telegram = s(input.telegram_username, 60) ? normalizeTelegram(s(input.telegram_username, 60)) : "";
+  if (telegram === null) return { ok: false, error: "That doesn't look like a Telegram username (5–32 letters, numbers or _)." };
 
   const clash = await queryOne<{ id: number }>("select id from donors where phone = $1 and id <> $2", [phone, input.id ?? 0]);
   if (clash) return { ok: false, error: "Another donor already has this phone number.", id: clash.id };
 
-  const values = [name, phone, email, amount, day, status, input.locale === "am" ? "am" : "en", s(input.notes, 2000)];
+  const values = [name, phone, email, amount, day, status, input.locale === "am" ? "am" : "en", s(input.notes, 2000), telegram];
   if (input.id) {
     await query(
-      `update donors set name=$1, phone=$2, email=$3, amount=$4, reminder_day=$5, status=$6, locale=$7, notes=$8,
+      `update donors set name=$1, phone=$2, email=$3, amount=$4, reminder_day=$5, status=$6, locale=$7, notes=$8, telegram_username=$9,
          stopped_at = case when $6 = 'stopped' then coalesce(stopped_at, now()) else null end
-       where id=$9`,
+       where id=$10`,
       [...values, input.id],
     );
     done();
     return { ok: true, id: input.id };
   }
   const row = await queryOne<{ id: number }>(
-    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, token, source)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'admin') returning id`,
+    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, token, source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'admin') returning id`,
     [...values, randomBytes(9).toString("base64url")],
   );
   done();
@@ -110,7 +115,7 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
   await requireUser();
   const url = s(input.yebunaUrl, 300);
   if (url && !/^https:\/\/[^\s]+$/.test(url)) return { ok: false, error: "The Ye-Buna link must start with https://" };
-  const amounts = [...new Set((input.amounts ?? []).map((n) => Math.round(Number(n))).filter((n) => n > 0))].sort((a, b) => a - b).slice(0, 6);
+  const amounts = [...new Set((input.amounts ?? []).map((n) => Math.round(Number(n))).filter((n) => n > 0))].sort((a, b) => a - b).slice(0, 12);
   if (amounts.length === 0) return { ok: false, error: "Add at least one suggested amount." };
   const templates = ["reminderEn", "reminderAm", "welcomeEn", "welcomeAm"] as const;
   const data: GivingSettings = {
@@ -121,6 +126,8 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
     remindersEnabled: Boolean(input.remindersEnabled),
     welcomeEnabled: Boolean(input.welcomeEnabled),
     skipIfPaid: Boolean(input.skipIfPaid),
+    telegramEnabled: Boolean(input.telegramEnabled),
+    telegramReplacesSms: Boolean(input.telegramReplacesSms),
     reminderEn: s(input.reminderEn, 900) || DEFAULT_GIVING.reminderEn,
     reminderAm: s(input.reminderAm, 900) || DEFAULT_GIVING.reminderAm,
     welcomeEn: s(input.welcomeEn, 900) || DEFAULT_GIVING.welcomeEn,
@@ -152,4 +159,77 @@ export async function runRemindersNow(): Promise<ReminderRun> {
   const run = await runReminders();
   done();
   return run;
+}
+
+// ---------------------------------------------------------------- Telegram bot
+
+export interface TelegramStatus {
+  configured: boolean;
+  bot: string;
+  connected: boolean;
+  webhookUrl: string;
+  lastError: string;
+  linkedDonors: number;
+}
+
+export async function telegramStatus(): Promise<TelegramStatus> {
+  await requireUser();
+  const linked = (await queryOne<{ n: number }>("select count(*)::int as n from donors where telegram_chat_id is not null"))?.n ?? 0;
+  if (!telegramConfigured()) return { configured: false, bot: "", connected: false, webhookUrl: "", lastError: "", linkedDonors: linked };
+  const [bot, info] = await Promise.all([botUsername(), tg<{ url: string; last_error_message?: string }>("getWebhookInfo")]);
+  const url = info.result?.url ?? "";
+  return {
+    configured: true,
+    bot,
+    connected: url.endsWith("/api/telegram/webhook"),
+    webhookUrl: url,
+    lastError: info.result?.last_error_message ?? (info.ok ? "" : (info.description ?? "")),
+    linkedDonors: linked,
+  };
+}
+
+/** Points the bot at this website, so it can answer donors and link their chats. */
+export async function connectTelegramBot(): Promise<Result> {
+  await requireUser();
+  if (!telegramConfigured()) return { ok: false, error: "Add TELEGRAM_BOT_TOKEN in Vercel first, then redeploy." };
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  if (!host || /^(localhost|127\.|10\.|192\.168\.)/.test(host)) {
+    return { ok: false, error: "Connect the bot from the live website (Telegram can't reach this computer)." };
+  }
+  const res = await tg("setWebhook", {
+    url: `https://${host}/api/telegram/webhook`,
+    secret_token: webhookSecret(),
+    allowed_updates: ["message"],
+    drop_pending_updates: true,
+  });
+  if (!res.ok) return { ok: false, error: `Telegram: ${res.description ?? "failed"}` };
+  await tg("setMyCommands", {
+    commands: [
+      { command: "start", description: "Connect for weekly giving reminders" },
+      { command: "status", description: "Your weekly gift" },
+      { command: "stop", description: "Stop reminders here" },
+    ],
+  });
+  return { ok: true };
+}
+
+export async function sendTelegramTest(donorId: number): Promise<Result> {
+  await requireUser();
+  const donor = await queryOne<DonorForSms>(
+    "select id, name, phone, amount, reminder_day, locale, token, telegram_chat_id from donors where id = $1",
+    [donorId],
+  );
+  if (!donor?.telegram_chat_id) return { ok: false, error: "This donor hasn't connected the Telegram bot yet." };
+  const giving = await readGivingNow();
+  const res = await sendTelegram({
+    chatId: donor.telegram_chat_id,
+    text: donorMessage("reminder", donor, giving, "telegram"),
+    button: giveButton(giving, donor.locale),
+    kind: "manual",
+    donorId: donor.id,
+    label: `telegram:${donor.name}`,
+  });
+  done();
+  return res;
 }

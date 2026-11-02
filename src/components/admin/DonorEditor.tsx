@@ -33,12 +33,15 @@ export default function DonorEditor({
   sms,
   reminderPreview,
   smsReady,
+  telegram,
 }: {
   donor: DonorInput;
   payments: PaymentRow[];
   sms: SmsRow[];
   reminderPreview: string;
   smsReady: boolean;
+  /** Whether the donor connected the Telegram bot, and their one-tap connect link. */
+  telegram: { linked: boolean; link: string } | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(donor);
@@ -113,6 +116,26 @@ export default function DonorEditor({
                 ))}
               </select>
             </div>
+          </div>
+          <div className="a-field">
+            <label htmlFor="dn-tg">Telegram username (optional)</label>
+            <input id="dn-tg" value={form.telegram_username} onChange={(e) => set("telegram_username", e.target.value)} placeholder="@username" />
+            <span className="a-hint">
+              {telegram?.linked
+                ? "✓ Connected to the reminder bot: weekly reminders go to their Telegram."
+                : "Not connected yet. They connect by pressing Start on the bot (with this username, their phone number, or the link below)."}
+            </span>
+            {telegram && !telegram.linked && telegram.link ? (
+              <span className="a-hint">
+                Personal connect link:{" "}
+                <a href={telegram.link} target="_blank" rel="noopener">
+                  {telegram.link}
+                </a>{" "}
+                <button type="button" className="a-btn a-btn--ghost a-btn--sm" onClick={() => void navigator.clipboard.writeText(telegram.link)}>
+                  Copy
+                </button>
+              </span>
+            ) : null}
           </div>
           <div className="a-field">
             <label htmlFor="dn-notes">Notes (only visible to admins)</label>

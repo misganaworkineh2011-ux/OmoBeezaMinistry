@@ -20,10 +20,10 @@ android {
         applicationId = "org.omobeeza.donors"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.0.1"
+        versionCode = 6
+        versionName = "1.1.0"
         // The ministry website the app talks to (can be changed on the sign-in screen).
-        buildConfigField("String", "DEFAULT_SITE", "\"https://www.omobeezaministry.com\"")
+        buildConfigField("String", "DEFAULT_SITE", "\"https://omo-beeza-ministry-seven.vercel.app\"")
         buildConfigField("String", "DEFAULT_AFRO_URL", "\"https://app.afromessage.com\"")
     }
 
@@ -78,6 +78,8 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.animation:animation")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // QR codes for the "connect on Telegram" link.
+    implementation("com.google.zxing:core:3.5.3")
     debugImplementation("androidx.compose.ui:ui-tooling")
     testImplementation("org.json:json:20231013")
 }

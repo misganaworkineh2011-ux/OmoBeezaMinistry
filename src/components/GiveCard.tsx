@@ -6,7 +6,7 @@ import { Field, focusFirstError, type FieldErrors } from "@/components/FormKit";
 import DonateForm from "@/components/DonateForm";
 import Icon from "@/components/Icon";
 import { useRouter } from "@/i18n/navigation";
-import { dayName, normalizePhone } from "@/lib/giving";
+import { dayName, normalizePhone, normalizeTelegram } from "@/lib/giving";
 
 type Tab = "weekly" | "once" | "abroad";
 
@@ -65,7 +65,9 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
     const name = String(data.get("name") ?? "").trim();
     const phone = String(data.get("phone") ?? "");
     const email = String(data.get("email") ?? "").trim();
+    const telegram = String(data.get("telegram") ?? "").trim();
     const next: FieldErrors = {};
+    if (telegram && !normalizeTelegram(telegram)) next.telegram = t("invalidTelegram");
     if (!name) next.name = tf("required");
     if (!normalizePhone(phone)) next.phone = t("invalidPhone");
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = tf("invalidEmail");
@@ -80,13 +82,16 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       const res = await fetch("/api/donors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email, amount: numeric, day, locale, consent: true, website: data.get("website") }),
+        body: JSON.stringify({ name, phone, email, telegram, amount: numeric, day, locale, consent: true, website: data.get("website") }),
       });
+      const body = (await res.json().catch(() => ({}))) as { telegram?: string };
       if (!res.ok) {
         setFailure(res.status === 429 ? t("rateLimited") : res.status === 503 ? t("unavailable") : t("error"));
       } else {
         // Registered: the thank-you page confirms it and offers the Ye-Buna button.
-        router.push(thankYouHref({ kind: "weekly", name: name.split(/\s+/)[0] ?? name, amount: numeric, day }));
+        router.push(
+          thankYouHref({ kind: "weekly", name: name.split(/\s+/)[0] ?? name, amount: numeric, day, ...(body.telegram ? { tg: body.telegram } : {}) }),
+        );
         return;
       }
     } catch {
@@ -101,9 +106,10 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
 
       <fieldset>
         <legend>{t("amountLegend")}</legend>
-        <div className="amounts">
+        {/* A scrollable row of suggested amounts; "Other" sits below it. */}
+        <div className="amount-scroll" role="radiogroup" aria-label={t("amountLegend")}>
           {settings.amounts.map((a) => (
-            <label key={a} className={`amount${preset && numeric === a ? " is-active" : ""}`}>
+            <label key={a} className={`amount amount--chip${preset && numeric === a ? " is-active" : ""}`}>
               <input
                 type="radio"
                 name="tier"
@@ -115,30 +121,31 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
                 }}
               />
               {a.toLocaleString("en-US")}
+              <small>{t("birrUnit")}</small>
             </label>
           ))}
-          <div className="amount-other">
-            <label htmlFor="give-other" className="sr-only">
-              {t("customLabel")}
-            </label>
-            <input
-              id="give-other"
-              name="amount"
-              className="input"
-              type="number"
-              min={settings.minAmount}
-              step={1}
-              inputMode="numeric"
-              placeholder={t("customShort")}
-              value={preset ? "" : amount}
-              aria-invalid={errors.amount ? true : undefined}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                setErrors((prev) => ({ ...prev, amount: undefined }));
-              }}
-              style={{ minHeight: 58, height: "100%" }}
-            />
-          </div>
+        </div>
+        <div className="amount-other amount-other--wide">
+          <label htmlFor="give-other" className="sr-only">
+            {t("customLabel")}
+          </label>
+          <input
+            id="give-other"
+            name="amount"
+            className="input"
+            type="number"
+            min={settings.minAmount}
+            step={1}
+            inputMode="numeric"
+            placeholder={t("customLabel")}
+            value={preset ? "" : amount}
+            aria-invalid={errors.amount ? true : undefined}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setErrors((prev) => ({ ...prev, amount: undefined }));
+            }}
+            style={{ minHeight: 54 }}
+          />
         </div>
         {errors.amount ? (
           <p className="field__error" style={{ marginTop: 8 }}>
@@ -162,7 +169,10 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
         <Field id="give-name" name="name" label={t("name")} autoComplete="name" error={errors.name} />
         <Field id="give-phone" name="phone" type="tel" label={t("phone")} autoComplete="tel" placeholder="09…" error={errors.phone} />
       </div>
-      <Field id="give-email" name="email" type="email" label={t("email")} autoComplete="email" optional error={errors.email} />
+      <div className="form__row">
+        <Field id="give-email" name="email" type="email" label={t("email")} autoComplete="email" optional error={errors.email} />
+        <Field id="give-telegram" name="telegram" label={t("telegram")} placeholder="@username" optional error={errors.telegram} />
+      </div>
 
       {/* Honeypot for bots: hidden from people and screen readers. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hp-field" />

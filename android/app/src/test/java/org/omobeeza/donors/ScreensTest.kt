@@ -37,6 +37,8 @@ class ScreensTest {
     private fun donor(id: Int, name: String, phone: String, amount: Int, day: Int, afro: Boolean, locale: String = "en") = Donor(
         id, name, phone, "", amount, day, locale, "active", "app", "Met at the carnival day", "2026-11-02T09:30:00.000Z",
         if (afro) "2026-11-02T10:00:00.000Z" else null, if (afro) "2026-11-01" else null, if (afro) 300 else 0,
+        telegramUsername = if (afro) "abebe_k" else "", telegramLinked = afro,
+        telegramLink = "https://t.me/OmoBeezaBot?start=AbC123xYz9AB",
     )
     private val donors = listOf(
         donor(1, "Almaz Bekele", "+251922111333", 250, 3, false, "am"),
@@ -65,6 +67,8 @@ class ScreensTest {
     @Test fun donorDetails() = paparazzi.snapshot {
         OmoTheme { Box(Modifier.background(Brand.Sand)) { DonorDetails(donors[0], true, {}, {}) } }
     }
+
+    @Test fun savedTelegramConnected() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[1], true, false, {}, {}, {}, animate = false) } }
 
     @Test fun settings() = paparazzi.snapshot {
         OmoTheme { SettingsScreen(user, "https://omobeezaministry.com", true, "https://app.afromessage.com", {}, {}, {}, {}) }
