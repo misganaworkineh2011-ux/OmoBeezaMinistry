@@ -8,7 +8,8 @@ import type { IconName } from "@/components/Icon";
 import Icon from "@/components/Icon";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
-import DonateForm from "@/components/DonateForm";
+import GiveCard from "@/components/GiveCard";
+import { getGiving } from "@/lib/data/giving";
 import { TIERS } from "@/lib/donations";
 import CopyButton from "@/components/CopyButton";
 import { Accordion, AccordionItem } from "@/components/Accordion";
@@ -32,6 +33,7 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
   const { locale } = await params;
   setRequestLocale(locale);
   const SITE = await getSite();
+  const giving = await getGiving();
   const t = await getTranslations("donations");
   const tNav = await getTranslations("nav");
   const tFaq = await getTranslations("faq");
@@ -139,7 +141,14 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
                   <Icon name="shield" /> {t("secure")}
                 </span>
               </div>
-              <DonateForm />
+              <GiveCard
+                settings={{
+                  yebunaUrl: giving.yebunaUrl,
+                  amounts: giving.amounts,
+                  minAmount: giving.minAmount,
+                  defaultDay: giving.defaultDay,
+                }}
+              />
             </div>
           </aside>
         </div>

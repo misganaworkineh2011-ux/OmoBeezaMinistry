@@ -167,6 +167,46 @@ export const SCHEMA: string[] = [
   `alter table chat_messages add column if not exists resolved boolean not null default false`,
   `create index if not exists chat_messages_conv on chat_messages (conversation_id, id)`,
   `create index if not exists chat_conversations_last on chat_conversations (last_at desc)`,
+  // Weekly givers (registered on the Donations page or added in the dashboard).
+  `create table if not exists donors (
+    id serial primary key,
+    name text not null,
+    phone text not null unique,
+    email text not null default '',
+    amount int not null,
+    reminder_day int not null default 0,
+    status text not null default 'active',
+    locale text not null default 'en',
+    token text not null unique,
+    notes text not null default '',
+    source text not null default 'website',
+    created_at timestamptz not null default now(),
+    last_reminded_at timestamptz,
+    stopped_at timestamptz
+  )`,
+  `create table if not exists donor_payments (
+    id serial primary key,
+    donor_id int not null references donors(id) on delete cascade,
+    amount int not null,
+    paid_on date not null default current_date,
+    reference text not null default '',
+    note text not null default '',
+    created_by text not null default '',
+    created_at timestamptz not null default now()
+  )`,
+  `create table if not exists sms_log (
+    id serial primary key,
+    donor_id int references donors(id) on delete set null,
+    to_phone text not null,
+    message text not null,
+    kind text not null,
+    status text not null,
+    provider_id text not null default '',
+    error text not null default '',
+    created_at timestamptz not null default now()
+  )`,
+  `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
+  `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,
   `create index if not exists chat_logs_created on chat_logs (created_at desc)`,
 ];

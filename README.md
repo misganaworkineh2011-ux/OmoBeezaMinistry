@@ -139,6 +139,30 @@ start over. To work against the real database, put `DATABASE_URL` in `.env.local
 Changes made in the dashboard appear on the site immediately (cached pages are refreshed).
 Large videos: use MP4 (H.264). The dashboard reads the size and length and captures a poster frame.
 
+## Weekly giving in birr (Ye-Buna + SMS reminders)
+The Donations page lets people commit to a **weekly** gift in birr. They register (name, mobile
+number, amount, reminder day), then continue to the ministry's **Ye-Buna** page to give. Every
+week, on the day they chose, they get an SMS reminder through **AfroMessage** with the Ye-Buna
+link and a personal link to stop reminders. Visitors can also give once on Ye-Buna, and people
+abroad can still send a USD pledge.
+
+Ye-Buna doesn't notify websites about payments, so record gifts in **Dashboard → Donors** (open a
+donor → Record payment) when you see them in your Ye-Buna account. Recorded payments drive the
+totals, the "Not paid in 7 days" list, and (optionally) skipping reminders for people who already gave.
+
+**Setup:**
+1. Create the ministry's page on [ye-buna.com](https://ye-buna.com) and paste its link in
+   **Dashboard → Giving & SMS**.
+2. In your AfroMessage account, get an API token (and an approved sender name / identifier if you
+   have one). Add `AFROMESSAGE_TOKEN` (and optionally `AFROMESSAGE_IDENTIFIER_ID`,
+   `AFROMESSAGE_SENDER_NAME`) in Vercel → Settings → Environment Variables.
+3. Add `CRON_SECRET` (any long random string). `vercel.json` runs `/api/cron/reminders` every day
+   at 06:00 UTC (9:00 in Ethiopia); it texts the donors whose reminder day it is.
+4. Redeploy, then use **Send a test SMS** on the Giving & SMS page.
+
+The SMS texts (English and Amharic) are editable on the same page, with a live preview and SMS
+count. Amharic uses 70 characters per SMS, so keep those messages short.
+
 ## Editing content (in code)
 - **Text / translations:** `messages/en.json` and `messages/am.json`. Any key missing from
   `am.json` automatically falls back to English (the Privacy/Terms bodies currently do).

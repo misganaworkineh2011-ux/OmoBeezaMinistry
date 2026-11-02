@@ -1150,5 +1150,50 @@
     "typing": "The assistant is typing",
     "you": "You",
     "bot": "Assistant"
+  },
+  "giving": {
+    "tabs": {
+      "weekly": "Weekly in birr",
+      "once": "One-time",
+      "abroad": "From abroad"
+    },
+    "weeklyTitle": "Give weekly in birr",
+    "weeklyLead": "Join our weekly supporters: choose an amount, give it through Ye-Buna, and we'll send you a short SMS reminder on the day you choose.",
+    "amountLegend": "Weekly amount (birr)",
+    "customLabel": "Other amount in birr",
+    "customShort": "Other",
+    "birr": "{amount} birr",
+    "dayLabel": "Remind me every",
+    "name": "Your name",
+    "phone": "Mobile number",
+    "phoneHint": "Ethiopian mobile number, e.g. 0911 234 567",
+    "email": "Email",
+    "consent": "Send me a weekly SMS reminder. I can stop at any time.",
+    "submit": "Commit {amount} birr every week",
+    "note": "Next, you'll continue to Ye-Buna to give this week's gift. Your number is only used for these reminders.",
+    "invalidPhone": "Enter a valid Ethiopian mobile number (09… or 07…).",
+    "minAmount": "Enter at least {min} birr.",
+    "consentRequired": "Please agree to receive the weekly reminder.",
+    "error": "Something went wrong. Please try again, or contact us.",
+    "rateLimited": "Too many attempts. Please wait a few minutes and try again.",
+    "unavailable": "Weekly registration isn't available right now. You can still give through our bank account.",
+    "successTitle": "Thank you, {name}!",
+    "successText": "You're now a weekly supporter with {amount} birr. We'll send you a reminder every {day}.",
+    "continue": "Give this week's gift on Ye-Buna",
+    "again": "Register another person",
+    "onceTitle": "Give once in birr",
+    "onceLead": "Give any amount, any time, through our Ye-Buna page.",
+    "onceButton": "Give on Ye-Buna",
+    "comingSoon": "Online giving in birr is coming soon. Meanwhile, you can transfer to our bank account on this page.",
+    "abroadLead": "Giving from outside Ethiopia? Tell us your pledge and we'll reply with the best way to complete it.",
+    "stop": {
+      "title": "Weekly giving reminders",
+      "lead": "Hi {name}, you are giving {amount} birr every week. Thank you! Would you like to stop the weekly SMS reminders?",
+      "button": "Stop my reminders",
+      "done": "Your reminders are stopped. Thank you for every gift you've given. You're welcome to register again at any time.",
+      "already": "Your reminders are already stopped. You're welcome to register again at any time.",
+      "invalid": "This link is no longer valid.",
+      "back": "Back to the website"
+    }
   }
 }

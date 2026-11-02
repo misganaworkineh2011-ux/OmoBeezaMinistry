@@ -31,6 +31,13 @@ export default async function PanelLayout({ children }: { children: ReactNode })
       ],
     },
     {
+      title: "Giving",
+      items: [
+        { href: "/admin/donors", label: "Donors", icon: "heart" },
+        { href: "/admin/giving", label: "Giving & SMS", icon: "send" },
+      ],
+    },
+    {
       title: "Engagement",
       items: [
         { href: "/admin/inbox", label: "Inbox", icon: "mail", badge: unread },

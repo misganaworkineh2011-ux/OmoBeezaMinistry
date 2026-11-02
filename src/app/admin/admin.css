@@ -1328,3 +1328,20 @@ div.convo__teach {
   border-radius: 10px;
   background: var(--a-gold-100);
 }
+
+/* ---------------------------------------------------------------- Donors */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0 16px;
+}
+
+.sms-preview {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px 12px 12px 4px;
+  background: var(--a-blue-50);
+  color: var(--a-ink);
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+}

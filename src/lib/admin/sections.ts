@@ -20,6 +20,7 @@ export const SECTION_GROUPS: { title: string; sections: Section[] }[] = [
       { ns: "gallery", title: "Gallery pages", descr: "Gallery headings and the prayer-wall wording." },
       { ns: "videos", title: "Videos page", descr: "Headings, the logo story, and video labels." },
       { ns: "donations", title: "Donate page", descr: "Donation page text, gift impact amounts, bank wording." },
+      { ns: "giving", title: "Weekly giving", descr: "Weekly birr giving form (Ye-Buna), success message and the stop-reminders page." },
       { ns: "careers", title: "Careers page", descr: "Why serve, open positions, application form labels." },
       { ns: "contact", title: "Contact page", descr: "Contact page text and form subjects." },
       { ns: "faq", title: "FAQ page", descr: "Questions and answers, grouped by topic." },
