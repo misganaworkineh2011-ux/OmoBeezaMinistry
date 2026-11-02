@@ -103,6 +103,10 @@
     "videos": {
       "title": "Videos",
       "description": "Watch the Omo Beeza documentary, our mission trip, the new playground, and short films from South Omo."
+    },
+    "thanks": {
+      "title": "Thank you",
+      "description": "Thank you for giving to Omo Beeza Ministry and standing with the children of South Omo."
     }
   },
   "home": {
@@ -1195,5 +1199,82 @@
       "invalid": "This link is no longer valid.",
       "back": "Back to the website"
     }
+  },
+  "thanks": {
+    "script": "Ameseginalehu!",
+    "titleNamed": "Thank you, <em>{name}</em>.",
+    "titlePlain": "Thank you for <em>giving</em>.",
+    "lead": "Your generosity just reached the children of South Omo. Because of you, a child will eat, learn, and fall asleep knowing they are loved.",
+    "ticket": {
+      "weekly": "Weekly giver",
+      "once": "Your gift",
+      "amount": "{amount} birr",
+      "every": "every {day}",
+      "sms": "We'll send you a short reminder by SMS every {day}. You can stop at any time with the link in the message.",
+      "onceNote": "Every gift, large or small, is received with gratitude and used with care.",
+      "seal": "OMO BEEZA MINISTRY • THANK YOU • ",
+      "giveNow": "Give this week's gift on Ye-Buna"
+    },
+    "letter": {
+      "eyebrow": "A note from Luqa",
+      "greeting": "Dear friend,",
+      "body": [
+        "Today, somewhere in Luqa, a child is sitting down to a warm meal, opening a schoolbook, or being tucked in by someone who cares. Your gift is part of that story.",
+        "Many of these children were once at risk of being abandoned. Now they are growing up in a Christ-centered family, with a future and a hope. We don't take your trust lightly: every birr is used carefully for their food, education, health and faith."
+      ],
+      "signoff": "With love and gratitude,",
+      "signature": "The Omo Beeza family",
+      "place": "Jinka · Luqa, South Omo",
+      "captions": [
+        "Our family in Luqa",
+        "Smiles at the Home Center",
+        "Class is in session"
+      ]
+    },
+    "impact": {
+      "eyebrow": "Where your gift goes",
+      "title": "What your gift <em>sets in motion</em>",
+      "steps": [
+        {
+          "icon": "meal",
+          "title": "A warm meal",
+          "descr": "Nutritious food every day for the children at the Home Center."
+        },
+        {
+          "icon": "graduation",
+          "title": "A seat in class",
+          "descr": "School fees, books and uniforms, from kindergarten up."
+        },
+        {
+          "icon": "shield",
+          "title": "Safe care",
+          "descr": "Shelter, medical care and loving staff, day and night."
+        },
+        {
+          "icon": "cross",
+          "title": "A living faith",
+          "descr": "Bible teaching and the love of a Christ-centered family."
+        }
+      ]
+    },
+    "verse": {
+      "quote": "“Each one must give as he has decided in his heart, not reluctantly or under compulsion, for God loves a cheerful giver.”",
+      "cite": "2 Corinthians 9:7"
+    },
+    "next": {
+      "eyebrow": "Keep the circle going",
+      "title": "Three more ways to <em>stand with them</em>",
+      "shareTitle": "Share the story",
+      "shareDescr": "Invite a friend to give weekly. One message can change a child's year.",
+      "shareText": "I just gave to Omo Beeza Ministry. Join me in standing with the children of South Omo!",
+      "prayTitle": "Pray for a child",
+      "prayDescr": "Put a face and a name to your prayers on our prayer wall.",
+      "prayCta": "Visit the prayer wall",
+      "watchTitle": "See the work",
+      "watchDescr": "Watch the documentary and short films from the field.",
+      "watchCta": "Watch the videos"
+    },
+    "home": "Back to the home page",
+    "giveAgain": "Give again"
   }
 }

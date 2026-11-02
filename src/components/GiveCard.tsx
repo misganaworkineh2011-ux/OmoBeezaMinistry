@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Field, focusFirstError, type FieldErrors } from "@/components/FormKit";
 import DonateForm from "@/components/DonateForm";
 import Icon from "@/components/Icon";
+import { useRouter } from "@/i18n/navigation";
 import { dayName, normalizePhone } from "@/lib/giving";
 
 type Tab = "weekly" | "once" | "abroad";
@@ -16,10 +17,27 @@ export interface GiveCardSettings {
   defaultDay: number;
 }
 
-/** Ye-Buna button (opens in a new tab so the visitor keeps our page). */
-function YebunaButton({ href, label }: { href: string; label: string }) {
+/** The thank-you page, personalised through its address. */
+function thankYouHref(params: Record<string, string | number>): string {
+  return `/thank-you?${new URLSearchParams(Object.entries(params).map(([k, v]) => [k, String(v)])).toString()}`;
+}
+
+/**
+ * Ye-Buna button: opens Ye-Buna in a new tab, and (with `thanks`) shows the
+ * thank-you page in this one.
+ */
+function YebunaButton({ href, label, thanks }: { href: string; label: string; thanks?: string }) {
+  const router = useRouter();
   return (
-    <a className="btn btn--gold btn--lg btn--block btn--wrap" href={href} target="_blank" rel="noopener">
+    <a
+      className="btn btn--gold btn--lg btn--block btn--wrap"
+      href={href}
+      target="_blank"
+      rel="noopener"
+      onClick={() => {
+        if (thanks) window.setTimeout(() => router.push(thanks), 300);
+      }}
+    >
       <Icon name="heart" /> {label} <Icon name="arrowRight" />
     </a>
   );
@@ -34,7 +52,7 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
-  const [done, setDone] = useState<{ name: string; link: string } | null>(null);
+  const router = useRouter();
 
   const numeric = Math.round(Number(amount)) || 0;
   const preset = settings.amounts.includes(numeric) && amount === String(numeric);
@@ -64,30 +82,18 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, email, amount: numeric, day, locale, consent: true, website: data.get("website") }),
       });
-      const body = (await res.json().catch(() => ({}))) as { link?: string };
-      if (!res.ok) setFailure(res.status === 429 ? t("rateLimited") : res.status === 503 ? t("unavailable") : t("error"));
-      else setDone({ name: name.split(/\s+/)[0] ?? name, link: body.link ?? settings.yebunaUrl });
+      if (!res.ok) {
+        setFailure(res.status === 429 ? t("rateLimited") : res.status === 503 ? t("unavailable") : t("error"));
+      } else {
+        // Registered: the thank-you page confirms it and offers the Ye-Buna button.
+        router.push(thankYouHref({ kind: "weekly", name: name.split(/\s+/)[0] ?? name, amount: numeric, day }));
+        return;
+      }
     } catch {
       setFailure(t("error"));
     }
     setBusy(false);
   };
-
-  if (done) {
-    return (
-      <div className="success" role="status">
-        <span className="success__icon">
-          <Icon name="check" />
-        </span>
-        <h3>{t("successTitle", { name: done.name })}</h3>
-        <p>{t("successText", { amount: numeric.toLocaleString("en-US"), day: dayName(day, locale) })}</p>
-        {done.link ? <YebunaButton href={done.link} label={t("continue")} /> : <p>{t("comingSoon")}</p>}
-        <button type="button" className="text-link mt-sm" onClick={() => setDone(null)}>
-          {t("again")}
-        </button>
-      </div>
-    );
-  }
 
   return (
     <form className="form" onSubmit={onSubmit} noValidate>
@@ -206,7 +212,11 @@ export default function GiveCard({ settings }: { settings: GiveCardSettings }) {
         <div className="form">
           <h3 className="title-sm">{t("onceTitle")}</h3>
           <p className="give-lead">{t("onceLead")}</p>
-          {settings.yebunaUrl ? <YebunaButton href={settings.yebunaUrl} label={t("onceButton")} /> : <p>{t("comingSoon")}</p>}
+          {settings.yebunaUrl ? (
+            <YebunaButton href={settings.yebunaUrl} label={t("onceButton")} thanks={thankYouHref({ kind: "once" })} />
+          ) : (
+            <p>{t("comingSoon")}</p>
+          )}
         </div>
       ) : null}
 

@@ -1,0 +1,17 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+# Release signing: keep these safe and private, never commit them.
+keystore.properties
+*.jks
+*.keystore
+
+# Built APKs
+*.apk
+release/

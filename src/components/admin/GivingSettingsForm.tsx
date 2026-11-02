@@ -61,6 +61,13 @@ export default function GivingSettingsForm({
             <span className="a-hint">
               Create a page at ye-buna.com, then paste its link here. Donors go there to give; it is also the {"{link}"} in SMS messages.
             </span>
+            <span className="a-hint">
+              If Ye-Buna lets you set a “thank you” or return link, use <strong>{origin}/thank-you</strong>{" "}
+              <a href="/thank-you" target="_blank" rel="noopener">
+                (preview)
+              </a>
+              .
+            </span>
           </div>
           <div className="form-grid">
             <div className="a-field">

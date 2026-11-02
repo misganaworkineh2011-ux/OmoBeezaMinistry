@@ -14,6 +14,7 @@ export type PageKey =
   | "blog"
   | "careers"
   | "donations"
+  | "thanks"
   | "contact"
   | "faq"
   | "privacy"

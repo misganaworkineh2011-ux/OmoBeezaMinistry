@@ -205,6 +205,9 @@ export const SCHEMA: string[] = [
     error text not null default '',
     created_at timestamptz not null default now()
   )`,
+  // Set when the donor was added (and verified) in AfroMessage contacts from
+  // the Android app's guided step — only needed while AfroMessage is in beta.
+  `alter table donors add column if not exists afro_contact_at timestamptz`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,

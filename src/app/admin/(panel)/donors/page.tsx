@@ -31,6 +31,8 @@ interface DonorRow {
   last_paid: string | null;
   total: number;
   last_reminded_at: string | null;
+  afro_contact_at: string | null;
+  source: string;
 }
 
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—");
@@ -45,7 +47,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
 
   const [rows, counts, stats] = await Promise.all([
     query<DonorRow>(
-      `select d.id, d.name, d.phone, d.amount, d.reminder_day, d.status, d.locale, d.created_at, d.last_reminded_at,
+      `select d.id, d.name, d.phone, d.amount, d.reminder_day, d.status, d.locale, d.created_at, d.last_reminded_at, d.afro_contact_at, d.source,
               (select max(p.paid_on) from donor_payments p where p.donor_id = d.id)::text as last_paid,
               (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total
        from donors d
@@ -154,10 +156,18 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
                   </td>
                   <td>
                     <span className={`pill ${d.status === "active" ? "pill--ok" : d.status === "paused" ? "pill--blue" : ""}`}>{d.status}</span>
+                    {d.afro_contact_at ? (
+                      <span className="pill pill--blue" title="Added and verified in AfroMessage contacts" style={{ marginLeft: 4 }}>
+                        AfroMessage ✓
+                      </span>
+                    ) : null}
                   </td>
                   <td>{date(d.last_paid)}</td>
                   <td className="num">{birr(d.total)}</td>
-                  <td>{date(d.created_at)}</td>
+                  <td>
+                    {date(d.created_at)}
+                    {d.source === "app" ? <div className="a-hint">via the app</div> : null}
+                  </td>
                 </tr>
               ))}
             </tbody>
