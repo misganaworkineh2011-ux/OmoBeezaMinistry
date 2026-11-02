@@ -55,11 +55,10 @@ export async function sendSms(opts: {
     return { ok: false, error: "SMS is not configured (AFROMESSAGE_TOKEN is missing)." };
   }
 
-  const payload: Record<string, string> = { to: opts.to, message: opts.message };
-  if (process.env.AFROMESSAGE_IDENTIFIER_ID) payload.from = process.env.AFROMESSAGE_IDENTIFIER_ID;
-  if (process.env.AFROMESSAGE_SENDER_NAME) payload.sender = process.env.AFROMESSAGE_SENDER_NAME;
-
-  try {
+  const post = async (withSender: boolean) => {
+    const payload: Record<string, string> = { to: opts.to, message: opts.message };
+    if (process.env.AFROMESSAGE_IDENTIFIER_ID) payload.from = process.env.AFROMESSAGE_IDENTIFIER_ID;
+    if (withSender && process.env.AFROMESSAGE_SENDER_NAME) payload.sender = process.env.AFROMESSAGE_SENDER_NAME;
     const res = await fetch(`${API}/send`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Accept: "application/json" },
@@ -72,13 +71,32 @@ export async function sendSms(opts: {
     } | null;
     if (res.ok && body?.acknowledge === "success") {
       const id = typeof body.response === "object" && body.response?.message_id ? String(body.response.message_id) : "";
-      await log("sent", id, "");
-      return { ok: true };
+      return { ok: true as const, id };
     }
     const detail =
       typeof body?.response === "string"
         ? body.response
         : JSON.stringify(body?.response?.errors ?? body?.response ?? body ?? `HTTP ${res.status}`);
+    return { ok: false as const, detail };
+  };
+
+  try {
+    let result = await post(true);
+    let note = "";
+    // A sender name that AfroMessage hasn't approved yet makes every message
+    // fail. Send without it (the account's default sender) and say so in the log.
+    if (!result.ok && process.env.AFROMESSAGE_SENDER_NAME && /sender id\/name|identifier/i.test(result.detail)) {
+      const retry = await post(false);
+      if (retry.ok || !/sender id\/name|identifier/i.test(retry.detail)) {
+        note = `Sender name "${process.env.AFROMESSAGE_SENDER_NAME}" is not approved by AfroMessage yet, so the default sender was used.`;
+        result = retry;
+      }
+    }
+    if (result.ok) {
+      await log("sent", result.id, note);
+      return { ok: true };
+    }
+    const detail = note ? `${result.detail} (${note})` : result.detail;
     await log("failed", "", detail);
     return { ok: false, error: `AfroMessage: ${detail}` };
   } catch (err) {
