@@ -121,6 +121,7 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onAfro: (Donor) -> Unit,
     onUndoAfro: (Donor) -> Unit,
+    onSms: () -> Unit = {},
 ) {
     var selected by remember { mutableStateOf<Donor?>(null) }
 
@@ -206,6 +207,8 @@ fun HomeScreen(
                         Spacer(Modifier.height(10.dp))
                         LinearProgressIndicator(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)), color = Brand.Gold, trackColor = Brand.GoldSoft)
                     }
+                    Spacer(Modifier.height(12.dp))
+                    SmsBanner(onSms)
                     if (afroStep && stats.pendingAfro > 0 && view != View.Afro) {
                         Spacer(Modifier.height(12.dp))
                         AfroBanner(stats.pendingAfro) { onView(View.Afro) }
@@ -246,6 +249,23 @@ private fun StatTile(value: String, label: String, modifier: Modifier = Modifier
     ) {
         Text(value, style = MaterialTheme.typography.titleLarge, color = if (gold) Brand.GoldLight else Color.White, maxLines = 1)
         Text(label, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun SmsBanner(onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brand.Navy).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(Brand.Gold), contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Rounded.Send, null, tint = Brand.Navy, modifier = Modifier.size(18.dp))
+        }
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text("Send SMS reminders", style = MaterialTheme.typography.titleSmall, color = Color.White)
+            Text("From this phone, to donors not reminded in 7 days", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.GoldLight)
     }
 }
 

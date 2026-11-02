@@ -75,6 +75,20 @@ class Api(baseUrl: String, private val token: String?) {
         return o.optStringOrNull("afro_contact_at")
     }
 
+    /** Active donors who haven't had a reminder in 7 days, each with their message. */
+    suspend fun smsQueue(): List<QueuedSms> {
+        val list = request("GET", "/api/mobile/sms").optJSONArray("donors") ?: JSONArray()
+        return List(list.length()) {
+            val o = list.getJSONObject(it)
+            QueuedSms(o.getInt("id"), o.optString("name"), o.optString("phone"), o.optString("message"), o.optStringOrNull("last_reminded_at"))
+        }
+    }
+
+    /** Tell the website how one SMS from this phone went (sent ones count as reminded). */
+    suspend fun reportSms(id: Int, error: String?) {
+        request("POST", "/api/mobile/sms", JSONObject().put("id", id).put("ok", error == null).put("error", error ?: ""))
+    }
+
     private fun user(o: JSONObject) = User(o.optInt("id"), o.optString("name"), o.optString("email"))
 
     private suspend fun request(method: String, path: String, body: JSONObject? = null): JSONObject =

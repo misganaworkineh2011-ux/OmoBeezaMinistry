@@ -2,6 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- "Send SMS reminders": sends reminders as normal SMS from this phone's SIM. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Only to list the SIM cards so the ministry SIM can be chosen on dual-SIM phones. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="false"

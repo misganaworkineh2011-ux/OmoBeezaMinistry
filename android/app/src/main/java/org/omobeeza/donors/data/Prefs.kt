@@ -44,5 +44,10 @@ class Prefs(context: Context) {
         get() = sp.getString("afroUrl", null) ?: BuildConfig.DEFAULT_AFRO_URL
         set(v) = sp.edit().putString("afroUrl", v.trim()).apply()
 
+    /** The SIM chosen for "Send SMS reminders" (-1 = the phone's default). */
+    var smsSim: Int
+        get() = sp.getInt("smsSim", -1)
+        set(v) = sp.edit().putInt("smsSim", v).apply()
+
     fun signOut() = sp.edit().remove("token").remove("userName").remove("userEmail").apply()
 }

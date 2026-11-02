@@ -24,6 +24,7 @@ interface LogRow {
   error: string;
   created_at: string;
   channel: string;
+  provider_id: string;
 }
 
 export default async function GivingPage() {
@@ -36,7 +37,7 @@ export default async function GivingPage() {
       [ethiopiaWeekday()],
     ),
     query<LogRow>(
-      `select l.id, l.donor_id, d.name, l.to_phone, l.message, l.kind, l.status, l.error, l.created_at, l.channel
+      `select l.id, l.donor_id, d.name, l.to_phone, l.message, l.kind, l.status, l.error, l.created_at, l.channel, l.provider_id
        from sms_log l left join donors d on d.id = l.donor_id order by l.created_at desc limit 100`,
     ),
     queryOne<{ sent: number; failed: number }>(
@@ -93,7 +94,7 @@ export default async function GivingPage() {
                       <div className="a-hint">{m.channel === "telegram" ? "Telegram" : displayPhone(m.to_phone)}</div>
                     </td>
                     <td>
-                      {m.channel === "telegram" ? "Telegram" : "SMS"} · {m.kind}
+                      {m.channel === "telegram" ? "Telegram" : m.provider_id === "phone" ? "SMS (ministry phone)" : "SMS"} · {m.kind}
                     </td>
                     <td>
                       <span className={`pill ${m.status === "sent" ? "pill--ok" : "pill--new"}`}>{m.status}</span>

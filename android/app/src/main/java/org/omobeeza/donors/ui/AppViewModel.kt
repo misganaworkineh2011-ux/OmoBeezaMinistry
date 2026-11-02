@@ -14,6 +14,8 @@ import org.omobeeza.donors.data.ApiException
 import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.NewDonor
+import org.omobeeza.donors.data.PhoneSms
+import org.omobeeza.donors.data.QueuedSms
 import org.omobeeza.donors.data.Prefs
 import org.omobeeza.donors.data.Stats
 import org.omobeeza.donors.data.User
@@ -26,6 +28,19 @@ sealed interface Screen {
     data class Saved(val donor: Donor, val created: Boolean) : Screen
     data class Afro(val donor: Donor, val returnTo: Screen) : Screen
     data object Settings : Screen
+}
+
+/** The "Send SMS reminders" sheet: the donors waiting and how sending is going. */
+data class SmsRun(
+    val phase: Phase,
+    val queue: List<QueuedSms> = emptyList(),
+    val done: Int = 0,
+    val sent: Int = 0,
+    val failed: List<Pair<String, String>> = emptyList(),
+    val current: String = "",
+    val stopped: String? = null,
+) {
+    enum class Phase { Loading, Ready, Sending, Done }
 }
 
 enum class View(val key: String, val label: String) {
@@ -65,7 +80,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var message by mutableStateOf<String?>(null)
     var formError by mutableStateOf<String?>(null)
 
+    var sms by mutableStateOf<SmsRun?>(null)
+        private set
+
     private var searchJob: Job? = null
+    private var smsStop = false
 
     private fun api() = Api(prefs.site, prefs.token)
 
@@ -206,6 +225,69 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setAfroUrl(url: String) {
         prefs.afroUrl = url
+    }
+
+    /** Open the sheet and load the donors who haven't had a reminder in 7 days. */
+    fun openSms() {
+        if (sms?.phase == SmsRun.Phase.Sending) return
+        sms = SmsRun(SmsRun.Phase.Loading)
+        viewModelScope.launch {
+            try {
+                sms = SmsRun(SmsRun.Phase.Ready, api().smsQueue())
+            } catch (e: ApiException) {
+                sms = null
+                handle(e)
+            }
+        }
+    }
+
+    fun closeSms() {
+        if (sms?.phase != SmsRun.Phase.Sending) sms = null
+    }
+
+    /** Stop after the message being sent now (so nothing is sent without being recorded). */
+    fun stopSms() {
+        smsStop = true
+    }
+
+    /** Send each waiting donor their reminder from this phone, a few seconds apart. */
+    fun startSms(simId: Int?) {
+        val start = sms ?: return
+        if (start.phase != SmsRun.Phase.Ready || start.queue.isEmpty()) return
+        val context = getApplication<Application>()
+        prefs.smsSim = simId ?: -1
+        smsStop = false
+        viewModelScope.launch {
+            var run = start.copy(phase = SmsRun.Phase.Sending)
+            sms = run
+            var inARow = 0
+            try {
+                for ((i, d) in start.queue.withIndex()) {
+                    if (i > 0) delay(3_000)
+                    if (smsStop) break
+                    run = run.copy(current = d.name)
+                    sms = run
+                    val error = PhoneSms.send(context, d.phone, d.message, simId)
+                    // Tell the website (a sent one counts as this week's reminder).
+                    for (attempt in 1..3) {
+                        val reported = runCatching { api().reportSms(d.id, error) }.isSuccess
+                        if (reported) break
+                        delay(2_000L * attempt)
+                    }
+                    run = if (error == null) run.copy(done = run.done + 1, sent = run.sent + 1)
+                    else run.copy(done = run.done + 1, failed = run.failed + (d.name to error))
+                    sms = run
+                    inARow = if (error == null) 0 else inARow + 1
+                    if (inARow >= 3) {
+                        run = run.copy(stopped = "Stopped after 3 failures in a row: $error")
+                        break
+                    }
+                }
+            } finally {
+                sms = run.copy(phase = SmsRun.Phase.Done, current = "", stopped = run.stopped ?: if (run.done < start.queue.size) "Stopped." else null)
+                refresh()
+            }
+        }
     }
 
     private fun handle(e: ApiException) {

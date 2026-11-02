@@ -28,6 +28,7 @@ import org.omobeeza.donors.ui.screens.RegisterScreen
 import org.omobeeza.donors.ui.screens.SavedScreen
 import org.omobeeza.donors.ui.screens.SettingsScreen
 import org.omobeeza.donors.ui.screens.SignInScreen
+import org.omobeeza.donors.ui.screens.SmsSheet
 import org.omobeeza.donors.ui.theme.OmoTheme
 
 class MainActivity : ComponentActivity() {
@@ -91,6 +92,7 @@ fun App(vm: AppViewModel = viewModel()) {
                 onSettings = { vm.go(Screen.Settings) },
                 onAfro = { vm.go(Screen.Afro(it, Screen.Home)) },
                 onUndoAfro = { vm.setAfro(it, false) },
+                onSms = vm::openSms,
             )
 
             Screen.Register -> RegisterScreen(vm.settings, vm.busy, vm.formError, onBack = { vm.back() }, onSave = vm::register)
@@ -124,5 +126,15 @@ fun App(vm: AppViewModel = viewModel()) {
                 onSignOut = vm::signOut,
             )
         }
+    }
+
+    vm.sms?.let { run ->
+        SmsSheet(
+            run = run,
+            savedSim = vm.prefs.smsSim,
+            onSend = vm::startSms,
+            onStop = vm::stopSms,
+            onClose = vm::closeSms,
+        )
     }
 }
