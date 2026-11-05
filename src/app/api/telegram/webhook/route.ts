@@ -221,7 +221,8 @@ async function finishSignup(chatId: number, data: Signup, from: TgUser, lang: La
     locale: data.locale ?? lang,
     telegram: from.username ?? "",
     source: "telegram",
-    noWelcomeSms: true,
+    requires: "phone",
+    noWelcome: true,
   });
   if (!res.ok) {
     await query("delete from telegram_sessions where chat_id = $1", [String(chatId)]);

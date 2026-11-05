@@ -3,12 +3,13 @@ import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { readGivingNow } from "@/lib/data/giving";
 import { displayPhone, ethiopiaWeekday } from "@/lib/giving";
-import { publicOrigin, smsConfig } from "@/lib/sms";
+import { emailConfig } from "@/lib/email";
+import { publicOrigin } from "@/lib/origin";
 import GivingSettingsForm from "@/components/admin/GivingSettingsForm";
 import { inviteCounts, telegramStatus } from "@/app/admin/actions/donors";
 import { accountConfigured } from "@/lib/telegram-user";
 
-export const metadata = { title: "Giving & SMS" };
+export const metadata = { title: "Giving & reminders" };
 export const dynamic = "force-dynamic";
 // "Send today's reminders now" runs on this page.
 export const maxDuration = 300;
@@ -52,19 +53,19 @@ export default async function GivingPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Giving &amp; SMS</h1>
-          <p>Weekly giving in birr through Ye-Buna, and the SMS reminders sent with AfroMessage.</p>
+          <h1>Giving &amp; reminders</h1>
+          <p>Weekly giving in birr through Ye-Buna, and the weekly reminders: Telegram and email (automatic), SMS (from the Android app).</p>
         </div>
       </div>
 
-      <GivingSettingsForm initial={giving} origin={publicOrigin()} sms={smsConfig()} dueToday={due?.n ?? 0} telegram={telegram}
+      <GivingSettingsForm initial={giving} origin={publicOrigin()} email={emailConfig()} dueToday={due?.n ?? 0} telegram={telegram}
         invites={invites}
         accountConfigured={accountConfigured()}
       />
 
       <section className="panel">
         <div className="panel__head">
-          <h2>Message log (SMS &amp; Telegram)</h2>
+          <h2>Message log (email, SMS &amp; Telegram)</h2>
           <p>
             Last 30 days: {totals?.sent ?? 0} sent, {totals?.failed ?? 0} failed
           </p>
@@ -91,16 +92,16 @@ export default async function GivingPage() {
                     </td>
                     <td style={{ whiteSpace: "nowrap" }}>
                       {m.donor_id && m.name ? <Link href={`/admin/donors/${m.donor_id}`}>{m.name}</Link> : null}
-                      <div className="a-hint">{m.channel === "telegram" ? "Telegram" : displayPhone(m.to_phone)}</div>
+                      <div className="a-hint">{m.channel === "telegram" ? "Telegram" : m.channel === "email" ? m.to_phone : displayPhone(m.to_phone)}</div>
                     </td>
                     <td>
-                      {m.channel === "telegram" ? "Telegram" : m.provider_id === "phone" ? "SMS (ministry phone)" : "SMS"} · {m.kind}
+                      {m.channel === "telegram" ? "Telegram" : m.channel === "email" ? "Email" : m.provider_id === "phone" ? "SMS (ministry phone)" : "SMS"} · {m.kind}
                     </td>
                     <td>
                       <span className={`pill ${m.status === "sent" ? "pill--ok" : "pill--new"}`}>{m.status}</span>
                     </td>
-                    <td dir="auto" style={{ maxWidth: 520 }}>
-                      {m.message}
+                    <td dir="auto" style={{ maxWidth: 520, whiteSpace: m.channel === "email" ? "pre-line" : undefined }}>
+                      {m.channel === "email" ? m.message.slice(0, 400) : m.message}
                       {m.error ? <div className="a-hint">{m.error}</div> : null}
                     </td>
                   </tr>

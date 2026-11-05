@@ -35,15 +35,6 @@ class Prefs(context: Context) {
         get() = sp.getString("userEmail", "").orEmpty()
         set(v) = sp.edit().putString("userEmail", v).apply()
 
-    /** Show the guided "add to AfroMessage contacts" step (needed while AfroMessage is in beta). */
-    var afroStep: Boolean
-        get() = sp.getBoolean("afroStep", true)
-        set(v) = sp.edit().putBoolean("afroStep", v).apply()
-
-    var afroUrl: String
-        get() = sp.getString("afroUrl", null) ?: BuildConfig.DEFAULT_AFRO_URL
-        set(v) = sp.edit().putString("afroUrl", v.trim()).apply()
-
     /** The SIM chosen for "Send SMS reminders" (-1 = the phone's default). */
     var smsSim: Int
         get() = sp.getInt("smsSim", -1)

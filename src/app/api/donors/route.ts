@@ -4,7 +4,7 @@ import { readGivingNow } from "@/lib/data/giving";
 import { registerDonor } from "@/lib/donors";
 
 // POST /api/donors — a visitor commits to give weekly in birr (Donations page).
-// Registering again with the same phone number updates the commitment. Returns
+// Registering again with the same email updates the commitment. Returns
 // the Ye-Buna link so the browser can continue there to give.
 
 export const runtime = "nodejs";
@@ -28,13 +28,13 @@ export async function POST(request: Request): Promise<Response> {
 
   const res = await registerDonor({
     name: body.name,
-    phone: body.phone,
     email: body.email,
     amount: body.amount,
     day: body.day,
     locale: body.locale,
     telegram: body.telegram,
     source: "website",
+    requires: "email",
   });
   if (!res.ok) return json(res.error === "save_failed" ? 500 : 400, { error: res.error });
   // The personal Telegram link connects this donor to the reminder bot in one tap.

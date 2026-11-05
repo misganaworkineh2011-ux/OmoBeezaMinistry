@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.Email
+import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Checkbox
@@ -87,6 +88,7 @@ fun RegisterScreen(
     var day by rememberSaveable { mutableIntStateOf(settings.defaultDay) }
     var locale by rememberSaveable { mutableStateOf("en") }
     var name by rememberSaveable { mutableStateOf("") }
+    var nickname by rememberSaveable { mutableStateOf("") }
     var phone by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
@@ -140,7 +142,7 @@ fun RegisterScreen(
             }
 
             Spacer(Modifier.height(18.dp))
-            SectionLabel("SMS language")
+            SectionLabel("Message language")
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 LangOption("English", "Hi Abebe, your weekly…", locale == "en", Modifier.weight(1f)) { locale = "en" }
@@ -151,6 +153,11 @@ fun RegisterScreen(
             SectionLabel("Donor")
             Spacer(Modifier.height(10.dp))
             Field(name, { name = it }, "Full name", Icons.Rounded.Person, error = nameError)
+            Spacer(Modifier.height(8.dp))
+            Field(
+                nickname, { nickname = it.take(40) }, "Nickname (optional)", Icons.Rounded.Face,
+                placeholder = "What the reminders call them, e.g. Abe",
+            )
             Spacer(Modifier.height(8.dp))
             Field(phone, { v -> phone = v.filter { it.isDigit() || it in "+ -" }.take(18) }, "Mobile number", Icons.Rounded.Call, placeholder = "09… or 07…", keyboard = KeyboardType.Phone, error = phoneError)
             Spacer(Modifier.height(8.dp))
@@ -194,7 +201,7 @@ fun RegisterScreen(
                     lineHeight = 26.sp,
                     color = Brand.Ink,
                 )
-                Text("A welcome SMS is sent when you save (if turned on in the dashboard).", style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
+                Text("A welcome SMS is sent from this phone when you save (if turned on in the dashboard).", style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
             }
             if (serverError != null) {
                 Spacer(Modifier.height(12.dp))
@@ -211,7 +218,7 @@ fun RegisterScreen(
                     val ok = name.isNotBlank() && normalizePhone(phone) != null && weekly >= settings.minAmount && consent &&
                         (email.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) &&
                         (telegram.isBlank() || normalizeTelegram(telegram) != null)
-                    if (ok) onSave(NewDonor(name.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim()))
+                    if (ok) onSave(NewDonor(name.trim(), nickname.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim()))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Rounded.Check,

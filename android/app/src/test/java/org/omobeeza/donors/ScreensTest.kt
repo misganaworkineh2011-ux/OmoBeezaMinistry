@@ -34,10 +34,10 @@ class ScreensTest {
     )
 
     private val user = User(1, "Misgana Worku", "admin@omobeeza.org")
-    private fun donor(id: Int, name: String, phone: String, amount: Int, day: Int, afro: Boolean, locale: String = "en") = Donor(
-        id, name, phone, "", amount, day, locale, "active", "app", "Met at the carnival day", "2026-11-02T09:30:00.000Z",
-        if (afro) "2026-11-02T10:00:00.000Z" else null, if (afro) "2026-11-01" else null, if (afro) 300 else 0,
-        telegramUsername = if (afro) "abebe_k" else "", telegramLinked = afro,
+    private fun donor(id: Int, name: String, phone: String, amount: Int, day: Int, linked: Boolean, locale: String = "en") = Donor(
+        id, name, if (linked) "" else "Almi", phone, "", amount, day, locale, "active", "app", "Met at the carnival day", "2026-11-02T09:30:00.000Z",
+        if (linked) "2026-11-02T10:00:00.000Z" else null, if (linked) "2026-11-01" else null, if (linked) 300 else 0,
+        telegramUsername = if (linked) "abebe_k" else "", telegramLinked = linked,
         telegramLink = "https://t.me/OmoBeezaBot?start=AbC123xYz9AB",
     )
     private val donors = listOf(
@@ -53,24 +53,24 @@ class ScreensTest {
     @Test fun home() = paparazzi.snapshot {
         OmoTheme {
             HomeScreen(
-                user, Stats(active = 42, weekly = 9850, paid7 = 31, pendingAfro = 2, today = 3), donors,
-                loading = false, loaded = true, query = "", view = View.All, afroStep = true, snackbar = SnackbarHostState(),
-                onQuery = {}, onView = {}, onRefresh = {}, onRegister = {}, onSettings = {}, onAfro = {}, onUndoAfro = {},
+                user, Stats(active = 42, weekly = 9850, paid7 = 31, smsWaiting = 7, today = 3), donors,
+                loading = false, loaded = true, query = "", view = View.All, snackbar = SnackbarHostState(),
+                onQuery = {}, onView = {}, onRefresh = {}, onRegister = {}, onSettings = {},
             )
         }
     }
 
     @Test fun register() = paparazzi.snapshot { OmoTheme { RegisterScreen(GivingSettings(), false, null, {}, {}) } }
 
-    @Test fun saved() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[0], true, true, {}, {}, {}, animate = false) } }
+    @Test fun saved() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[0], true, "Welcome SMS sent from this phone.", {}, {}, animate = false) } }
 
     @Test fun donorDetails() = paparazzi.snapshot {
-        OmoTheme { Box(Modifier.background(Brand.Sand)) { DonorDetails(donors[0], true, {}, {}) } }
+        OmoTheme { Box(Modifier.background(Brand.Sand)) { DonorDetails(donors[0]) } }
     }
 
-    @Test fun savedTelegramConnected() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[1], true, false, {}, {}, {}, animate = false) } }
+    @Test fun savedTelegramConnected() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[1], true, null, {}, {}, animate = false) } }
 
     @Test fun settings() = paparazzi.snapshot {
-        OmoTheme { SettingsScreen(user, "https://omobeezaministry.com", true, "https://app.afromessage.com", {}, {}, {}, {}) }
+        OmoTheme { SettingsScreen(user, "https://omobeezaministry.com", {}, {}) }
     }
 }

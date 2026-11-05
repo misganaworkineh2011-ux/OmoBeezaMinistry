@@ -1,6 +1,8 @@
 // Weekly giving in birr: shared types, defaults and helpers (safe to import
-// from client components). Donors register on the Donations page, give on
-// Ye-Buna, and get a weekly SMS reminder (AfroMessage) on the day they chose.
+// from client components). Donors register on the Donations page (with their
+// email) or in the Android app (with their phone), give on Ye-Buna, and get a
+// weekly reminder on the day they chose: on Telegram, by email (sent
+// automatically), or by SMS (sent from the ministry phone with the app).
 
 export interface GivingSettings {
   /** The ministry's Ye-Buna page, e.g. https://ye-buna.com/omobeeza */
@@ -16,15 +18,42 @@ export interface GivingSettings {
   skipIfPaid: boolean;
   /** Send weekly reminders on Telegram to donors who connected the bot. */
   telegramEnabled: boolean;
-  /** For donors reached on Telegram, don't also send the SMS (saves SMS costs). */
+  /** For donors reached on Telegram, don't also send the email. (Stored under its old name.) */
   telegramReplacesSms: boolean;
   /** Reach donors who haven't connected the bot from the ministry's Telegram account (by @username or phone). */
   telegramUserEnabled: boolean;
+  /** SMS from the ministry phone (Android app), and Telegram messages. */
   reminderEn: string;
   reminderAm: string;
   welcomeEn: string;
   welcomeAm: string;
+  /** Emails, sent automatically by the website. */
+  emailReminderSubjectEn: string;
+  emailReminderSubjectAm: string;
+  emailReminderEn: string;
+  emailReminderAm: string;
+  emailWelcomeSubjectEn: string;
+  emailWelcomeSubjectAm: string;
+  emailWelcomeEn: string;
+  emailWelcomeAm: string;
 }
+
+/** Every editable message template (Dashboard → Message templates). */
+export const TEMPLATE_KEYS = [
+  "reminderEn",
+  "reminderAm",
+  "welcomeEn",
+  "welcomeAm",
+  "emailReminderSubjectEn",
+  "emailReminderSubjectAm",
+  "emailReminderEn",
+  "emailReminderAm",
+  "emailWelcomeSubjectEn",
+  "emailWelcomeSubjectAm",
+  "emailWelcomeEn",
+  "emailWelcomeAm",
+] as const;
+export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const DEFAULT_GIVING: GivingSettings = {
   yebunaUrl: "",
@@ -41,6 +70,18 @@ export const DEFAULT_GIVING: GivingSettings = {
   reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች የዚህ ሳምንት የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
   welcomeEn: "Thank you {name}! You now give {amount} birr weekly to Omo Beeza. We'll remind you every {day}. Give: {link}",
   welcomeAm: "እናመሰግናለን {name}! በየሳምንቱ {amount} ብር ለኦሞ ቤዛ ይሰጣሉ። በየ{day} እናስታውስዎታለን። ይስጡ፦ {link}",
+  emailReminderSubjectEn: "Your weekly gift for the children of Omo Beeza",
+  emailReminderSubjectAm: "ለኦሞ ቤዛ ልጆች ሳምንታዊ ስጦታዎ",
+  emailReminderEn:
+    "Hi {name},\n\nThis is your weekly reminder for your {amount} birr gift to the children of Omo Beeza. Thank you for standing with them every week.\n\nGive this week's gift: {link}\n\nWith gratitude,\nOmo Beeza Ministry\n\nTo stop these reminders: {stop}",
+  emailReminderAm:
+    "ሰላም {name}፣\n\nይህ ለኦሞ ቤዛ ልጆች የሚሰጡት ሳምንታዊ የ{amount} ብር ስጦታ ማሳሰቢያ ነው። በየሳምንቱ ከልጆቹ ጋር ስለቆሙ እናመሰግናለን።\n\nየዚህን ሳምንት ስጦታ ይስጡ፦ {link}\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት\n\nማሳሰቢያዎቹን ለማቆም፦ {stop}",
+  emailWelcomeSubjectEn: "Thank you for giving weekly, {name}!",
+  emailWelcomeSubjectAm: "{name}፣ ስለ ሳምንታዊ ስጦታዎ እናመሰግናለን!",
+  emailWelcomeEn:
+    "Hi {name},\n\nThank you for committing {amount} birr every week to the children of Omo Beeza. We'll send you a short reminder every {day}.\n\nGive your first gift: {link}\n\nWith gratitude,\nOmo Beeza Ministry\n\nTo stop these reminders: {stop}",
+  emailWelcomeAm:
+    "ሰላም {name}፣\n\nለኦሞ ቤዛ ልጆች በየሳምንቱ {amount} ብር ለመስጠት ስለወሰኑ እናመሰግናለን። በየ{day} አጭር ማሳሰቢያ እንልክልዎታለን።\n\nየመጀመሪያ ስጦታዎን ይስጡ፦ {link}\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት\n\nማሳሰቢያዎቹን ለማቆም፦ {stop}",
 };
 
 export type DonorStatus = "active" | "paused" | "stopped";
@@ -70,8 +111,26 @@ export function dayName(day: number, locale: string): string {
   return (locale === "am" ? DAYS_AM : DAYS_EN)[((day % 7) + 7) % 7];
 }
 
-export function fillTemplate(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (m, key: string) => values[key] ?? m).replace(/\s+/g, " ").trim();
+/** Fills {placeholders}. SMS text is one line; `multiline` keeps the line breaks (emails). */
+export function fillTemplate(template: string, values: Record<string, string>, multiline = false): string {
+  const filled = template.replace(/\{(\w+)\}/g, (m, key: string) => values[key] ?? m);
+  if (!multiline) return filled.replace(/\s+/g, " ").trim();
+  return filled
+    .replace(/\r\n?/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+/** The name used in messages: the nickname if set, otherwise the first name. */
+export function callName(name: string, nickname?: string | null): string {
+  return nickname?.trim() || name.trim().split(/\s+/)[0] || name;
+}
+
+export function isEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 /** SMS segments: 160 chars (GSM) or 70 for Unicode such as Amharic; longer messages use 153 / 67. */

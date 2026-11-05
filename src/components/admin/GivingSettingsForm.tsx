@@ -7,20 +7,14 @@ import {
   inviteToTelegram,
   runRemindersNow,
   saveGiving,
-  sendTestSms,
+  sendTestEmail,
   telegramAccountStatus,
   type TelegramStatus,
 } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { DAYS_EN, dayName, fillTemplate, smsSegments, type GivingSettings } from "@/lib/giving";
+import { DAYS_EN, dayName, type GivingSettings } from "@/lib/giving";
 
 type Msg = { ok: boolean; text: string } | null;
-const TEMPLATES = [
-  { key: "reminderEn", label: "Weekly reminder · English", locale: "en" },
-  { key: "reminderAm", label: "Weekly reminder · Amharic", locale: "am" },
-  { key: "welcomeEn", label: "Welcome message · English", locale: "en" },
-  { key: "welcomeAm", label: "Welcome message · Amharic", locale: "am" },
-] as const;
 
 function Notice({ msg }: { msg: Msg }) {
   return msg ? <p className={`notice ${msg.ok ? "notice--ok" : "notice--error"}`}>{msg.text}</p> : null;
@@ -29,7 +23,7 @@ function Notice({ msg }: { msg: Msg }) {
 export default function GivingSettingsForm({
   initial,
   origin,
-  sms,
+  email,
   dueToday,
   telegram,
   invites,
@@ -37,11 +31,11 @@ export default function GivingSettingsForm({
 }: {
   initial: GivingSettings;
   origin: string;
-  sms: { token: boolean; identifier: boolean; sender: string };
+  email: { host: string; user: string; from: string; ready: boolean };
   dueToday: number;
   telegram: TelegramStatus;
-  /** Donors not on the bot and not yet invited: with a username / all. */
-  invites: { withUsername: number; all: number };
+  /** Donors with an email who aren't on the bot and haven't been invited yet. */
+  invites: { withEmail: number };
   accountConfigured: boolean;
 }) {
   const router = useRouter();
@@ -49,30 +43,22 @@ export default function GivingSettingsForm({
   const [amounts, setAmounts] = useState(initial.amounts.join(", "));
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<Msg>(null);
-  const [test, setTest] = useState({ phone: "", message: "" });
+  const [test, setTest] = useState({ to: "", message: "" });
   const [testMsg, setTestMsg] = useState<Msg>(null);
   const [runMsg, setRunMsg] = useState<Msg>(null);
   const [tgMsg, setTgMsg] = useState<Msg>(null);
   const [inviteMsg, setInviteMsg] = useState<Msg>(null);
   const [accountMsg, setAccountMsg] = useState<Msg>(null);
 
-  const invite = (scope: "username" | "all", n: number) =>
-    confirm(`Send ${n} SMS invitation${n === 1 ? "" : "s"} with each donor's personal Telegram link?`) &&
+  const invite = (n: number) =>
+    confirm(`Email ${n} invitation${n === 1 ? "" : "s"} with each donor's personal Telegram link?`) &&
     start(async () => {
-      const res = await inviteToTelegram(scope);
+      const res = await inviteToTelegram();
       setInviteMsg(res.ok ? { ok: true, text: `Sent ${res.sent} invitation${res.sent === 1 ? "" : "s"}.` } : { ok: false, text: res.error ?? "Not sent." });
       router.refresh();
     });
 
   const set = <K extends keyof GivingSettings>(key: K, value: GivingSettings[K]) => setForm((f) => ({ ...f, [key]: value }));
-  const sample = (locale: string) => ({
-    name: locale === "am" ? "አበበ" : "Abebe",
-    amount: "100",
-    day: dayName(0, locale),
-    link: form.yebunaUrl || `${origin}/donations`,
-    stop: `${origin}${locale === "am" ? "/am" : ""}/stop/AbC123xYz9`,
-  });
-
   return (
     <div className="two-col">
       <div>
@@ -85,7 +71,7 @@ export default function GivingSettingsForm({
             <label htmlFor="g-url">Ye-Buna page link</label>
             <input id="g-url" value={form.yebunaUrl} onChange={(e) => set("yebunaUrl", e.target.value)} placeholder="https://ye-buna.com/your-page" />
             <span className="a-hint">
-              Create a page at ye-buna.com, then paste its link here. Donors go there to give; it is also the {"{link}"} in SMS messages.
+              Create a page at ye-buna.com, then paste its link here. Donors go there to give; it is also the {"{link}"} in reminder messages.
             </span>
             <span className="a-hint">
               If Ye-Buna lets you set a “thank you” or return link, use <strong>{origin}/thank-you</strong>{" "}
@@ -116,8 +102,9 @@ export default function GivingSettingsForm({
             </div>
           </div>
           <label className="a-check">
-            <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} /> Send weekly SMS
-            reminders automatically (every day at 9:00 Ethiopian time, to donors whose day it is)
+            <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} /> Send weekly
+            reminders automatically by Telegram and email (every day at 9:00 Ethiopian time, to donors whose day it is). Donors with only a
+            phone number get theirs as SMS from the Android app’s “Send SMS reminders”.
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.skipIfPaid} onChange={(e) => set("skipIfPaid", e.target.checked)} /> Don’t remind donors who already
@@ -129,48 +116,19 @@ export default function GivingSettingsForm({
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.telegramReplacesSms} onChange={(e) => set("telegramReplacesSms", e.target.checked)} /> For donors
-            reached on Telegram, don’t also send the SMS (saves SMS costs)
+            reached on Telegram, don’t also send the email
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.telegramUserEnabled} onChange={(e) => set("telegramUserEnabled", e.target.checked)} /> For
-            donors who haven’t connected the bot, try the ministry’s Telegram account (by @username or phone) before SMS
+            donors who haven’t connected the bot, try the ministry’s Telegram account (by @username or phone) before email
           </label>
           <label className="a-check">
-            <input type="checkbox" checked={form.welcomeEnabled} onChange={(e) => set("welcomeEnabled", e.target.checked)} /> Send a welcome SMS when
-            someone registers
+            <input type="checkbox" checked={form.welcomeEnabled} onChange={(e) => set("welcomeEnabled", e.target.checked)} /> Send a welcome message
+            when someone registers (email on the website; SMS from the phone in the app)
           </label>
-        </section>
-
-        <section className="panel">
-          <div className="panel__head">
-            <h2>SMS messages</h2>
-            <p>
-              Placeholders: {"{name}"} first name · {"{amount}"} weekly birr · {"{day}"} reminder day · {"{link}"} Ye-Buna link · {"{stop}"} personal
-              stop link
-            </p>
-          </div>
-          {TEMPLATES.map(({ key, label, locale }) => {
-            const preview = fillTemplate(form[key], sample(locale));
-            const info = smsSegments(preview);
-            return (
-              <div className="a-field" key={key}>
-                <label htmlFor={`g-${key}`}>{label}</label>
-                <textarea
-                  id={`g-${key}`}
-                  rows={3}
-                  className={locale === "am" ? "am-text" : undefined}
-                  value={form[key]}
-                  onChange={(e) => set(key, e.target.value)}
-                />
-                <div className="sms-preview" dir="auto">
-                  {preview}
-                </div>
-                <span className="a-hint">
-                  Preview · {info.chars} characters · {info.segments} SMS per person{info.unicode ? " (Amharic uses 70 characters per SMS)" : ""}
-                </span>
-              </div>
-            );
-          })}
+          <p className="a-hint">
+            The texts of the reminders and welcome messages are on <a href="/admin/messages">Message templates</a>.
+          </p>
           <div className="form-actions">
             <button
               type="button"
@@ -194,25 +152,26 @@ export default function GivingSettingsForm({
       <aside>
         <section className="panel">
           <div className="panel__head">
-            <h2>AfroMessage</h2>
+            <h2>Email</h2>
           </div>
           <ul className="q-log" style={{ marginTop: 0 }}>
             <li>
-              <span>API token (AFROMESSAGE_TOKEN)</span>
-              <span className={`pill ${sms.token ? "pill--ok" : "pill--new"}`}>{sms.token ? "Set" : "Missing"}</span>
+              <span>SMTP server (SMTP_HOST)</span>
+              <span className={`pill ${email.host ? "pill--ok" : "pill--new"}`}>{email.host || "Missing"}</span>
             </li>
             <li>
-              <span>Identifier ID (AFROMESSAGE_IDENTIFIER_ID)</span>
-              <span className="pill">{sms.identifier ? "Set" : "Default"}</span>
+              <span>Mailbox (SMTP_USER / SMTP_PASS)</span>
+              <span className={`pill ${email.ready ? "pill--ok" : "pill--new"}`}>{email.ready ? email.user : "Missing"}</span>
             </li>
             <li>
-              <span>Sender name (AFROMESSAGE_SENDER_NAME)</span>
-              <span className="pill">{sms.sender || "Default"}</span>
+              <span>Sent from (EMAIL_FROM)</span>
+              <span className="pill">{email.from || "—"}</span>
             </li>
           </ul>
-          {!sms.token ? (
+          {!email.ready ? (
             <p className="a-hint" style={{ marginTop: 10 }}>
-              Add these in Vercel → Settings → Environment Variables (from your AfroMessage account), then redeploy.
+              Add SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS in Vercel → Settings → Environment Variables, then redeploy. With Gmail: smtp.gmail.com,
+              port 465, the Gmail address, and an app password (Google Account → Security → 2-Step Verification → App passwords).
             </p>
           ) : null}
         </section>
@@ -278,28 +237,18 @@ export default function GivingSettingsForm({
             <h2>Invite donors to Telegram</h2>
           </div>
           <p className="a-hint" style={{ marginBottom: 10 }}>
-            A one-time SMS with each donor’s personal link: one tap in Telegram connects them, and their reminders come there for free from then on.
+            A one-time email with each donor’s personal link: one tap in Telegram connects them, and their reminders come there from then on.
             Each donor is only invited once.
           </p>
           <Notice msg={inviteMsg} />
-          <div className="btn-group">
-            <button
-              type="button"
-              className="a-btn a-btn--sm"
-              disabled={pending || !telegram.bot || !sms.token || invites.withUsername === 0}
-              onClick={() => invite("username", invites.withUsername)}
-            >
-              Invite {invites.withUsername} with a Telegram username
-            </button>
-            <button
-              type="button"
-              className="a-btn a-btn--ghost a-btn--sm"
-              disabled={pending || !telegram.bot || !sms.token || invites.all === 0}
-              onClick={() => invite("all", invites.all)}
-            >
-              Invite all {invites.all} not on Telegram yet
-            </button>
-          </div>
+          <button
+            type="button"
+            className="a-btn a-btn--sm"
+            disabled={pending || !telegram.bot || !email.ready || invites.withEmail === 0}
+            onClick={() => invite(invites.withEmail)}
+          >
+            Invite {invites.withEmail} donor{invites.withEmail === 1 ? "" : "s"} by email
+          </button>
           {!telegram.bot ? <p className="a-hint" style={{ marginTop: 8 }}>Set up the bot first.</p> : null}
         </section>
 
@@ -309,7 +258,7 @@ export default function GivingSettingsForm({
           </div>
           <p className="a-hint" style={{ marginBottom: 10 }}>
             Reaches donors who never pressed Start on the bot, by their @username or phone number. Use a dedicated ministry number:
-            Telegram limits accounts that message many people, so at most 80 are sent per day, spaced out, and it switches to SMS if Telegram asks
+            Telegram limits accounts that message many people, so at most 80 are sent per day, spaced out, and it switches to email if Telegram asks
             to slow down.
           </p>
           <Notice msg={accountMsg} />
@@ -341,12 +290,12 @@ export default function GivingSettingsForm({
 
         <section className="panel">
           <div className="panel__head">
-            <h2>Send a test SMS</h2>
+            <h2>Send a test email</h2>
           </div>
           <Notice msg={testMsg} />
           <div className="a-field">
-            <label htmlFor="t-phone">Mobile number</label>
-            <input id="t-phone" type="tel" value={test.phone} onChange={(e) => setTest({ ...test, phone: e.target.value })} placeholder="09…" />
+            <label htmlFor="t-to">Email address</label>
+            <input id="t-to" type="email" value={test.to} onChange={(e) => setTest({ ...test, to: e.target.value })} placeholder="you@example.com" />
           </div>
           <div className="a-field">
             <label htmlFor="t-msg">Message (optional)</label>
@@ -355,11 +304,11 @@ export default function GivingSettingsForm({
           <button
             type="button"
             className="a-btn"
-            disabled={pending || !sms.token}
+            disabled={pending || !email.ready}
             onClick={() =>
               start(async () => {
-                const res = await sendTestSms(test.phone, test.message);
-                setTestMsg(res.ok ? { ok: true, text: "Sent. Check the phone." } : { ok: false, text: res.error ?? "Not sent." });
+                const res = await sendTestEmail(test.to, test.message);
+                setTestMsg(res.ok ? { ok: true, text: "Sent. Check the inbox (and the spam folder)." } : { ok: false, text: res.error ?? "Not sent." });
                 router.refresh();
               })
             }
@@ -380,7 +329,7 @@ export default function GivingSettingsForm({
           <button
             type="button"
             className="a-btn a-btn--ghost"
-            disabled={pending || (!sms.token && !telegram.connected) || dueToday === 0}
+            disabled={pending || (!email.ready && !telegram.connected) || dueToday === 0}
             onClick={() =>
               confirm(`Send today’s reminder to ${dueToday} donor(s) now?`) &&
               start(async () => {
@@ -390,7 +339,7 @@ export default function GivingSettingsForm({
                     ? { ok: false, text: "Automatic reminders are turned off above." }
                     : {
                         ok: run.failed === 0,
-                        text: `Sent ${run.sent} SMS and ${run.telegram} Telegram, skipped ${run.skippedPaid} (already paid), failed ${run.failed}.`,
+                        text: `Sent ${run.sent} email and ${run.telegram} Telegram, skipped ${run.skippedPaid} (already paid), failed ${run.failed}.${run.phoneOnly ? ` ${run.phoneOnly} with only a phone number: send theirs with “Send SMS reminders” in the app.` : ""}`,
                       },
                 );
                 router.refresh();

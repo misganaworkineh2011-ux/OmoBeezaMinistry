@@ -227,6 +227,13 @@ export const SCHEMA: string[] = [
     data jsonb not null default '{}',
     updated_at timestamptz not null default now()
   )`,
+  // What to call the donor in messages ("Abebe" for "Abebe Kebede Tadesse").
+  `alter table donors add column if not exists nickname text not null default ''`,
+  // Website donors sign up with their email and app donors with their phone,
+  // so the phone may be empty ('') — but is still unique when given.
+  `alter table donors drop constraint if exists donors_phone_key`,
+  `create unique index if not exists donors_phone_unique on donors (phone) where phone <> ''`,
+  `create index if not exists donors_email on donors (lower(email))`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,

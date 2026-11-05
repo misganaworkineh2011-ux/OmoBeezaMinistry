@@ -6,7 +6,7 @@ import { Field, focusFirstError, type FieldErrors } from "@/components/FormKit";
 import DonateForm from "@/components/DonateForm";
 import Icon from "@/components/Icon";
 import { useRouter } from "@/i18n/navigation";
-import { dayName, normalizePhone, normalizeTelegram } from "@/lib/giving";
+import { dayName, isEmail, normalizeTelegram } from "@/lib/giving";
 
 type Tab = "weekly" | "once" | "abroad";
 
@@ -63,14 +63,12 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
     const form = e.currentTarget;
     const data = new FormData(form);
     const name = String(data.get("name") ?? "").trim();
-    const phone = String(data.get("phone") ?? "");
     const email = String(data.get("email") ?? "").trim();
     const telegram = String(data.get("telegram") ?? "").trim();
     const next: FieldErrors = {};
     if (telegram && !normalizeTelegram(telegram)) next.telegram = t("invalidTelegram");
     if (!name) next.name = tf("required");
-    if (!normalizePhone(phone)) next.phone = t("invalidPhone");
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = tf("invalidEmail");
+    if (!isEmail(email)) next.email = t("invalidEmail");
     if (numeric < settings.minAmount) next.amount = t("minAmount", { min: settings.minAmount });
     if (!data.get("consent")) next.consent = t("consentRequired");
     setErrors(next);
@@ -82,7 +80,7 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       const res = await fetch("/api/donors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, email, telegram, amount: numeric, day, locale, consent: true, website: data.get("website") }),
+        body: JSON.stringify({ name, email, telegram, amount: numeric, day, locale, consent: true, website: data.get("website") }),
       });
       const body = (await res.json().catch(() => ({}))) as { telegram?: string };
       if (!res.ok) {
@@ -167,12 +165,9 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
 
       <div className="form__row">
         <Field id="give-name" name="name" label={t("name")} autoComplete="name" error={errors.name} />
-        <Field id="give-phone" name="phone" type="tel" label={t("phone")} autoComplete="tel" placeholder="09…" error={errors.phone} />
+        <Field id="give-email" name="email" type="email" label={t("email")} autoComplete="email" placeholder="name@example.com" error={errors.email} />
       </div>
-      <div className="form__row">
-        <Field id="give-email" name="email" type="email" label={t("email")} autoComplete="email" optional error={errors.email} />
-        <Field id="give-telegram" name="telegram" label={t("telegram")} placeholder="@username" optional error={errors.telegram} />
-      </div>
+      <Field id="give-telegram" name="telegram" label={t("telegram")} placeholder="@username" optional error={errors.telegram} />
 
       {/* Honeypot for bots: hidden from people and screen readers. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hp-field" />

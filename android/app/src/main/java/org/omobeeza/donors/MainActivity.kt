@@ -22,7 +22,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.omobeeza.donors.ui.AppViewModel
 import org.omobeeza.donors.ui.Screen
-import org.omobeeza.donors.ui.screens.AfroScreen
 import org.omobeeza.donors.ui.screens.HomeScreen
 import org.omobeeza.donors.ui.screens.RegisterScreen
 import org.omobeeza.donors.ui.screens.SavedScreen
@@ -46,7 +45,6 @@ private fun depth(s: Screen): Int = when (s) {
     Screen.SignIn, Screen.Home -> 0
     Screen.Register, Screen.Settings -> 1
     is Screen.Saved -> 2
-    is Screen.Afro -> 3
 }
 
 @Composable
@@ -83,15 +81,12 @@ fun App(vm: AppViewModel = viewModel()) {
                 loaded = vm.loaded,
                 query = vm.query,
                 view = vm.view,
-                afroStep = vm.afroStep,
                 snackbar = snackbar,
                 onQuery = vm::search,
                 onView = vm::selectView,
                 onRefresh = vm::refresh,
                 onRegister = { vm.go(Screen.Register) },
                 onSettings = { vm.go(Screen.Settings) },
-                onAfro = { vm.go(Screen.Afro(it, Screen.Home)) },
-                onUndoAfro = { vm.setAfro(it, false) },
                 onSms = vm::openSms,
             )
 
@@ -100,29 +95,15 @@ fun App(vm: AppViewModel = viewModel()) {
             is Screen.Saved -> SavedScreen(
                 donor = screen.donor,
                 created = screen.created,
-                afroStep = vm.afroStep,
-                onAfro = { vm.go(Screen.Afro(screen.donor, screen)) },
+                welcomeSms = vm.welcomeSms,
                 onAnother = { vm.go(Screen.Register) },
                 onDone = { vm.go(Screen.Home) },
-            )
-
-            is Screen.Afro -> AfroScreen(
-                donor = screen.donor,
-                afroUrl = vm.prefs.afroUrl,
-                busy = vm.busy,
-                onClose = { vm.back() },
-                onDone = { vm.setAfro(screen.donor, true) },
-                onCopied = { Toast.makeText(context, "Copied $it", Toast.LENGTH_SHORT).show() },
             )
 
             Screen.Settings -> SettingsScreen(
                 user = vm.user,
                 site = vm.prefs.site,
-                afroStep = vm.afroStep,
-                afroUrl = vm.prefs.afroUrl,
                 onBack = { vm.back() },
-                onAfroStep = vm::changeAfroStep,
-                onAfroUrl = { vm.setAfroUrl(it); vm.message = "AfroMessage address saved." },
                 onSignOut = vm::signOut,
             )
         }

@@ -50,15 +50,9 @@ import org.omobeeza.donors.ui.theme.Brand
 fun SettingsScreen(
     user: User?,
     site: String,
-    afroStep: Boolean,
-    afroUrl: String,
     onBack: () -> Unit,
-    onAfroStep: (Boolean) -> Unit,
-    onAfroUrl: (String) -> Unit,
     onSignOut: () -> Unit,
 ) {
-    var url by remember { mutableStateOf(afroUrl) }
-
     Column(Modifier.fillMaxSize().background(Brand.Sand).verticalScroll(rememberScrollState())) {
         WaveHeader(bottomPadding = 40.dp) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -82,28 +76,6 @@ fun SettingsScreen(
                 Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Home, null, tint = Brand.Blue)
                     Text(site.removePrefix("https://"), Modifier.padding(start = 10.dp), style = MaterialTheme.typography.bodyMedium, color = Brand.Body)
-                }
-            }
-
-            Spacer(Modifier.height(18.dp))
-            SectionLabel("AfroMessage")
-            Spacer(Modifier.height(8.dp))
-            SoftCard(Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Guided contact step", style = MaterialTheme.typography.titleMedium, color = Brand.Ink)
-                        Text(
-                            "After saving a donor, help me add and verify them in AfroMessage contacts. Turn this off once your AfroMessage account is out of beta.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Brand.Muted,
-                        )
-                    }
-                    Switch(afroStep, onAfroStep, colors = SwitchDefaults.colors(checkedTrackColor = Brand.Blue))
-                }
-                Spacer(Modifier.height(14.dp))
-                Field(url, { url = it }, "AfroMessage address", Icons.AutoMirrored.Rounded.Send, keyboard = KeyboardType.Uri)
-                if (url.trim() != afroUrl) {
-                    TextButton(onClick = { onAfroUrl(url) }) { Text("Save address") }
                 }
             }
 

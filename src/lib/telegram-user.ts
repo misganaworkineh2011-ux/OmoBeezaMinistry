@@ -91,7 +91,7 @@ export async function sendFromAccount(
         if (status !== "error") result = { ok: false, status, error: errorText(err) };
       }
     }
-    if (!result.ok && result.status === "not_on_telegram") {
+    if (!result.ok && result.status === "not_on_telegram" && donor.phone) {
       const { Api } = await import("telegram");
       const bigInt = (await import("big-integer")).default;
       const [first, ...rest] = donor.name.trim().split(/\s+/);

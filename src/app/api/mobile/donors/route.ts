@@ -4,7 +4,7 @@ import { registerDonor } from "@/lib/donors";
 import { withAppUser } from "@/lib/mobile";
 import { botUsername } from "@/lib/telegram";
 
-// GET  /api/mobile/donors?q=&view=all|active|afro  — donor list for the app.
+// GET  /api/mobile/donors?q=&view=all|active      — donor list for the app.
 // POST /api/mobile/donors                           — register a donor from the app.
 
 export const runtime = "nodejs";
@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export interface AppDonor {
   id: number;
   name: string;
+  nickname: string;
   phone: string;
   email: string;
   amount: number;
@@ -22,7 +23,7 @@ export interface AppDonor {
   source: string;
   notes: string;
   created_at: string;
-  afro_contact_at: string | null;
+  last_reminded_at: string | null;
   last_paid: string | null;
   total: number;
   telegram_username: string;
@@ -37,8 +38,8 @@ async function withLinks(donors: AppDonor[]): Promise<AppDonor[]> {
   return donors.map(({ token, ...d }) => ({ ...d, telegram_link: bot && token ? `https://t.me/${bot}?start=${token}` : "" }));
 }
 
-const SELECT = `select d.id, d.name, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.status, d.source, d.notes,
-  d.created_at, d.afro_contact_at, d.telegram_username, d.telegram_chat_id is not null as telegram_linked, d.token,
+const SELECT = `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.status, d.source, d.notes,
+  d.created_at, d.last_reminded_at, d.telegram_username, d.telegram_chat_id is not null as telegram_linked, d.token,
   (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
   (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total
   from donors d`;
@@ -46,7 +47,6 @@ const SELECT = `select d.id, d.name, d.phone, d.email, d.amount, d.reminder_day,
 const VIEWS: Record<string, string> = {
   all: "true",
   active: "d.status = 'active'",
-  afro: "d.status = 'active' and d.afro_contact_at is null",
 };
 
 export async function GET(request: Request): Promise<Response> {
@@ -76,6 +76,7 @@ export async function POST(request: Request): Promise<Response> {
     if (body.consent !== true) return json(400, { error: "consent_required" });
     const res = await registerDonor({
       name: body.name,
+      nickname: body.nickname,
       phone: body.phone,
       email: body.email,
       amount: body.amount,
@@ -84,9 +85,11 @@ export async function POST(request: Request): Promise<Response> {
       notes: body.notes,
       telegram: body.telegram,
       source: "app",
+      requires: "phone",
     });
     if (!res.ok) return json(res.error === "save_failed" ? 500 : 400, { error: res.error, min: res.min });
     const [donor] = await withLinks(await query<AppDonor>(`${SELECT} where d.id = $1`, [res.donor.id]));
-    return json(200, { donor, created: res.created });
+    // The app sends the welcome SMS from the ministry phone (and reports it to /api/mobile/sms).
+    return json(200, { donor, created: res.created, welcome_sms: res.welcomeSms });
   });
 }

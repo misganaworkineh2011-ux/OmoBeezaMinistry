@@ -65,8 +65,8 @@ private data class Confetto(val angle: Float, val speed: Float, val size: Float,
 fun SavedScreen(
     donor: Donor,
     created: Boolean,
-    afroStep: Boolean,
-    onAfro: () -> Unit,
+    /** How the welcome SMS went (null = none sent). */
+    welcomeSms: String?,
     onAnother: () -> Unit,
     onDone: () -> Unit,
     /** False in screenshot tests: show the end of the celebration. */
@@ -127,7 +127,11 @@ fun SavedScreen(
                     Avatar(donor.name, donor.id, 54.dp)
                     Column(Modifier.padding(start = 14.dp)) {
                         Text(donor.name, style = MaterialTheme.typography.titleLarge, color = Brand.Ink)
-                        Text(localPhone(donor.phone), style = MaterialTheme.typography.bodyMedium, color = Brand.Muted)
+                        Text(
+                            listOfNotNull(donor.nickname.takeIf { it.isNotBlank() }?.let { "“$it”" }, localPhone(donor.phone)).joinToString(" · "),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Brand.Muted,
+                        )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
@@ -143,26 +147,15 @@ fun SavedScreen(
                 TelegramConnectCard(donor)
             }
 
-            if (afroStep && !donor.afroDone) {
+            welcomeSms?.let { status ->
                 Spacer(Modifier.height(16.dp))
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(Brand.GoldSoft)
-                        .padding(18.dp),
+                val ok = status.startsWith("Welcome SMS sent")
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (ok) Brand.GreenSoft else Brand.GoldSoft).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionLabel("Step 2 of 2")
-                    Spacer(Modifier.height(6.dp))
-                    Text("Add to AfroMessage contacts", style = MaterialTheme.typography.titleLarge, color = Brand.Navy)
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        "While your AfroMessage account is in beta, each number has to be added and verified there before reminders can reach it. The number is copied for you.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Brand.Body,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    GoldButton("Open AfroMessage", onAfro, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Rounded.Send)
+                    Icon(Icons.AutoMirrored.Rounded.Send, null, tint = if (ok) Brand.Green else Brand.Navy, modifier = Modifier.size(20.dp))
+                    Text(status, Modifier.padding(start = 10.dp), style = MaterialTheme.typography.bodyMedium, color = if (ok) Brand.Green else Brand.Navy)
                 }
             }
 
@@ -172,7 +165,7 @@ fun SavedScreen(
                 Text("  Register another donor", style = MaterialTheme.typography.labelLarge)
             }
             TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
-                Text(if (afroStep && !donor.afroDone) "Skip for now · back to donors" else "Back to donors", color = Brand.Muted, textAlign = TextAlign.Center)
+                Text("Back to donors", color = Brand.Muted, textAlign = TextAlign.Center)
             }
             Spacer(Modifier.height(18.dp))
         }

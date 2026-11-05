@@ -18,6 +18,7 @@ export async function GET(): Promise<Response> {
   if (!(await getCurrentUser())) return new Response("Unauthorized", { status: 401 });
   const rows = await query<{
     name: string;
+    nickname: string;
     phone: string;
     email: string;
     amount: number;
@@ -31,17 +32,18 @@ export async function GET(): Promise<Response> {
     total: number;
     payments: number;
   }>(
-    `select d.name, d.phone, d.email, d.amount, d.reminder_day, d.status, d.locale, d.source, d.notes, d.created_at::text,
+    `select d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.status, d.locale, d.source, d.notes, d.created_at::text,
             (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
             (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total,
             (select count(*)::int from donor_payments p where p.donor_id = d.id) as payments
      from donors d order by d.created_at`,
   );
-  const header = ["Name", "Phone", "Email", "Weekly amount (birr)", "Reminder day", "Status", "Language", "Source", "Registered", "Last payment", "Payments", "Total given (birr)", "Notes"];
+  const header = ["Name", "Nickname", "Phone", "Email", "Weekly amount (birr)", "Reminder day", "Status", "Language", "Source", "Registered", "Last payment", "Payments", "Total given (birr)", "Notes"];
   const lines = rows.map((r) =>
     [
       r.name,
-      displayPhone(r.phone),
+      r.nickname,
+      r.phone ? displayPhone(r.phone) : "",
       r.email,
       r.amount,
       dayName(r.reminder_day, "en"),

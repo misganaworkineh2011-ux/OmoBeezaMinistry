@@ -26,7 +26,6 @@ sealed interface Screen {
     data object Home : Screen
     data object Register : Screen
     data class Saved(val donor: Donor, val created: Boolean) : Screen
-    data class Afro(val donor: Donor, val returnTo: Screen) : Screen
     data object Settings : Screen
 }
 
@@ -46,7 +45,6 @@ data class SmsRun(
 enum class View(val key: String, val label: String) {
     All("all", "All"),
     Active("active", "Active"),
-    Afro("afro", "AfroMessage step"),
 }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
@@ -73,7 +71,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     var view by mutableStateOf(View.All)
         private set
-    var afroStep by mutableStateOf(prefs.afroStep)
+    /** How the welcome SMS for the donor just registered went (shown on the Saved screen). */
+    var welcomeSms by mutableStateOf<String?>(null)
         private set
 
     /** One-off message shown in a snackbar. */
@@ -98,8 +97,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun back(): Boolean {
-        when (val s = screen) {
-            is Screen.Afro -> go(s.returnTo)
+        when (screen) {
             Screen.Register, Screen.Settings, is Screen.Saved -> go(Screen.Home)
             else -> return false
         }
@@ -190,9 +188,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         formError = null
         viewModelScope.launch {
             try {
-                val (donor, created) = api().register(d)
-                go(Screen.Saved(donor, created))
+                val saved = api().register(d)
+                welcomeSms = null
+                go(Screen.Saved(saved.donor, saved.created))
                 refresh()
+                if (saved.welcomeSms.isNotBlank()) sendWelcome(saved.donor, saved.welcomeSms)
             } catch (e: ApiException) {
                 if (e.code == "unauthorized") handle(e) else formError = errorText(e.code, e.min ?: settings.minAmount)
             } finally {
@@ -201,30 +201,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Mark (or unmark) a donor as added and verified in AfroMessage contacts. */
-    fun setAfro(donor: Donor, done: Boolean, then: Screen = Screen.Home) {
-        busy = true
-        viewModelScope.launch {
-            try {
-                api().setAfroContact(donor.id, done)
-                message = if (done) "${donor.name} is ready for SMS reminders." else "AfroMessage step reopened for ${donor.name}."
-                go(then)
-                refresh()
-            } catch (e: ApiException) {
-                handle(e)
-            } finally {
-                busy = false
-            }
+    /** The welcome SMS for a newly registered donor, sent from this phone's SIM. */
+    private suspend fun sendWelcome(donor: Donor, text: String) {
+        val context = getApplication<Application>()
+        if (!PhoneSms.hasTelephony(context)) return
+        if (!PhoneSms.canSend(context)) {
+            welcomeSms = "Welcome SMS not sent: allow SMS first (Send SMS reminders on the home screen)."
+            return
         }
-    }
-
-    fun changeAfroStep(on: Boolean) {
-        prefs.afroStep = on
-        afroStep = on
-    }
-
-    fun setAfroUrl(url: String) {
-        prefs.afroUrl = url
+        welcomeSms = "Sending the welcome SMS…"
+        val error = PhoneSms.send(context, donor.phone, text, prefs.smsSim.takeIf { it >= 0 })
+        runCatching { api().reportSms(donor.id, error, "welcome") }
+        welcomeSms = if (error == null) "Welcome SMS sent from this phone." else "Welcome SMS not sent: $error"
     }
 
     /** Open the sheet and load the donors who haven't had a reminder in 7 days. */

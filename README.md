@@ -139,12 +139,17 @@ start over. To work against the real database, put `DATABASE_URL` in `.env.local
 Changes made in the dashboard appear on the site immediately (cached pages are refreshed).
 Large videos: use MP4 (H.264). The dashboard reads the size and length and captures a poster frame.
 
-## Weekly giving in birr (Ye-Buna + SMS reminders)
-The Donations page lets people commit to a **weekly** gift in birr. They register (name, mobile
-number, amount, reminder day), then continue to the ministry's **Ye-Buna** page to give. Every
-week, on the day they chose, they get an SMS reminder through **AfroMessage** with the Ye-Buna
+## Weekly giving in birr (Ye-Buna + email / SMS reminders)
+The Donations page lets people commit to a **weekly** gift in birr. They register (name, email,
+amount, reminder day, optional Telegram username), then continue to the ministry's **Ye-Buna**
+page to give. Every week, on the day they chose, they get a reminder **email** with the Ye-Buna
 link and a personal link to stop reminders. Visitors can also give once on Ye-Buna, and people
 abroad can still send a USD pledge.
+
+Donors registered in the **Android app** (by phone number, with an optional nickname) get their
+reminders as normal **SMS from the ministry phone**: the app's "Send SMS reminders" sends one to
+every active donor who hasn't had a reminder in 7 days. The app also sends the welcome SMS after
+registering someone.
 
 Ye-Buna doesn't notify websites about payments, so record gifts in **Dashboard → Donors** (open a
 donor → Record payment) when you see them in your Ye-Buna account. Recorded payments drive the
@@ -152,16 +157,18 @@ totals, the "Not paid in 7 days" list, and (optionally) skipping reminders for p
 
 **Setup:**
 1. Create the ministry's page on [ye-buna.com](https://ye-buna.com) and paste its link in
-   **Dashboard → Giving & SMS**.
-2. In your AfroMessage account, get an API token (and an approved sender name / identifier if you
-   have one). Add `AFROMESSAGE_TOKEN` (and optionally `AFROMESSAGE_IDENTIFIER_ID`,
-   `AFROMESSAGE_SENDER_NAME`) in Vercel → Settings → Environment Variables.
+   **Dashboard → Giving & reminders**.
+2. Email: add `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` (and optionally `EMAIL_FROM`) in
+   Vercel → Settings → Environment Variables. With Gmail: `smtp.gmail.com`, port `465`, the Gmail
+   address, and an [app password](https://myaccount.google.com/apppasswords) (needs 2-Step
+   Verification). Gmail sends up to about 500 emails a day.
 3. Add `CRON_SECRET` (any long random string). `vercel.json` runs `/api/cron/reminders` every day
-   at 06:00 UTC (9:00 in Ethiopia); it texts the donors whose reminder day it is.
-4. Redeploy, then use **Send a test SMS** on the Giving & SMS page.
+   at 06:00 UTC (9:00 in Ethiopia); it reminds the donors whose reminder day it is.
+4. Redeploy, then use **Send a test email** on the Giving & reminders page.
 
-The SMS texts (English and Amharic) are editable on the same page, with a live preview and SMS
-count. Amharic uses 70 characters per SMS, so keep those messages short.
+The texts of every message (emails, SMS and Telegram, in English and Amharic) are editable in
+**Dashboard → Message templates**, with a live preview. `{name}` is the donor's nickname, or their
+first name when they have none. Amharic uses 70 characters per SMS, so keep the SMS short.
 
 ## Telegram reminders
 Donors can also get their weekly reminder on Telegram, from the ministry's own bot.
@@ -169,24 +176,24 @@ Telegram only lets a bot message people who pressed **Start** on it, so each don
 once: by the personal link / QR code (shown in the app after registering, and on the
 website's thank-you page), by the @username saved with their registration, or by sharing their
 phone number with the bot. After that the daily reminder job sends their reminder on Telegram
-(and, by default, skips the SMS for them).
+(and, by default, skips the email for them).
 
 **Signing up in the bot:** people who aren't registered can sign up right in the bot: they share
 their phone number, give their name (one tap uses their Telegram name), weekly amount, reminder
 day and language, and confirm. They appear in Dashboard → Donors "via Telegram".
 
 **Reaching donors who never pressed Start:**
-- *SMS invitation*: Dashboard → Giving & SMS → "Invite donors to Telegram" texts each one their
-  personal link, once.
+- *Email invitation*: Dashboard → Giving & reminders → "Invite donors to Telegram" emails each one
+  their personal link, once.
 - *Ministry Telegram account* (optional): reminders are sent from a real Telegram account by
   @username or phone number. Use a dedicated ministry number. Get an API ID/hash at
   https://my.telegram.org, run `npm run telegram-login`, and add the printed `TELEGRAM_API_ID`,
   `TELEGRAM_API_HASH` and `TELEGRAM_SESSION` in Vercel. At most 80 such messages are sent per day,
-  spaced out; on a Telegram "slow down" signal the rest get SMS.
+  spaced out; on a Telegram "slow down" signal the rest get email.
 
 **Setup:** in Telegram open **@BotFather** → `/newbot` → choose a name and a username ending in
 `bot`. Add the token as `TELEGRAM_BOT_TOKEN` in Vercel, redeploy, then click **Connect the bot**
-in Dashboard → Giving & SMS. Bot commands: `/start`, `/status`, `/stop`.
+in Dashboard → Giving & reminders. Bot commands: `/start`, `/status`, `/stop`.
 
 ## Editing content (in code)
 - **Text / translations:** `messages/en.json` and `messages/am.json`. Any key missing from

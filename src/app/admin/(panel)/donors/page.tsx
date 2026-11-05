@@ -22,7 +22,9 @@ type View = keyof typeof VIEWS;
 interface DonorRow {
   id: number;
   name: string;
+  nickname: string;
   phone: string;
+  email: string;
   amount: number;
   reminder_day: number;
   status: string;
@@ -31,7 +33,6 @@ interface DonorRow {
   last_paid: string | null;
   total: number;
   last_reminded_at: string | null;
-  afro_contact_at: string | null;
   source: string;
   telegram: boolean;
 }
@@ -48,7 +49,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
 
   const [rows, counts, stats] = await Promise.all([
     query<DonorRow>(
-      `select d.id, d.name, d.phone, d.amount, d.reminder_day, d.status, d.locale, d.created_at, d.last_reminded_at, d.afro_contact_at, d.source, d.telegram_chat_id is not null as telegram,
+      `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.status, d.locale, d.created_at, d.last_reminded_at, d.source, d.telegram_chat_id is not null as telegram,
               (select max(p.paid_on) from donor_payments p where p.donor_id = d.id)::text as last_paid,
               (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total
        from donors d
@@ -76,7 +77,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
     { icon: "heart", value: (stats?.weekly ?? 0).toLocaleString("en-US"), label: "Birr committed every week" },
     { icon: "check", value: `${stats?.paid7 ?? 0}/${stats?.active ?? 0}`, label: "Paid in the last 7 days" },
     { icon: "bank", value: (stats?.received30 ?? 0).toLocaleString("en-US"), label: "Birr recorded, last 30 days" },
-    { icon: "send", value: String(stats?.sms7 ?? 0), label: "SMS sent, last 7 days" },
+    { icon: "send", value: String(stats?.sms7 ?? 0), label: "Messages sent, last 7 days" },
   ];
 
   const href = (v: View) => `/admin/donors?view=${v}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
@@ -132,7 +133,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Phone</th>
+                <th>Email / phone</th>
                 <th className="num">Weekly</th>
                 <th>Reminder</th>
                 <th>Status</th>
@@ -148,8 +149,12 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
                     <Link href={`/admin/donors/${d.id}`}>
                       <strong>{d.name}</strong>
                     </Link>
+                    {d.nickname ? <div className="a-hint">“{d.nickname}”</div> : null}
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>{displayPhone(d.phone)}</td>
+                  <td style={{ whiteSpace: "nowrap" }}>
+                    {d.email || null}
+                    {d.phone ? d.email ? <div className="a-hint">{displayPhone(d.phone)}</div> : displayPhone(d.phone) : null}
+                  </td>
                   <td className="num">{birr(d.amount)}</td>
                   <td>
                     {dayName(d.reminder_day, "en")}
@@ -160,11 +165,6 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
                     {d.telegram ? (
                       <span className="pill pill--blue" title="Gets weekly reminders on Telegram" style={{ marginLeft: 4 }}>
                         Telegram ✓
-                      </span>
-                    ) : null}
-                    {d.afro_contact_at ? (
-                      <span className="pill pill--blue" title="Added and verified in AfroMessage contacts" style={{ marginLeft: 4 }}>
-                        AfroMessage ✓
                       </span>
                     ) : null}
                   </td>

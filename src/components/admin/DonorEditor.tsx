@@ -2,9 +2,9 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteDonor, deletePayment, recordPayment, saveDonor, smsDonor, type DonorInput } from "@/app/admin/actions/donors";
+import { deleteDonor, deletePayment, emailDonorNow, recordPayment, saveDonor, type DonorInput } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { DAYS_EN, DONOR_STATUSES, smsSegments } from "@/lib/giving";
+import { DAYS_EN, DONOR_STATUSES } from "@/lib/giving";
 
 export interface PaymentRow {
   id: number;
@@ -17,6 +17,7 @@ export interface PaymentRow {
 
 export interface SmsRow {
   id: number;
+  channel: string;
   message: string;
   kind: string;
   status: string;
@@ -32,14 +33,15 @@ export default function DonorEditor({
   payments,
   sms,
   reminderPreview,
-  smsReady,
+  emailReady,
   telegram,
 }: {
   donor: DonorInput;
   payments: PaymentRow[];
   sms: SmsRow[];
-  reminderPreview: string;
-  smsReady: boolean;
+  /** Their weekly reminder email (subject and text). */
+  reminderPreview: { subject: string; text: string };
+  emailReady: boolean;
   /** Whether the donor connected the Telegram bot, and their one-tap connect link. */
   telegram: { linked: boolean; link: string } | null;
 }) {
@@ -50,7 +52,8 @@ export default function DonorEditor({
   const [pay, setPay] = useState({ amount: String(donor.amount), date: today(), reference: "", note: "" });
   const [payMsg, setPayMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [custom, setCustom] = useState("");
-  const [smsMsg, setSmsMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [subject, setSubject] = useState("");
+  const [mailMsg, setMailMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const total = payments.reduce((n, p) => n + p.amount, 0);
   const set = <K extends keyof DonorInput>(key: K, value: DonorInput[K]) => setForm((f) => ({ ...f, [key]: value }));
@@ -78,12 +81,18 @@ export default function DonorEditor({
               <input id="dn-name" value={form.name} onChange={(e) => set("name", e.target.value)} />
             </div>
             <div className="a-field">
-              <label htmlFor="dn-phone">Mobile number</label>
-              <input id="dn-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="09…" />
+              <label htmlFor="dn-nick">Nickname (optional)</label>
+              <input id="dn-nick" value={form.nickname} onChange={(e) => set("nickname", e.target.value)} placeholder="What messages call them" />
             </div>
             <div className="a-field">
-              <label htmlFor="dn-email">Email (optional)</label>
+              <label htmlFor="dn-email">Email</label>
               <input id="dn-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+              <span className="a-hint">Weekly reminders by email, sent automatically.</span>
+            </div>
+            <div className="a-field">
+              <label htmlFor="dn-phone">Mobile number</label>
+              <input id="dn-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="09…" />
+              <span className="a-hint">Weekly SMS from the ministry phone (Android app).</span>
             </div>
             <div className="a-field">
               <label htmlFor="dn-amount">Weekly amount (birr)</label>
@@ -100,7 +109,7 @@ export default function DonorEditor({
               </select>
             </div>
             <div className="a-field">
-              <label htmlFor="dn-locale">SMS language</label>
+              <label htmlFor="dn-locale">Message language</label>
               <select id="dn-locale" value={form.locale} onChange={(e) => set("locale", e.target.value)}>
                 <option value="en">English</option>
                 <option value="am">Amharic (አማርኛ)</option>
@@ -123,7 +132,7 @@ export default function DonorEditor({
             <span className="a-hint">
               {telegram?.linked
                 ? "✓ Connected to the reminder bot: weekly reminders go to their Telegram."
-                : "Not connected yet. They connect by pressing Start on the bot (with this username, their phone number, or the link below)."}
+                : "Not connected yet. They connect by pressing Start on the bot (with the link below, this username, or their phone number)."}
             </span>
             {telegram && !telegram.linked && telegram.link ? (
               <span className="a-hint">
@@ -264,47 +273,49 @@ export default function DonorEditor({
         <aside>
           <section className="panel">
             <div className="panel__head">
-              <h2>Send an SMS</h2>
+              <h2>Send an email</h2>
             </div>
-            {!smsReady ? <p className="notice notice--warn">SMS is not configured yet. See Giving &amp; SMS.</p> : null}
-            {smsMsg ? <p className={`notice ${smsMsg.ok ? "notice--ok" : "notice--error"}`}>{smsMsg.text}</p> : null}
+            {!emailReady ? <p className="notice notice--warn">Email is not set up yet. See Giving &amp; reminders.</p> : null}
+            {!form.email ? <p className="notice notice--warn">This donor has no email address. SMS go from the app on the ministry phone.</p> : null}
+            {mailMsg ? <p className={`notice ${mailMsg.ok ? "notice--ok" : "notice--error"}`}>{mailMsg.text}</p> : null}
             <div className="a-field">
-              <label htmlFor="sms-text">Message</label>
+              <label htmlFor="mail-subject">Subject</label>
+              <input id="mail-subject" dir="auto" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={reminderPreview.subject} />
+            </div>
+            <div className="a-field">
+              <label htmlFor="mail-text">Message</label>
               <textarea
-                id="sms-text"
-                rows={4}
+                id="mail-text"
+                rows={6}
                 dir="auto"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
-                placeholder={`Leave empty to send their weekly reminder:\n\n${reminderPreview}`}
+                placeholder={`Leave empty to send their weekly reminder:\n\n${reminderPreview.text}`}
               />
-              <span className="a-hint">
-                {(() => {
-                  const info = smsSegments(custom || reminderPreview);
-                  return `${info.chars} characters · ${info.segments} SMS${info.unicode ? " (Amharic/Unicode: 70 per SMS)" : ""}`;
-                })()}
-              </span>
             </div>
             <button
               type="button"
               className="a-btn a-btn--gold"
-              disabled={pending || !smsReady}
+              disabled={pending || !emailReady || !donor.email}
               onClick={() =>
                 start(async () => {
-                  const res = await smsDonor(donor.id as number, custom);
-                  setSmsMsg(res.ok ? { ok: true, text: "SMS sent." } : { ok: false, text: res.error ?? "Not sent." });
-                  if (res.ok) setCustom("");
+                  const res = await emailDonorNow(donor.id as number, subject, custom);
+                  setMailMsg(res.ok ? { ok: true, text: "Email sent." } : { ok: false, text: res.error ?? "Not sent." });
+                  if (res.ok) {
+                    setCustom("");
+                    setSubject("");
+                  }
                   router.refresh();
                 })
               }
             >
-              <Icon name="send" /> {custom.trim() ? "Send message" : "Send weekly reminder now"}
+              <Icon name="send" /> {custom.trim() ? "Send email" : "Email weekly reminder now"}
             </button>
           </section>
 
           <section className="panel">
             <div className="panel__head">
-              <h2>SMS history</h2>
+              <h2>Message history</h2>
             </div>
             {sms.length === 0 ? (
               <p className="empty">No messages yet.</p>
@@ -314,9 +325,9 @@ export default function DonorEditor({
                   <li key={m.id} style={{ display: "block" }}>
                     <span className={`pill ${m.status === "sent" ? "pill--ok" : "pill--new"}`}>{m.status}</span>{" "}
                     <small>
-                      {m.kind} · {new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {m.channel === "email" ? "Email" : m.channel === "telegram" ? "Telegram" : "SMS"} · {m.kind} · {new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </small>
-                    <p dir="auto" style={{ margin: "6px 0 0" }}>
+                    <p dir="auto" style={{ margin: "6px 0 0", whiteSpace: "pre-line" }}>
                       {m.message}
                     </p>
                     {m.error ? <p className="a-hint">{m.error}</p> : null}

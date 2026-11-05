@@ -112,15 +112,12 @@ fun HomeScreen(
     loaded: Boolean,
     query: String,
     view: View,
-    afroStep: Boolean,
     snackbar: SnackbarHostState,
     onQuery: (String) -> Unit,
     onView: (View) -> Unit,
     onRefresh: () -> Unit,
     onRegister: () -> Unit,
     onSettings: () -> Unit,
-    onAfro: (Donor) -> Unit,
-    onUndoAfro: (Donor) -> Unit,
     onSms: () -> Unit = {},
 ) {
     var selected by remember { mutableStateOf<Donor?>(null) }
@@ -187,12 +184,11 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(View.values().filter { afroStep || it != View.Afro }) { v ->
-                            val count = if (v == View.Afro) stats.pendingAfro else null
+                        items(View.values()) { v ->
                             FilterChip(
                                 selected = view == v,
                                 onClick = { onView(v) },
-                                label = { Text(if (count != null && count > 0) "${v.label} · $count" else v.label) },
+                                label = { Text(v.label) },
                                 shape = RoundedCornerShape(50),
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = Color.White,
@@ -208,11 +204,7 @@ fun HomeScreen(
                         LinearProgressIndicator(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)), color = Brand.Gold, trackColor = Brand.GoldSoft)
                     }
                     Spacer(Modifier.height(12.dp))
-                    SmsBanner(onSms)
-                    if (afroStep && stats.pendingAfro > 0 && view != View.Afro) {
-                        Spacer(Modifier.height(12.dp))
-                        AfroBanner(stats.pendingAfro) { onView(View.Afro) }
-                    }
+                    SmsBanner(stats.smsWaiting, onSms)
                 }
             }
 
@@ -221,7 +213,7 @@ fun HomeScreen(
             }
 
             items(donors, key = { it.id }) { d ->
-                DonorRow(d, afroStep, Modifier.padding(horizontal = 18.dp, vertical = 5.dp).offset(y = (-20).dp)) { selected = d }
+                DonorRow(d, Modifier.padding(horizontal = 18.dp, vertical = 5.dp).offset(y = (-20).dp)) { selected = d }
             }
         }
     }
@@ -229,12 +221,7 @@ fun HomeScreen(
     selected?.let { d ->
         val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { selected = null }, sheetState = sheet, containerColor = Brand.Sand) {
-            DonorDetails(
-                d,
-                afroStep,
-                onAfro = { selected = null; onAfro(d) },
-                onUndoAfro = { selected = null; onUndoAfro(d) },
-            )
+            DonorDetails(d)
         }
     }
 }
@@ -253,7 +240,7 @@ private fun StatTile(value: String, label: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun SmsBanner(onClick: () -> Unit) {
+private fun SmsBanner(waiting: Int, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brand.Navy).clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -263,31 +250,16 @@ private fun SmsBanner(onClick: () -> Unit) {
         }
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text("Send SMS reminders", style = MaterialTheme.typography.titleSmall, color = Color.White)
-            Text("From this phone, to donors not reminded in 7 days", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+            Text(
+                if (waiting > 0) "$waiting donor${if (waiting == 1) "" else "s"} not reminded in 7 days" else "From this phone, to donors not reminded in 7 days",
+                style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.GoldLight)
     }
 }
 
 @Composable
-private fun AfroBanner(count: Int, onClick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brand.GoldSoft).clickable(onClick = onClick).padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(Brand.Gold), contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Rounded.Send, null, tint = Brand.Navy, modifier = Modifier.size(18.dp))
-        }
-        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-            Text("$count donor${if (count == 1) "" else "s"} need the AfroMessage step", style = MaterialTheme.typography.titleSmall, color = Brand.Navy)
-            Text("Add and verify them so SMS reminders can reach them.", style = MaterialTheme.typography.bodySmall, color = Brand.Body)
-        }
-        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.Navy)
-    }
-}
-
-@Composable
-private fun DonorRow(d: Donor, afroStep: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun DonorRow(d: Donor, modifier: Modifier, onClick: () -> Unit) {
     SoftCard(modifier.fillMaxWidth().clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar(d.name, d.id)
@@ -298,13 +270,6 @@ private fun DonorRow(d: Donor, afroStep: Boolean, modifier: Modifier, onClick: (
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill("${birr(d.amount)} birr · ${dayName(d.reminderDay).take(3)}", Brand.GoldSoft, Brand.Navy)
                     if (d.status != "active") Pill(d.status, Color(0xFFEDEBE7), Brand.Muted)
-                }
-            }
-            if (afroStep && d.status == "active") {
-                if (d.afroDone) {
-                    Icon(Icons.Rounded.CheckCircle, "Ready for SMS", tint = Brand.Green, modifier = Modifier.size(26.dp))
-                } else {
-                    Box(Modifier.size(12.dp).clip(CircleShape).background(Brand.Gold))
                 }
             }
         }
@@ -325,13 +290,14 @@ private fun EmptyState(filtered: Boolean) {
 }
 
 @Composable
-internal fun DonorDetails(d: Donor, afroStep: Boolean, onAfro: () -> Unit, onUndoAfro: () -> Unit) {
+internal fun DonorDetails(d: Donor) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 28.dp).animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar(d.name, d.id, 64.dp)
             Column(Modifier.padding(start = 14.dp).weight(1f)) {
                 Text(d.name, style = MaterialTheme.typography.headlineSmall, color = Brand.Ink)
+                if (d.nickname.isNotBlank()) Text("“${d.nickname}”", style = MaterialTheme.typography.bodyMedium, color = Brand.Muted)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Pill(d.status, if (d.status == "active") Brand.GreenSoft else Color(0xFFEDEBE7), if (d.status == "active") Brand.Green else Brand.Muted)
                     if (d.source == "app") Pill("via the app", Color(0xFFE3ECF8), Brand.Blue)
@@ -352,7 +318,7 @@ internal fun DonorDetails(d: Donor, afroStep: Boolean, onAfro: () -> Unit, onUnd
         SoftCard(Modifier.fillMaxWidth(), padding = 16.dp) {
             DetailLine(Icons.Rounded.Call, "Phone", localPhone(d.phone))
             DetailLine(Icons.Rounded.Favorite, "Weekly gift", "${birr(d.amount)} birr")
-            DetailLine(Icons.Rounded.DateRange, "Reminder", "Every ${dayName(d.reminderDay)} · ${if (d.locale == "am") "Amharic SMS" else "English SMS"}")
+            DetailLine(Icons.Rounded.DateRange, "Reminder", "Every ${dayName(d.reminderDay)} · ${if (d.locale == "am") "Amharic" else "English"} · last ${prettyDate(d.lastReminded)}")
             if (d.email.isNotBlank()) DetailLine(Icons.Rounded.Email, "Email", d.email)
             DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
             DetailLine(Icons.Rounded.Info, "Registered", prettyDate(d.createdAt), last = d.notes.isBlank())
@@ -363,25 +329,6 @@ internal fun DonorDetails(d: Donor, afroStep: Boolean, onAfro: () -> Unit, onUnd
             SectionLabel("Telegram")
             Spacer(Modifier.height(6.dp))
             TelegramConnectCard(d)
-        }
-        if (afroStep && d.status == "active") {
-            Spacer(Modifier.height(16.dp))
-            SectionLabel("AfroMessage")
-            Spacer(Modifier.height(6.dp))
-            if (d.afroDone) {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brand.GreenSoft).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.CheckCircle, null, tint = Brand.Green)
-                    Text("Added and verified on ${prettyDate(d.afroContactAt)}", Modifier.weight(1f).padding(horizontal = 10.dp), color = Brand.Green, style = MaterialTheme.typography.titleSmall)
-                    TextButton(onClick = onUndoAfro) { Text("Undo", color = Brand.Muted) }
-                }
-            } else {
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(Brand.GoldSoft).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Warning, null, tint = Brand.Gold)
-                    Text("Not in AfroMessage contacts yet, so SMS can't reach this number while the account is in beta.", Modifier.padding(start = 10.dp), color = Brand.Navy, style = MaterialTheme.typography.bodyMedium)
-                }
-                Spacer(Modifier.height(12.dp))
-                GoldButton("Add to AfroMessage contacts", onAfro, Modifier.fillMaxWidth(), icon = Icons.AutoMirrored.Rounded.Send)
-            }
         }
     }
 }

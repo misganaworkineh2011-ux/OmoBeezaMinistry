@@ -14,11 +14,12 @@ export async function GET(request: Request): Promise<Response> {
   return withAppUser(request, async (user) => {
     const [giving, stats, bot] = await Promise.all([
       readGivingNow(),
-      queryOne<{ active: number; weekly: number; paid7: number; pendingAfro: number; today: number }>(
+      queryOne<{ active: number; weekly: number; paid7: number; smsWaiting: number; today: number }>(
         `select (select count(*)::int from donors where status = 'active') as active,
                 (select coalesce(sum(amount), 0)::int from donors where status = 'active') as weekly,
                 (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
-                (select count(*)::int from donors where status = 'active' and afro_contact_at is null) as "pendingAfro",
+                (select count(*)::int from donors where status = 'active' and phone <> ''
+                   and (last_reminded_at is null or last_reminded_at < now() - interval '7 days')) as "smsWaiting",
                 (select count(*)::int from donors where created_at > now() - interval '24 hours') as today`,
       ),
       botUsername(),

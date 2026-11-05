@@ -2,12 +2,14 @@ import "server-only";
 import { query } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
 import {
+  callName,
   dayName,
   ethiopiaWeekday,
   fillTemplate,
   type GivingSettings,
 } from "@/lib/giving";
-import { publicOrigin, sendSms, smsConfigured } from "@/lib/sms";
+import { closeEmail, emailConfigured, sendEmail } from "@/lib/email";
+import { publicOrigin } from "@/lib/origin";
 import {
   sendTelegram,
   telegramConfigured,
@@ -22,7 +24,9 @@ import {
 export interface DonorForSms {
   id: number;
   name: string;
+  nickname?: string;
   phone: string;
+  email?: string;
   amount: number;
   reminder_day: number;
   locale: string;
@@ -37,7 +41,7 @@ export interface DonorForSms {
 const ACCOUNT_LIMIT = 80;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export type Channel = "sms" | "telegram";
+export type Channel = "sms" | "telegram" | "email";
 
 /** Where donors give (the Ye-Buna page, or the website's Donations page). */
 export function giveLink(giving: GivingSettings, locale: string): string {
@@ -47,15 +51,35 @@ export function giveLink(giving: GivingSettings, locale: string): string {
   );
 }
 
+/** The values for {placeholders} in every template. */
+export function templateValues(
+  donor: DonorForSms,
+  giving: GivingSettings,
+  channel: Channel,
+): Record<string, string> {
+  const am = donor.locale === "am";
+  return {
+    name: callName(donor.name, donor.nickname),
+    fullname: donor.name,
+    amount: donor.amount.toLocaleString("en-US"),
+    day: dayName(donor.reminder_day, donor.locale),
+    link: giveLink(giving, donor.locale),
+    stop:
+      channel === "telegram"
+        ? "/stop"
+        : `${publicOrigin()}${am ? "/am" : ""}/stop/${donor.token}`,
+  };
+}
+
 /**
- * The personalised text for one donor. On Telegram the "stop" part points to
- * the bot's /stop command instead of a web link.
+ * The personalised SMS / Telegram text for one donor. On Telegram the "stop"
+ * part points to the bot's /stop command instead of a web link.
  */
 export function donorMessage(
   kind: "reminder" | "welcome",
   donor: DonorForSms,
   giving: GivingSettings,
-  channel: Channel = "sms",
+  channel: "sms" | "telegram" = "sms",
 ): string {
   const am = donor.locale === "am";
   const template =
@@ -66,24 +90,53 @@ export function donorMessage(
       : am
         ? giving.welcomeAm
         : giving.welcomeEn;
-  const origin = publicOrigin();
-  return fillTemplate(template, {
-    name: donor.name.split(/\s+/)[0] ?? donor.name,
-    amount: donor.amount.toLocaleString("en-US"),
-    day: dayName(donor.reminder_day, donor.locale),
-    link: giveLink(giving, donor.locale),
-    stop:
-      channel === "telegram"
-        ? "/stop"
-        : `${origin}${am ? "/am" : ""}/stop/${donor.token}`,
+  return fillTemplate(template, templateValues(donor, giving, channel));
+}
+
+/** The personalised email (subject and text) for one donor. */
+export function donorEmail(
+  kind: "reminder" | "welcome",
+  donor: DonorForSms,
+  giving: GivingSettings,
+): { subject: string; text: string } {
+  const am = donor.locale === "am";
+  const values = templateValues(donor, giving, "email");
+  const [subject, body] =
+    kind === "reminder"
+      ? am
+        ? [giving.emailReminderSubjectAm, giving.emailReminderAm]
+        : [giving.emailReminderSubjectEn, giving.emailReminderEn]
+      : am
+        ? [giving.emailWelcomeSubjectAm, giving.emailWelcomeAm]
+        : [giving.emailWelcomeSubjectEn, giving.emailWelcomeEn];
+  return {
+    subject: fillTemplate(subject, values),
+    text: fillTemplate(body, values, true),
+  };
+}
+
+/** Email one donor their reminder or welcome, with a "Give" button. */
+export function emailDonor(
+  kind: "reminder" | "welcome",
+  donor: DonorForSms & { email: string },
+  giving: GivingSettings,
+) {
+  const { subject, text } = donorEmail(kind, donor, giving);
+  return sendEmail({
+    to: donor.email,
+    subject,
+    text,
+    kind,
+    donorId: donor.id,
+    button: giveButton(giving, donor.locale),
   });
 }
 
-/** The "Give" button under Telegram reminders. */
+/** The "Give" button under Telegram reminders and in emails. */
 export function giveButton(
   giving: GivingSettings,
   locale: string,
-): InlineButton {
+): InlineButton & { url: string } {
   const am = locale === "am";
   const text = giving.yebunaUrl
     ? am
@@ -98,40 +151,48 @@ export function giveButton(
 export interface ReminderRun {
   weekday: number;
   due: number;
+  /** Emails sent. */
   sent: number;
   telegram: number;
   skippedPaid: number;
   failed: number;
+  /** Not reached here but have a phone number: the app's "Send SMS reminders" sends them an SMS. */
+  phoneOnly: number;
   disabled?: boolean;
 }
 
 /**
  * Sends today's weekly reminders: active donors whose reminder day is today
  * (Ethiopian time) and who haven't been reminded in the last 20 hours. Donors
- * connected to the Telegram bot get it there; SMS goes to everyone else (and
- * to them too unless "Telegram replaces SMS" is on). Safe to run more than
- * once a day. Called by the daily cron job and from the dashboard.
+ * connected to the Telegram bot get it there, then the ministry's Telegram
+ * account is tried, and everyone with an email gets the email (unless
+ * "Telegram replaces email" is on and Telegram reached them). Donors with only
+ * a phone number are left for the Android app's "Send SMS reminders". Safe to
+ * run more than once a day. Called by the daily cron job and from the dashboard.
  */
 export async function runReminders(limit = 300): Promise<ReminderRun> {
   const giving = await readGivingNow();
   const weekday = ethiopiaWeekday();
-  if (!giving.remindersEnabled)
-    return {
-      weekday,
-      due: 0,
-      sent: 0,
-      telegram: 0,
-      skippedPaid: 0,
-      failed: 0,
-      disabled: true,
-    };
+  const run: ReminderRun = {
+    weekday,
+    due: 0,
+    sent: 0,
+    telegram: 0,
+    skippedPaid: 0,
+    failed: 0,
+    phoneOnly: 0,
+  };
+  if (!giving.remindersEnabled) return { ...run, disabled: true };
   const useTelegram = giving.telegramEnabled && telegramConfigured();
   let useAccount =
     giving.telegramEnabled && giving.telegramUserEnabled && accountConfigured();
+  const useEmail = emailConfigured();
   let accountSends = 0;
 
-  const due = await query<DonorForSms & { paid_recently: boolean }>(
-    `select d.id, d.name, d.phone, d.amount, d.reminder_day, d.locale, d.token, d.telegram_chat_id,
+  const due = await query<
+    DonorForSms & { email: string; paid_recently: boolean }
+  >(
+    `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.token, d.telegram_chat_id,
             d.telegram_username, d.telegram_user_status, d.telegram_user_checked_at,
             exists (select 1 from donor_payments p where p.donor_id = d.id and p.paid_on > current_date - 6) as paid_recently
      from donors d
@@ -140,15 +201,8 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
      order by d.id limit $2`,
     [weekday, limit],
   );
+  run.due = due.length;
 
-  const run: ReminderRun = {
-    weekday,
-    due: due.length,
-    sent: 0,
-    telegram: 0,
-    skippedPaid: 0,
-    failed: 0,
-  };
   try {
     for (const donor of due) {
       if (giving.skipIfPaid && donor.paid_recently) {
@@ -188,7 +242,8 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
         !viaTelegram &&
         useAccount &&
         accountSends < ACCOUNT_LIMIT &&
-        !recentlyMissing
+        !recentlyMissing &&
+        (donor.phone || donor.telegram_username)
       ) {
         if (accountSends > 0) await sleep(1500);
         accountSends++;
@@ -205,19 +260,18 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
           reached = viaTelegram = true;
           run.telegram++;
         } else if (acc.status === "flood") {
-          useAccount = false; // Telegram asked us to slow down: SMS for the rest today.
+          useAccount = false; // Telegram asked us to slow down: the rest get email / SMS.
         }
       }
 
-      // SMS for everyone not reached on Telegram (or also for them, if chosen).
-      if ((!viaTelegram || !giving.telegramReplacesSms) && smsConfigured()) {
-        const sms = await sendSms({
-          to: donor.phone,
-          message: donorMessage("reminder", donor, giving),
-          kind: "reminder",
-          donorId: donor.id,
-        });
-        if (sms.ok) {
+      // Email for everyone not reached on Telegram (or also for them, if chosen).
+      if (
+        donor.email &&
+        useEmail &&
+        (!viaTelegram || !giving.telegramReplacesSms)
+      ) {
+        const mail = await emailDonor("reminder", donor, giving);
+        if (mail.ok) {
           reached = true;
           run.sent++;
         }
@@ -227,10 +281,12 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
           "update donors set last_reminded_at = now() where id = $1",
           [donor.id],
         );
+      else if (donor.phone) run.phoneOnly++; // the app sends them an SMS
       else run.failed++;
     }
   } finally {
     if (accountSends > 0) await closeAccount();
+    closeEmail();
   }
   return run;
 }
