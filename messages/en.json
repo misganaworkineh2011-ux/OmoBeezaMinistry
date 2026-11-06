@@ -1205,7 +1205,7 @@
     "invalidTelegram": "Enter a Telegram username like @abebe (or leave it empty)."
   },
   "thanks": {
-    "script": "Ameseginalehu!",
+    "script": "እናመሰግናለን!",
     "titleNamed": "Thank you, <em>{name}</em>.",
     "titlePlain": "Thank you for <em>giving</em>.",
     "lead": "Your generosity just reached the children of South Omo. Because of you, a child will eat, learn, and fall asleep knowing they are loved.",
