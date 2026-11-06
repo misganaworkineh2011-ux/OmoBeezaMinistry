@@ -20,7 +20,7 @@ export default async function MessagesPage() {
           <p>The words of the weekly reminders and welcome messages, in English and Amharic.</p>
         </div>
       </div>
-      <MessageTemplatesForm initial={pick(giving)} defaults={pick(DEFAULT_GIVING)} yebunaUrl={yebunaLink(giving, 100)} origin={publicOrigin()} />
+      <MessageTemplatesForm initial={pick(giving)} defaults={pick(DEFAULT_GIVING)} yebunaUrl={yebunaLink(giving, 100)} includeStopLink={giving.includeStopLink} origin={publicOrigin()} />
     </>
   );
 }

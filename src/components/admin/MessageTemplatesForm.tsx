@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveTemplates } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { dayName, fillTemplate, smsSegments, type TemplateKey } from "@/lib/giving";
+import { dayName, fillTemplate, smsSegments, withoutStop, type TemplateKey } from "@/lib/giving";
 
 type Templates = Record<TemplateKey, string>;
 
@@ -29,7 +29,7 @@ const GROUPS: { title: string; hint: string; email: boolean; items: Item[] }[] =
   },
   {
     title: "SMS and Telegram",
-    hint: "SMS are sent from the ministry phone with the Android app (“Send SMS reminders”, and the welcome SMS after registering a donor). Telegram reminders use the same text; there {stop} becomes the bot’s /stop command.",
+    hint: "SMS are sent from the ministry phone with the Android app (“Send SMS reminders”, and the welcome SMS after registering a donor). Telegram reminders use the same text; there {stop} (when included) becomes the bot’s /stop command.",
     email: false,
     items: [
       { label: "Weekly reminder · English", locale: "en", body: "reminderEn" },
@@ -45,17 +45,21 @@ export default function MessageTemplatesForm({
   defaults,
   yebunaUrl,
   origin,
+  includeStopLink,
 }: {
   initial: Templates;
   defaults: Templates;
   yebunaUrl: string;
   origin: string;
+  includeStopLink: boolean;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(initial);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const changed = (Object.keys(form) as TemplateKey[]).some((k) => form[k] !== initial[k]);
+  const [stopLink, setStopLink] = useState(includeStopLink);
+  const changed = stopLink !== includeStopLink || (Object.keys(form) as TemplateKey[]).some((k) => form[k] !== initial[k]);
+  const sent = (template: string) => (stopLink ? template : withoutStop(template));
 
   const set = (key: TemplateKey, value: string) => setForm((f) => ({ ...f, [key]: value }));
   const sample = (locale: string) => ({
@@ -69,7 +73,7 @@ export default function MessageTemplatesForm({
 
   const save = () =>
     start(async () => {
-      const res = await saveTemplates(form);
+      const res = await saveTemplates(form, stopLink);
       setMsg(res.ok ? { ok: true, text: "Saved. New messages use these texts." } : { ok: false, text: res.error ?? "Not saved." });
       if (res.ok) router.refresh();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -105,9 +109,17 @@ export default function MessageTemplatesForm({
           </li>
           <li>
             <code>{"{stop}"}</code>
-            <span>Their personal link to stop reminders (required in reminders)</span>
+            <span>Their personal link to stop reminders (only sent when the box below is ticked)</span>
           </li>
         </ul>
+        <label className="a-check" style={{ marginTop: 14 }}>
+          <input type="checkbox" checked={stopLink} onChange={(e) => setStopLink(e.target.checked)} /> Include the “stop reminders” link
+          ({"{stop}"}) in messages
+        </label>
+        <span className="a-hint">
+          Off: the {"{stop}"} part (with its label, such as “To stop these reminders:”) is left out of every email, SMS and Telegram message,
+          as the previews show. Donors can still ask you to stop, and you can pause or stop them in Donors.
+        </span>
       </section>
 
       {GROUPS.map((group) => (
@@ -118,7 +130,7 @@ export default function MessageTemplatesForm({
           </div>
           {group.items.map((item) => {
             const values = sample(item.locale);
-            const body = fillTemplate(form[item.body], values, group.email);
+            const body = fillTemplate(sent(form[item.body]), values, group.email);
             const info = smsSegments(body);
             const isDefault = form[item.body] === defaults[item.body] && (!item.subject || form[item.subject] === defaults[item.subject]);
             return (
@@ -157,7 +169,7 @@ export default function MessageTemplatesForm({
                   onChange={(e) => set(item.body, e.target.value)}
                 />
                 <div className="sms-preview" dir="auto">
-                  {item.subject ? <strong style={{ display: "block", marginBottom: 6 }}>{fillTemplate(form[item.subject], values)}</strong> : null}
+                  {item.subject ? <strong style={{ display: "block", marginBottom: 6 }}>{fillTemplate(sent(form[item.subject]), values)}</strong> : null}
                   {body}
                 </div>
                 <span className="a-hint">

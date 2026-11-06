@@ -7,6 +7,7 @@ import {
   ethiopiaWeekday,
   fillTemplate,
   type GivingSettings,
+  templateFor,
   yebunaLink,
 } from "@/lib/giving";
 import { closeEmail, emailConfigured, sendEmail } from "@/lib/email";
@@ -98,7 +99,7 @@ export function donorMessage(
       : am
         ? giving.welcomeAm
         : giving.welcomeEn;
-  return fillTemplate(template, templateValues(donor, giving, channel));
+  return fillTemplate(templateFor(giving, template), templateValues(donor, giving, channel));
 }
 
 /** The personalised email (subject and text) for one donor. */
@@ -118,8 +119,8 @@ export function donorEmail(
         ? [giving.emailWelcomeSubjectAm, giving.emailWelcomeAm]
         : [giving.emailWelcomeSubjectEn, giving.emailWelcomeEn];
   return {
-    subject: fillTemplate(subject, values),
-    text: fillTemplate(body, values, true),
+    subject: fillTemplate(templateFor(giving, subject), values),
+    text: fillTemplate(templateFor(giving, body), values, true),
   };
 }
 

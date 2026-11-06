@@ -174,15 +174,15 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
 }
 
 /** Dashboard → Message templates. Empty fields go back to the default text. */
-export async function saveTemplates(input: Record<TemplateKey, string>): Promise<Result> {
+export async function saveTemplates(input: Record<TemplateKey, string>, includeStopLink: boolean): Promise<Result> {
   await requireUser();
-  const data = { ...(await readGivingNow()) };
+  const data = { ...(await readGivingNow()), includeStopLink: Boolean(includeStopLink) };
   for (const key of TEMPLATE_KEYS) {
     const max = key.includes("Subject") ? 200 : key.startsWith("email") ? 5000 : 900;
     data[key] = s(input[key], max) || DEFAULT_GIVING[key];
   }
   const missingStop = (["reminderEn", "reminderAm", "emailReminderEn", "emailReminderAm"] as const).find((k) => !data[k].includes("{stop}"));
-  if (missingStop) return { ok: false, error: "Reminder messages must include {stop} so people can stop the reminders." };
+  if (data.includeStopLink && missingStop) return { ok: false, error: "Reminder messages must include {stop} so people can stop the reminders (or turn off the stop link)." };
   await saveSettings(data);
   return { ok: true };
 }

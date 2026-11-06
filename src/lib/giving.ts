@@ -24,6 +24,8 @@ export interface GivingSettings {
   telegramReplacesSms: boolean;
   /** Reach donors who haven't connected the bot from the ministry's Telegram account (by @username or phone). */
   telegramUserEnabled: boolean;
+  /** Put the personal "stop reminders" link ({stop}) in messages. Off: it is left out. */
+  includeStopLink: boolean;
   /** SMS from the ministry phone (Android app), and Telegram messages. */
   reminderEn: string;
   reminderAm: string;
@@ -78,6 +80,7 @@ export const DEFAULT_GIVING: GivingSettings = {
   telegramEnabled: true,
   telegramReplacesSms: true,
   telegramUserEnabled: true,
+  includeStopLink: false,
   reminderEn: "Hi {name}, your weekly {amount} birr gift for the children of Omo Beeza: {link} Stop reminders: {stop}",
   reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች የዚህ ሳምንት የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
   welcomeEn: "Thank you {name}! You now give {amount} birr weekly to Omo Beeza. We'll remind you every {day}. Give: {link}",
@@ -142,6 +145,22 @@ export function fillTemplate(template: string, values: Record<string, string>, m
  */
 export function yebunaLink(giving: Pick<GivingSettings, "amountLinks" | "yebunaUrl">, amount?: number): string {
   return (amount ? giving.amountLinks?.[String(amount)] : "") || giving.yebunaUrl || "";
+}
+
+/**
+ * Leaves the stop link out of a template: removes {stop} together with its
+ * label ("Stop reminders: {stop}", "ለማቆም፦ {stop}", or a whole line in emails).
+ */
+export function withoutStop(template: string): string {
+  return template
+    .replace(/[^\n.!?።{}]*\{stop\}[ \t]*/g, "")
+    .replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n")
+    .trim();
+}
+
+/** The template as sent: with or without the stop link, per the dashboard setting. */
+export function templateFor(giving: Pick<GivingSettings, "includeStopLink">, template: string): string {
+  return giving.includeStopLink ? template : withoutStop(template);
 }
 
 /** The name used in messages: the nickname if set, otherwise the first name. */
