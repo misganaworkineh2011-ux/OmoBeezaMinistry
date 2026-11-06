@@ -62,6 +62,7 @@ import org.omobeeza.donors.data.DAYS_AM
 import org.omobeeza.donors.data.DAYS_EN
 import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.NewDonor
+import org.omobeeza.donors.data.payLink
 import org.omobeeza.donors.data.birr
 import org.omobeeza.donors.data.normalizePhone
 import org.omobeeza.donors.data.normalizeTelegram
@@ -131,6 +132,14 @@ fun RegisterScreen(
             }
             Spacer(Modifier.height(10.dp))
             Field(custom, { v -> custom = v.filter { it.isDigit() }.take(7) }, "Other amount (birr)", Icons.Rounded.Favorite, keyboard = KeyboardType.Number, error = amountError)
+            settings.payLink(weekly).takeIf { it.isNotBlank() }?.let { link ->
+                Text(
+                    "Pays on Ye-Buna: ${link.removePrefix("https://")}",
+                    Modifier.padding(start = 6.dp, top = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Brand.Muted,
+                )
+            }
 
             Spacer(Modifier.height(18.dp))
             SectionLabel("Remind every")

@@ -71,7 +71,7 @@ export default function GivingSettingsForm({
             <label htmlFor="g-url">Ye-Buna page link</label>
             <input id="g-url" value={form.yebunaUrl} onChange={(e) => set("yebunaUrl", e.target.value)} placeholder="https://ye-buna.com/your-page" />
             <span className="a-hint">
-              Create a page at ye-buna.com, then paste its link here. Donors go there to give; it is also the {"{link}"} in reminder messages.
+              Create a page at ye-buna.com, then paste its link here. Used for amounts that have no payment link of their own (below), and for one-time gifts.
             </span>
             <span className="a-hint">
               If Ye-Buna lets you set a “thank you” or return link, use <strong>{origin}/thank-you</strong>{" "}
@@ -100,6 +100,24 @@ export default function GivingSettingsForm({
                 ))}
               </select>
             </div>
+          </div>
+          <div className="a-field">
+            <label>Ye-Buna payment link for each amount</label>
+            <span className="a-hint" style={{ marginBottom: 8 }}>
+              Each amount opens its own Ye-Buna payment page (on the Donations page, the thank-you page, and as the {"{link}"} in that donor’s
+              reminders). Other amounts use the Ye-Buna page link above.
+            </span>
+            {[...new Set(amounts.split(/[,\s]+/).map(Number).filter((n) => n > 0))].map((n) => (
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                <span style={{ minWidth: 92, fontWeight: 600 }}>{n.toLocaleString("en-US")} birr</span>
+                <input
+                  aria-label={`Ye-Buna link for ${n} birr`}
+                  value={form.amountLinks?.[String(n)] ?? ""}
+                  onChange={(e) => set("amountLinks", { ...form.amountLinks, [String(n)]: e.target.value })}
+                  placeholder={`https://ye-buna.com/pay/…`}
+                />
+              </div>
+            ))}
           </div>
           <label className="a-check">
             <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} /> Send weekly

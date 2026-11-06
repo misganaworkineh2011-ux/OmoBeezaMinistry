@@ -41,6 +41,10 @@ class Api(baseUrl: String, private val token: String?) {
                 minAmount = s.optInt("minAmount", 10),
                 defaultDay = s.optInt("defaultDay", 0),
                 yebunaUrl = s.optString("yebunaUrl"),
+                amountLinks = s.optJSONObject("amountLinks")?.let { links ->
+                    links.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to links.optString(k) } }
+                        .filter { it.second.startsWith("https://") }.toMap()
+                }.orEmpty(),
                 telegramBot = s.optString("telegramBot"),
             ),
             Stats(

@@ -11,9 +11,14 @@ data class GivingSettings(
     val minAmount: Int = 10,
     val defaultDay: Int = 0,
     val yebunaUrl: String = "",
+    /** Ye-Buna payment link for each amount (amount in birr → link). */
+    val amountLinks: Map<Int, String> = emptyMap(),
     /** The reminder bot's @username ("" when the bot isn't set up). */
     val telegramBot: String = "",
 )
+
+/** Where a donor pays [amount] birr: its own Ye-Buna link, or the general Ye-Buna page ("" = none). */
+fun GivingSettings.payLink(amount: Int): String = amountLinks[amount] ?: yebunaUrl
 
 data class Stats(
     val active: Int = 0,

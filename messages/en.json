@@ -1187,8 +1187,11 @@
     "continue": "Give this week's gift on Ye-Buna",
     "again": "Register another person",
     "onceTitle": "Give once in birr",
-    "onceLead": "Give any amount, any time, through our Ye-Buna page.",
+    "onceLead": "Choose an amount and give it once, securely, through Ye-Buna.",
     "onceButton": "Give on Ye-Buna",
+    "onceAmountLegend": "Amount (birr)",
+    "onceButtonAmount": "Give {amount} birr on Ye-Buna",
+    "onceOther": "Give a different amount on Ye-Buna",
     "comingSoon": "Online giving in birr is coming soon. Meanwhile, you can transfer to our bank account on this page.",
     "abroadLead": "Giving from outside Ethiopia? Tell us your pledge and we'll reply with the best way to complete it.",
     "stop": {

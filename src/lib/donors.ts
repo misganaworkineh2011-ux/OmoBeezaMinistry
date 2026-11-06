@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
-import { isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
+import { isEmail, normalizePhone, normalizeTelegram, yebunaLink } from "@/lib/giving";
 import { donorMessage, emailDonor, type DonorForSms } from "@/lib/reminders";
 import { connectLink } from "@/lib/telegram";
 
@@ -110,7 +110,7 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
     ok: true,
     donor,
     created,
-    link: giving.yebunaUrl,
+    link: yebunaLink(giving, donor.amount),
     telegramLink: await connectLink(donor.token),
     welcomeSms: welcome && donor.phone && !donor.email ? donorMessage("welcome", donor, giving) : "",
   };

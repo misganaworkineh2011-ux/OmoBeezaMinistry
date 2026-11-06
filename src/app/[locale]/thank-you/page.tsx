@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { pageMetadata } from "@/lib/metadata";
 import { richEm } from "@/lib/rich";
-import { dayName } from "@/lib/giving";
+import { dayName, yebunaLink } from "@/lib/giving";
 import { getGiving } from "@/lib/data/giving";
 import { botUsername } from "@/lib/telegram";
 import Icon, { isIconName } from "@/components/Icon";
@@ -52,7 +52,8 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
   const amount = Math.round(Number(sp.amount));
   const day = Number(sp.day);
   const weekly = sp.kind === "weekly" && amount > 0 && day >= 0 && day <= 6;
-  const { yebunaUrl } = await getGiving();
+  // The Ye-Buna payment page for their weekly amount (or the general page).
+  const yebunaUrl = yebunaLink(await getGiving(), weekly ? amount : undefined);
   // One-tap link to the reminder bot (only for a valid personal token).
   const bot = weekly && /^[A-Za-z0-9_-]{8,40}$/.test(sp.tg ?? "") ? await botUsername() : "";
   const telegramLink = bot ? `https://t.me/${bot}?start=${sp.tg}` : "";

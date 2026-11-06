@@ -7,6 +7,7 @@ import {
   ethiopiaWeekday,
   fillTemplate,
   type GivingSettings,
+  yebunaLink,
 } from "@/lib/giving";
 import { closeEmail, emailConfigured, sendEmail } from "@/lib/email";
 import { publicOrigin } from "@/lib/origin";
@@ -43,10 +44,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export type Channel = "sms" | "telegram" | "email";
 
-/** Where donors give (the Ye-Buna page, or the website's Donations page). */
-export function giveLink(giving: GivingSettings, locale: string): string {
+/**
+ * Where a donor gives: the Ye-Buna payment link for their amount, the general
+ * Ye-Buna page, or the website's Donations page.
+ */
+export function giveLink(
+  giving: GivingSettings,
+  locale: string,
+  amount?: number,
+): string {
   return (
-    giving.yebunaUrl ||
+    yebunaLink(giving, amount) ||
     `${publicOrigin()}${locale === "am" ? "/am" : ""}/donations`
   );
 }
@@ -63,7 +71,7 @@ export function templateValues(
     fullname: donor.name,
     amount: donor.amount.toLocaleString("en-US"),
     day: dayName(donor.reminder_day, donor.locale),
-    link: giveLink(giving, donor.locale),
+    link: giveLink(giving, donor.locale, donor.amount),
     stop:
       channel === "telegram"
         ? "/stop"
@@ -128,7 +136,7 @@ export function emailDonor(
     text,
     kind,
     donorId: donor.id,
-    button: giveButton(giving, donor.locale),
+    button: giveButton(giving, donor.locale, donor.amount),
   });
 }
 
@@ -136,16 +144,17 @@ export function emailDonor(
 export function giveButton(
   giving: GivingSettings,
   locale: string,
+  amount?: number,
 ): InlineButton & { url: string } {
   const am = locale === "am";
-  const text = giving.yebunaUrl
+  const text = yebunaLink(giving, amount)
     ? am
       ? "❤ በየቡና ይስጡ"
       : "❤ Give on Ye-Buna"
     : am
       ? "❤ ይስጡ"
       : "❤ Give";
-  return { text, url: giveLink(giving, locale) };
+  return { text, url: giveLink(giving, locale, amount) };
 }
 
 export interface ReminderRun {
@@ -220,7 +229,7 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
         const tg = await sendTelegram({
           chatId: donor.telegram_chat_id,
           text: donorMessage("reminder", donor, giving, "telegram"),
-          button: giveButton(giving, donor.locale),
+          button: giveButton(giving, donor.locale, donor.amount),
           kind: "reminder",
           donorId: donor.id,
           label: `telegram:${donor.name}`,

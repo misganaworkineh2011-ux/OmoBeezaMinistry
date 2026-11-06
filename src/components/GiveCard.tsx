@@ -6,12 +6,14 @@ import { Field, focusFirstError, type FieldErrors } from "@/components/FormKit";
 import DonateForm from "@/components/DonateForm";
 import Icon from "@/components/Icon";
 import { useRouter } from "@/i18n/navigation";
-import { dayName, isEmail, normalizeTelegram } from "@/lib/giving";
+import { dayName, isEmail, normalizeTelegram, yebunaLink } from "@/lib/giving";
 
 type Tab = "weekly" | "once" | "abroad";
 
 export interface GiveCardSettings {
   yebunaUrl: string;
+  /** Ye-Buna payment link for each suggested amount. */
+  amountLinks: Record<string, string>;
   amounts: number[];
   minAmount: number;
   defaultDay: number;
@@ -40,6 +42,48 @@ function YebunaButton({ href, label, thanks }: { href: string; label: string; th
     >
       <Icon name="heart" /> {label} <Icon name="arrowRight" />
     </a>
+  );
+}
+
+/** One-time gift: pick an amount, pay it on its Ye-Buna payment page. */
+function OnceForm({ settings }: { settings: GiveCardSettings }) {
+  const t = useTranslations("giving");
+  const linked = settings.amounts.filter((a) => yebunaLink({ ...settings, yebunaUrl: "" }, a));
+  const [amount, setAmount] = useState(linked[1] ?? linked[0] ?? 0);
+  const href = yebunaLink(settings, amount || undefined);
+  return (
+    <div className="form">
+      <h3 className="title-sm">{t("onceTitle")}</h3>
+      <p className="give-lead">{t("onceLead")}</p>
+      {linked.length ? (
+        <fieldset>
+          <legend>{t("onceAmountLegend")}</legend>
+          <div className="amount-scroll" role="radiogroup" aria-label={t("onceAmountLegend")}>
+            {linked.map((a) => (
+              <label key={a} className={`amount amount--chip${amount === a ? " is-active" : ""}`}>
+                <input type="radio" name="once-tier" value={a} checked={amount === a} onChange={() => setAmount(a)} />
+                {a.toLocaleString("en-US")}
+                <small>{t("birrUnit")}</small>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      ) : null}
+      {href ? (
+        <YebunaButton
+          href={href}
+          label={amount && linked.includes(amount) ? t("onceButtonAmount", { amount: amount.toLocaleString("en-US") }) : t("onceButton")}
+          thanks={thankYouHref({ kind: "once" })}
+        />
+      ) : (
+        <p>{t("comingSoon")}</p>
+      )}
+      {settings.yebunaUrl && linked.length ? (
+        <a className="give-other-link" href={settings.yebunaUrl} target="_blank" rel="noopener">
+          {t("onceOther")}
+        </a>
+      ) : null}
+    </div>
   );
 }
 
@@ -213,17 +257,7 @@ export default function GiveCard({ settings }: { settings: GiveCardSettings }) {
 
       {tab === "weekly" ? <WeeklyForm settings={settings} /> : null}
 
-      {tab === "once" ? (
-        <div className="form">
-          <h3 className="title-sm">{t("onceTitle")}</h3>
-          <p className="give-lead">{t("onceLead")}</p>
-          {settings.yebunaUrl ? (
-            <YebunaButton href={settings.yebunaUrl} label={t("onceButton")} thanks={thankYouHref({ kind: "once" })} />
-          ) : (
-            <p>{t("comingSoon")}</p>
-          )}
-        </div>
-      ) : null}
+      {tab === "once" ? <OnceForm settings={settings} /> : null}
 
       {tab === "abroad" ? (
         <>

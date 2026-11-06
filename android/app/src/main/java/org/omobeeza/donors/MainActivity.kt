@@ -20,6 +20,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import org.omobeeza.donors.data.payLink
 import org.omobeeza.donors.ui.AppViewModel
 import org.omobeeza.donors.ui.Screen
 import org.omobeeza.donors.ui.screens.HomeScreen
@@ -88,6 +89,7 @@ fun App(vm: AppViewModel = viewModel()) {
                 onRegister = { vm.go(Screen.Register) },
                 onSettings = { vm.go(Screen.Settings) },
                 onSms = vm::openSms,
+                payLink = { vm.settings.payLink(it.amount) },
             )
 
             Screen.Register -> RegisterScreen(vm.settings, vm.busy, vm.formError, onBack = { vm.back() }, onSave = vm::register)
@@ -96,6 +98,7 @@ fun App(vm: AppViewModel = viewModel()) {
                 donor = screen.donor,
                 created = screen.created,
                 welcomeSms = vm.welcomeSms,
+                payLink = vm.settings.payLink(screen.donor.amount),
                 onAnother = { vm.go(Screen.Register) },
                 onDone = { vm.go(Screen.Home) },
             )

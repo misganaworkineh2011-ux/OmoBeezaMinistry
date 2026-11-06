@@ -26,7 +26,7 @@ export async function GET(request: Request): Promise<Response> {
     ]);
     return json(200, {
       user,
-      settings: { amounts: giving.amounts, minAmount: giving.minAmount, defaultDay: giving.defaultDay, yebunaUrl: giving.yebunaUrl, telegramBot: bot },
+      settings: { amounts: giving.amounts, minAmount: giving.minAmount, defaultDay: giving.defaultDay, yebunaUrl: giving.yebunaUrl, amountLinks: giving.amountLinks, telegramBot: bot },
       stats,
     });
   });

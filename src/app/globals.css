@@ -7710,3 +7710,14 @@ button.text-link {
   --btn-bg: #229ed9;
   --btn-fg: #fff;
 }
+
+/* One-time gift: link to Ye-Buna's general page for other amounts. */
+.give-other-link {
+  display: block;
+  margin-top: 12px;
+  text-align: center;
+  font-size: 0.92rem;
+  color: var(--blue-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

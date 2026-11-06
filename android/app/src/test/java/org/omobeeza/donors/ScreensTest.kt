@@ -62,13 +62,13 @@ class ScreensTest {
 
     @Test fun register() = paparazzi.snapshot { OmoTheme { RegisterScreen(GivingSettings(), false, null, {}, {}) } }
 
-    @Test fun saved() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[0], true, "Welcome SMS sent from this phone.", {}, {}, animate = false) } }
+    @Test fun saved() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[0], true, "Welcome SMS sent from this phone.", "https://ye-buna.com/pay/250", {}, {}, animate = false) } }
 
     @Test fun donorDetails() = paparazzi.snapshot {
-        OmoTheme { Box(Modifier.background(Brand.Sand)) { DonorDetails(donors[0]) } }
+        OmoTheme { Box(Modifier.background(Brand.Sand)) { DonorDetails(donors[0], "https://ye-buna.com/pay/250") } }
     }
 
-    @Test fun savedTelegramConnected() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[1], true, null, {}, {}, animate = false) } }
+    @Test fun savedTelegramConnected() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[1], true, null, onAnother = {}, onDone = {}, animate = false) } }
 
     @Test fun settings() = paparazzi.snapshot {
         OmoTheme { SettingsScreen(user, "https://omobeezaministry.com", {}, {}) }

@@ -144,6 +144,7 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
               <GiveCard
                 settings={{
                   yebunaUrl: giving.yebunaUrl,
+                  amountLinks: giving.amountLinks,
                   amounts: giving.amounts,
                   minAmount: giving.minAmount,
                   defaultDay: giving.defaultDay,

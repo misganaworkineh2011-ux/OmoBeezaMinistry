@@ -9,6 +9,8 @@ export interface GivingSettings {
   yebunaUrl: string;
   /** Suggested weekly amounts in birr. */
   amounts: number[];
+  /** A Ye-Buna payment link for each amount ("100" → https://ye-buna.com/pay/…). */
+  amountLinks: Record<string, string>;
   minAmount: number;
   /** 0 = Sunday … 6 = Saturday. */
   defaultDay: number;
@@ -58,6 +60,16 @@ export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 export const DEFAULT_GIVING: GivingSettings = {
   yebunaUrl: "",
   amounts: [50, 100, 250, 500, 1000, 2000, 5000, 10000],
+  amountLinks: {
+    "50": "https://ye-buna.com/pay/omobeeza-50",
+    "100": "https://ye-buna.com/pay/omobeeza-100",
+    "250": "https://ye-buna.com/pay/250",
+    "500": "https://ye-buna.com/pay/omobeeza-500",
+    "1000": "https://ye-buna.com/pay/omobeeza-1000",
+    "2000": "https://ye-buna.com/pay/omobeeza-2000",
+    "5000": "https://ye-buna.com/pay/omobeeza-5000",
+    "10000": "https://ye-buna.com/pay/omobeeza-10000",
+  },
   minAmount: 10,
   defaultDay: 0,
   remindersEnabled: true,
@@ -122,6 +134,14 @@ export function fillTemplate(template: string, values: Record<string, string>, m
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+/**
+ * Where to pay a gift of `amount` birr on Ye-Buna: that amount's own payment
+ * link, or the general Ye-Buna page ("" when neither is set).
+ */
+export function yebunaLink(giving: Pick<GivingSettings, "amountLinks" | "yebunaUrl">, amount?: number): string {
+  return (amount ? giving.amountLinks?.[String(amount)] : "") || giving.yebunaUrl || "";
 }
 
 /** The name used in messages: the nickname if set, otherwise the first name. */

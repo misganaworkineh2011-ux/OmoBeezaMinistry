@@ -148,11 +148,19 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
   if (url && !/^https:\/\/[^\s]+$/.test(url)) return { ok: false, error: "The Ye-Buna link must start with https://" };
   const amounts = [...new Set((input.amounts ?? []).map((n) => Math.round(Number(n))).filter((n) => n > 0))].sort((a, b) => a - b).slice(0, 12);
   if (amounts.length === 0) return { ok: false, error: "Add at least one suggested amount." };
+  const amountLinks: Record<string, string> = {};
+  for (const [amount, link] of Object.entries(input.amountLinks ?? {})) {
+    const value = s(link, 300);
+    if (!value) continue;
+    if (!/^https:\/\/[^\s]+$/.test(value)) return { ok: false, error: `The Ye-Buna link for ${amount} birr must start with https://` };
+    if (Number(amount) > 0) amountLinks[String(Math.round(Number(amount)))] = value;
+  }
   // The message templates are saved on their own page; keep them as they are.
   await saveSettings({
     ...(await readGivingNow()),
     yebunaUrl: url,
     amounts,
+    amountLinks,
     minAmount: Math.max(1, Math.round(Number(input.minAmount)) || DEFAULT_GIVING.minAmount),
     defaultDay: Math.min(6, Math.max(0, Math.round(Number(input.defaultDay)) || 0)),
     remindersEnabled: Boolean(input.remindersEnabled),
@@ -265,7 +273,7 @@ export async function sendTelegramTest(donorId: number): Promise<Result> {
   const res = await sendTelegram({
     chatId: donor.telegram_chat_id,
     text: donorMessage("reminder", donor, giving, "telegram"),
-    button: giveButton(giving, donor.locale),
+    button: giveButton(giving, donor.locale, donor.amount),
     kind: "manual",
     donorId: donor.id,
     label: `telegram:${donor.name}`,

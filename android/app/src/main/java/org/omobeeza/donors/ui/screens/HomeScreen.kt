@@ -92,6 +92,7 @@ import org.omobeeza.donors.ui.components.GoldButton
 import org.omobeeza.donors.ui.components.Pill
 import org.omobeeza.donors.ui.components.SectionLabel
 import org.omobeeza.donors.ui.components.SoftCard
+import org.omobeeza.donors.ui.components.PayLinkCard
 import org.omobeeza.donors.ui.components.TelegramConnectCard
 import org.omobeeza.donors.ui.components.WaveHeader
 import org.omobeeza.donors.ui.theme.Brand
@@ -119,6 +120,8 @@ fun HomeScreen(
     onRegister: () -> Unit,
     onSettings: () -> Unit,
     onSms: () -> Unit = {},
+    /** Each donor's Ye-Buna payment link ("" = none). */
+    payLink: (Donor) -> String = { "" },
 ) {
     var selected by remember { mutableStateOf<Donor?>(null) }
 
@@ -221,7 +224,7 @@ fun HomeScreen(
     selected?.let { d ->
         val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { selected = null }, sheetState = sheet, containerColor = Brand.Sand) {
-            DonorDetails(d)
+            DonorDetails(d, payLink(d))
         }
     }
 }
@@ -290,7 +293,7 @@ private fun EmptyState(filtered: Boolean) {
 }
 
 @Composable
-internal fun DonorDetails(d: Donor) {
+internal fun DonorDetails(d: Donor, payLink: String = "") {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 28.dp).animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -323,6 +326,10 @@ internal fun DonorDetails(d: Donor) {
             DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
             DetailLine(Icons.Rounded.Info, "Registered", prettyDate(d.createdAt), last = d.notes.isBlank())
             if (d.notes.isNotBlank()) DetailLine(Icons.Rounded.Info, "Notes", d.notes, last = true)
+        }
+        if (d.status == "active" && payLink.isNotBlank()) {
+            Spacer(Modifier.height(16.dp))
+            PayLinkCard(d, payLink)
         }
         if (d.status == "active" && (d.telegramLinked || d.telegramLink.isNotBlank())) {
             Spacer(Modifier.height(16.dp))

@@ -137,7 +137,7 @@ async function link(donor: LinkDonor, chatId: number, from: TgUser): Promise<voi
   await sendTelegram({
     chatId: String(chatId),
     text: t.linked(donor.name.split(/\s+/)[0] ?? donor.name, birr(donor.amount), dayName(donor.reminder_day, donor.locale)),
-    button: giveButton(giving, donor.locale),
+    button: giveButton(giving, donor.locale, donor.amount),
     kind: "welcome",
     donorId: donor.id,
     label: `telegram:${donor.name}`,
