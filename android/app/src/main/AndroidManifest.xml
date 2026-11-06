@@ -26,5 +26,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Android's "SMS sent" reports for "Send SMS reminders". -->
+        <receiver android:name=".data.SmsSentReceiver" android:exported="false" />
     </application>
 </manifest>
