@@ -46,18 +46,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export type Channel = "sms" | "telegram" | "email";
 
 /**
- * Where a donor gives: the Ye-Buna payment link for their amount, the general
- * Ye-Buna page, or the website's Donations page.
+ * Where a donor gives, on the ministry's own address: /give/250 forwards to
+ * the Ye-Buna payment page for that amount (or the general Ye-Buna page, see
+ * src/app/give). Without any Ye-Buna link it is the website's Donations page.
  */
 export function giveLink(
   giving: GivingSettings,
   locale: string,
   amount?: number,
 ): string {
-  return (
-    yebunaLink(giving, amount) ||
-    `${publicOrigin()}${locale === "am" ? "/am" : ""}/donations`
-  );
+  if (yebunaLink(giving, amount)) return `${publicOrigin()}/give${amount ? `/${amount}` : ""}`;
+  return `${publicOrigin()}${locale === "am" ? "/am" : ""}/donations`;
 }
 
 /** The values for {placeholders} in every template. */

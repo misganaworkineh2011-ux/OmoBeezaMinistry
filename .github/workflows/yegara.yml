@@ -1,0 +1,32 @@
+# Builds the website for Yegara HOST (cPanel "Setup Node.js App") on Linux, so
+# the image resizer matches the server. Run it from GitHub → Actions → "Build
+# for Yegara" → Run workflow, then download "omobeeza-yegara" from the run.
+name: Build for Yegara
+
+on:
+  workflow_dispatch:
+    inputs:
+      unoptimized_images:
+        description: "Serve photos without resizing (only if photos don't load on the server)"
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build:yegara
+        env:
+          IMAGES_UNOPTIMIZED: ${{ inputs.unoptimized_images && '1' || '' }}
+          NEXT_TELEMETRY_DISABLED: "1"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omobeeza-yegara
+          path: deploy/omobeeza-yegara.zip
+          retention-days: 14

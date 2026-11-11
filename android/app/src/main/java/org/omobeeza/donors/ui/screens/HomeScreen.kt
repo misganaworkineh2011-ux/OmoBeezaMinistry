@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
@@ -120,6 +121,7 @@ fun HomeScreen(
     onRegister: () -> Unit,
     onSettings: () -> Unit,
     onSms: () -> Unit = {},
+    onSubAdmins: () -> Unit = {},
     /** Each donor's Ye-Buna payment link ("" = none). */
     payLink: (Donor) -> String = { "" },
 ) {
@@ -208,6 +210,8 @@ fun HomeScreen(
                     }
                     Spacer(Modifier.height(12.dp))
                     SmsBanner(stats.smsWaiting, onSms)
+                    Spacer(Modifier.height(10.dp))
+                    SubAdminsBanner(stats, onSubAdmins)
                 }
             }
 
@@ -262,6 +266,26 @@ private fun SmsBanner(waiting: Int, onClick: () -> Unit) {
 }
 
 @Composable
+private fun SubAdminsBanner(stats: Stats, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White).clickable(onClick = onClick).padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(36.dp).clip(CircleShape).background(Brand.GoldSoft), contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.Person, null, tint = Brand.Navy, modifier = Modifier.size(18.dp))
+        }
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text("Sub-admins", style = MaterialTheme.typography.titleSmall, color = Brand.Ink)
+            Text(
+                if (stats.subAdmins > 0) "${stats.subAdmins} registering · ${birr(stats.subRegistered)} of ${birr(stats.subTarget)} donors"
+                else "Add people who register donors for you",
+                style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
+        }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.Gold)
+    }
+}
+
+@Composable
 private fun DonorRow(d: Donor, modifier: Modifier, onClick: () -> Unit) {
     SoftCard(modifier.fillMaxWidth().clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -293,7 +317,7 @@ private fun EmptyState(filtered: Boolean) {
 }
 
 @Composable
-internal fun DonorDetails(d: Donor, payLink: String = "") {
+internal fun DonorDetails(d: Donor, payLink: String = "", full: Boolean = true) {
     val context = LocalContext.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 28.dp).animateContentSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -305,6 +329,7 @@ internal fun DonorDetails(d: Donor, payLink: String = "") {
                     Pill(d.status, if (d.status == "active") Brand.GreenSoft else Color(0xFFEDEBE7), if (d.status == "active") Brand.Green else Brand.Muted)
                     if (d.source == "app") Pill("via the app", Color(0xFFE3ECF8), Brand.Blue)
                     if (d.source == "telegram") Pill("via Telegram", Color(0xFFE6F4FB), Color(0xFF1A7FB0))
+                    if (d.registeredBy.isNotBlank()) Pill("by ${d.registeredBy}", Brand.GoldSoft, Brand.Navy)
                 }
             }
         }
@@ -321,9 +346,9 @@ internal fun DonorDetails(d: Donor, payLink: String = "") {
         SoftCard(Modifier.fillMaxWidth(), padding = 16.dp) {
             DetailLine(Icons.Rounded.Call, "Phone", localPhone(d.phone))
             DetailLine(Icons.Rounded.Favorite, "Weekly gift", "${birr(d.amount)} birr")
-            DetailLine(Icons.Rounded.DateRange, "Reminder", "Every ${dayName(d.reminderDay)} · ${if (d.locale == "am") "Amharic" else "English"} · last ${prettyDate(d.lastReminded)}")
+            DetailLine(Icons.Rounded.DateRange, "Reminder", "Every ${dayName(d.reminderDay)} · ${if (d.locale == "am") "Amharic" else "English"}" + if (full) " · last ${prettyDate(d.lastReminded)}" else "")
             if (d.email.isNotBlank()) DetailLine(Icons.Rounded.Email, "Email", d.email)
-            DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
+            if (full) DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
             DetailLine(Icons.Rounded.Info, "Registered", prettyDate(d.createdAt), last = d.notes.isBlank())
             if (d.notes.isNotBlank()) DetailLine(Icons.Rounded.Info, "Notes", d.notes, last = true)
         }
@@ -331,7 +356,7 @@ internal fun DonorDetails(d: Donor, payLink: String = "") {
             Spacer(Modifier.height(16.dp))
             PayLinkCard(d, payLink)
         }
-        if (d.status == "active" && (d.telegramLinked || d.telegramLink.isNotBlank())) {
+        if (full && d.status == "active" && (d.telegramLinked || d.telegramLink.isNotBlank())) {
             Spacer(Modifier.height(16.dp))
             SectionLabel("Telegram")
             Spacer(Modifier.height(6.dp))

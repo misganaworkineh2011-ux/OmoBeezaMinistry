@@ -83,6 +83,8 @@ fun RegisterScreen(
     serverError: String?,
     onBack: () -> Unit,
     onSave: (NewDonor) -> Unit,
+    /** The line under the summary (null = none). */
+    welcomeNote: String? = "A welcome SMS is sent from this phone when you save (if turned on in the dashboard).",
 ) {
     var amount by rememberSaveable { mutableIntStateOf(settings.amounts.getOrElse(1) { settings.amounts.firstOrNull() ?: 100 }) }
     var custom by rememberSaveable { mutableStateOf("") }
@@ -134,7 +136,7 @@ fun RegisterScreen(
             Field(custom, { v -> custom = v.filter { it.isDigit() }.take(7) }, "Other amount (birr)", Icons.Rounded.Favorite, keyboard = KeyboardType.Number, error = amountError)
             settings.payLink(weekly).takeIf { it.isNotBlank() }?.let { link ->
                 Text(
-                    "Pays on Ye-Buna: ${link.removePrefix("https://")}",
+                    "Payment link: ${link.removePrefix("https://")}",
                     Modifier.padding(start = 6.dp, top = 6.dp),
                     style = MaterialTheme.typography.bodySmall,
                     color = Brand.Muted,
@@ -210,7 +212,7 @@ fun RegisterScreen(
                     lineHeight = 26.sp,
                     color = Brand.Ink,
                 )
-                Text("A welcome SMS is sent from this phone when you save (if turned on in the dashboard).", style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
+                welcomeNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Brand.Muted) }
             }
             if (serverError != null) {
                 Spacer(Modifier.height(12.dp))

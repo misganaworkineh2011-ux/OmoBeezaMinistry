@@ -15,10 +15,20 @@ data class GivingSettings(
     val amountLinks: Map<Int, String> = emptyMap(),
     /** The reminder bot's @username ("" when the bot isn't set up). */
     val telegramBot: String = "",
+    /** The ministry's own payment links, e.g. https://www.omobeezaministry.org/give ("" = older website). */
+    val linkBase: String = "",
 )
 
-/** Where a donor pays [amount] birr: its own Ye-Buna link, or the general Ye-Buna page ("" = none). */
-fun GivingSettings.payLink(amount: Int): String = amountLinks[amount] ?: yebunaUrl
+/**
+ * Where a donor pays [amount] birr ("" = no Ye-Buna link set up): the ministry's
+ * own address (…/give/250), which forwards to that amount's Ye-Buna page or the
+ * general one. Older websites without /give get the Ye-Buna link itself.
+ */
+fun GivingSettings.payLink(amount: Int): String {
+    val yebuna = amountLinks[amount] ?: yebunaUrl
+    if (yebuna.isBlank()) return ""
+    return if (linkBase.isNotBlank()) "$linkBase/$amount" else yebuna
+}
 
 data class Stats(
     val active: Int = 0,
@@ -27,7 +37,63 @@ data class Stats(
     /** Active donors with a phone who haven't had a reminder in 7 days. */
     val smsWaiting: Int = 0,
     val today: Int = 0,
+    /** Active sub-admins, the donors they registered, and their targets added up. */
+    val subAdmins: Int = 0,
+    val subRegistered: Int = 0,
+    val subTarget: Int = 0,
 )
+
+/** A sub-admin (someone who only registers donors), as the admin app lists them. */
+data class SubAdmin(
+    val id: Int,
+    val name: String,
+    val phone: String,
+    val target: Int,
+    val status: String,
+    val registered: Int,
+    val createdAt: String = "",
+    val lastLogin: String? = null,
+    val lastRegistered: String? = null,
+) {
+    val active: Boolean get() = status == "active"
+
+    companion object {
+        fun from(o: JSONObject) = SubAdmin(
+            id = o.getInt("id"),
+            name = o.optString("name"),
+            phone = o.optString("phone"),
+            target = o.optInt("target"),
+            status = o.optString("status", "active"),
+            registered = o.optInt("registered"),
+            createdAt = o.optString("created_at"),
+            lastLogin = o.optStringOrNull("last_login"),
+            lastRegistered = o.optStringOrNull("last_registered"),
+        )
+    }
+}
+
+/** What the admin app sends to add or change a sub-admin (null = unchanged). */
+data class SubAdminInput(
+    val name: String? = null,
+    val phone: String? = null,
+    val password: String? = null,
+    val target: Int? = null,
+    val status: String? = null,
+)
+
+/** The signed-in sub-admin's target and progress (Sub-admin app). */
+data class Progress(
+    val id: Int = 0,
+    val name: String = "",
+    val phone: String = "",
+    val target: Int = 0,
+    val registered: Int = 0,
+    val today: Int = 0,
+) {
+    val left: Int get() = (target - registered).coerceAtLeast(0)
+    val done: Boolean get() = target > 0 && registered >= target
+    val fraction: Float get() = if (target <= 0) 0f else (registered.toFloat() / target).coerceIn(0f, 1f)
+}
 
 data class Donor(
     val id: Int,
@@ -49,6 +115,8 @@ data class Donor(
     val telegramLinked: Boolean = false,
     /** One-tap link that connects this donor to the reminder bot. */
     val telegramLink: String = "",
+    /** The sub-admin who registered them ("" = not a sub-admin). */
+    val registeredBy: String = "",
 ) {
     companion object {
         fun from(o: JSONObject) = Donor(
@@ -70,6 +138,7 @@ data class Donor(
             telegramUsername = o.optString("telegram_username"),
             telegramLinked = o.optBoolean("telegram_linked"),
             telegramLink = o.optString("telegram_link"),
+            registeredBy = o.optString("registered_by_name"),
         )
     }
 }

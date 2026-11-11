@@ -20,10 +20,28 @@ android {
         applicationId = "org.omobeeza.donors"
         minSdk = 24
         targetSdk = 34
-        versionCode = 11
-        versionName = "1.4.1"
+        versionCode = 12
+        versionName = "1.5.0"
         // The ministry website the app talks to (can be changed on the sign-in screen).
         buildConfigField("String", "DEFAULT_SITE", "\"https://omo-beeza-ministry-seven.vercel.app\"")
+    }
+
+    // Two apps from the same code:
+    //   admin    → "Omo Beeza Admin": dashboard accounts; registers donors, sends the SMS reminders,
+    //              manages sub-admins and their targets. Keeps the original app ID, so it installs
+    //              over "Omo Beeza Donors".
+    //   subadmin → "Omo Beeza Sub-admin": only registers donors toward the target an admin set.
+    flavorDimensions += "role"
+    productFlavors {
+        create("admin") {
+            dimension = "role"
+            buildConfigField("boolean", "SUB_ADMIN", "false")
+        }
+        create("subadmin") {
+            dimension = "role"
+            applicationId = "org.omobeeza.subadmin"
+            buildConfigField("boolean", "SUB_ADMIN", "true")
+        }
     }
 
     signingConfigs {

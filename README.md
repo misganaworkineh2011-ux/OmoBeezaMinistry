@@ -195,6 +195,11 @@ day and language, and confirm. They appear in Dashboard → Donors "via Telegram
 `bot`. Add the token as `TELEGRAM_BOT_TOKEN` in Vercel, redeploy, then click **Connect the bot**
 in Dashboard → Giving & reminders. Bot commands: `/start`, `/status`, `/stop`.
 
+## Hosting on Yegara HOST (cPanel)
+The site can also run on Yegara HOST's Premium plan (cPanel "Setup Node.js App"). Build the package
+with the GitHub workflow **Build for Yegara** (or `npm run build:yegara`) and follow
+[DEPLOY-YEGARA.md](DEPLOY-YEGARA.md).
+
 ## Editing content (in code)
 - **Text / translations:** `messages/en.json` and `messages/am.json`. Any key missing from
   `am.json` automatically falls back to English (the Privacy/Terms bodies currently do).

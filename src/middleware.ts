@@ -20,6 +20,9 @@ export default function middleware(request: NextRequest) {
     return response;
   }
 
+  // Payment links (/give/250) forward to Ye-Buna: see src/app/give.
+  if (pathname === "/give" || pathname.startsWith("/give/")) return NextResponse.next();
+
   return intl(request);
 }
 

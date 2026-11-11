@@ -4,7 +4,7 @@ import { registerDonor } from "@/lib/donors";
 import { withAppUser } from "@/lib/mobile";
 import { botUsername } from "@/lib/telegram";
 
-// GET  /api/mobile/donors?q=&view=all|active      — donor list for the app.
+// GET  /api/mobile/donors?q=&view=all|active&registrar= — donor list for the app.
 // POST /api/mobile/donors                           — register a donor from the app.
 
 export const runtime = "nodejs";
@@ -28,6 +28,8 @@ export interface AppDonor {
   total: number;
   telegram_username: string;
   telegram_linked: boolean;
+  /** The sub-admin who registered them ("" = not a sub-admin). */
+  registered_by_name: string;
   token?: string;
   telegram_link?: string;
 }
@@ -40,6 +42,7 @@ async function withLinks(donors: AppDonor[]): Promise<AppDonor[]> {
 
 const SELECT = `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.status, d.source, d.notes,
   d.created_at, d.last_reminded_at, d.telegram_username, d.telegram_chat_id is not null as telegram_linked, d.token,
+  coalesce((select r.name from registrars r where r.id = d.registered_by), '') as registered_by_name,
   (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
   (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total
   from donors d`;
@@ -55,11 +58,14 @@ export async function GET(request: Request): Promise<Response> {
     const where = VIEWS[url.searchParams.get("view") ?? "all"] ?? VIEWS.all;
     const q = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
     const digits = q.replace(/\D/g, "").replace(/^0/, "");
+    // ?registrar=ID: only the donors that sub-admin registered.
+    const registrar = Number(url.searchParams.get("registrar")) || null;
     const donors = await query<AppDonor>(
       `${SELECT} where ${where}
          and ($1 = '' or d.name ilike '%' || $1 || '%' or ($2 <> '' and d.phone like '%' || $2 || '%'))
+         and ($3::int is null or d.registered_by = $3)
        order by d.created_at desc limit 300`,
-      [q, digits],
+      [q, digits, registrar],
     );
     return json(200, { donors: await withLinks(donors) });
   });

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lock
@@ -60,6 +61,8 @@ fun SignInScreen(
     site: String,
     busy: Boolean,
     error: String?,
+    /** The Sub-admin app signs in with a phone number instead of an email. */
+    subAdmin: Boolean = false,
     onSignIn: (site: String, email: String, password: String) -> Unit,
 ) {
     var email by rememberSaveable { mutableStateOf("") }
@@ -89,7 +92,7 @@ fun SignInScreen(
             Box(Modifier.scale(pulse)) { Emblem(112.dp) }
             Spacer(Modifier.height(22.dp))
             Text("Omo Beeza", style = MaterialTheme.typography.displaySmall, color = Color.White)
-            Text("WEEKLY DONORS", style = MaterialTheme.typography.labelSmall, color = Brand.GoldLight)
+            Text(if (subAdmin) "DONOR REGISTRATION" else "WEEKLY DONORS", style = MaterialTheme.typography.labelSmall, color = Brand.GoldLight)
             Spacer(Modifier.height(10.dp))
             Text(
                 "Register the people who give every week, right where you meet them.",
@@ -101,9 +104,13 @@ fun SignInScreen(
 
             SoftCard(Modifier.fillMaxWidth(), padding = 22.dp) {
                 Text("Sign in", style = MaterialTheme.typography.headlineSmall, color = Brand.Ink)
-                Text("Use your Omo Beeza dashboard account.", style = MaterialTheme.typography.bodyMedium, color = Brand.Muted)
+                Text(
+                    if (subAdmin) "Use the phone number and password the ministry gave you." else "Use your Omo Beeza dashboard account.",
+                    style = MaterialTheme.typography.bodyMedium, color = Brand.Muted,
+                )
                 Spacer(Modifier.height(16.dp))
-                Field(email, { email = it }, "Email", Icons.Rounded.Email, keyboard = KeyboardType.Email)
+                if (subAdmin) Field(email, { v -> email = v.filter { it.isDigit() || it in "+ -" }.take(18) }, "Phone number", Icons.Rounded.Call, placeholder = "09… or 07…", keyboard = KeyboardType.Phone)
+                else Field(email, { email = it }, "Email", Icons.Rounded.Email, keyboard = KeyboardType.Email)
                 Spacer(Modifier.height(10.dp))
                 Field(
                     password, { password = it }, "Password", Icons.Rounded.Lock,

@@ -105,7 +105,7 @@ export default function MessageTemplatesForm({
           </li>
           <li>
             <code>{"{link}"}</code>
-            <span>The Ye-Buna giving link</span>
+            <span>Their payment link on the ministry’s address (/give/100), which opens the Ye-Buna page for their amount</span>
           </li>
           <li>
             <code>{"{stop}"}</code>

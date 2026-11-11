@@ -172,7 +172,9 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
                   <td className="num">{birr(d.total)}</td>
                   <td>
                     {date(d.created_at)}
-                    {d.source === "app" || d.source === "telegram" ? <div className="a-hint">via {d.source === "app" ? "the app" : "Telegram"}</div> : null}
+                    {d.source === "app" || d.source === "telegram" || d.source === "registrar" ? (
+                      <div className="a-hint">via {d.source === "app" ? "the app" : d.source === "registrar" ? "a sub-admin" : "Telegram"}</div>
+                    ) : null}
                   </td>
                 </tr>
               ))}

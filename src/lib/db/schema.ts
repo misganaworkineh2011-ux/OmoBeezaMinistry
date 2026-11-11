@@ -234,6 +234,28 @@ export const SCHEMA: string[] = [
   `alter table donors drop constraint if exists donors_phone_key`,
   `create unique index if not exists donors_phone_unique on donors (phone) where phone <> ''`,
   `create index if not exists donors_email on donors (lower(email))`,
+  // Sub-admins: people who only register donors (in the "Omo Beeza Sub-admin"
+  // app), each with a number of donors to register. They have no dashboard
+  // access; they sign in with their phone number and a password an admin set.
+  `create table if not exists registrars (
+    id serial primary key,
+    name text not null,
+    phone text not null unique,
+    password_hash text not null,
+    target int not null default 0,
+    status text not null default 'active',
+    created_by int references users(id) on delete set null,
+    created_at timestamptz not null default now(),
+    last_login timestamptz
+  )`,
+  `create table if not exists registrar_sessions (
+    id text primary key,
+    registrar_id int not null references registrars(id) on delete cascade,
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+  )`,
+  `alter table donors add column if not exists registered_by int references registrars(id) on delete set null`,
+  `create index if not exists donors_registered_by on donors (registered_by)`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,

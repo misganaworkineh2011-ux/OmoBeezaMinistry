@@ -25,14 +25,14 @@ import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.birr
 import org.omobeeza.donors.ui.theme.Brand
 
-/** The donor's Ye-Buna payment page for their weekly amount, to open or share with them. */
+/** The donor's payment link for their weekly amount (the ministry's address, forwarding to Ye-Buna), to open or share. */
 @Composable
 fun PayLinkCard(donor: Donor, link: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     SoftCard(modifier.fillMaxWidth(), padding = 16.dp) {
         Row {
             Icon(Icons.Rounded.Favorite, null, tint = Brand.Gold, modifier = Modifier.size(20.dp))
-            Text("  Ye-Buna payment link · ${birr(donor.amount)} birr", style = MaterialTheme.typography.titleSmall, color = Brand.Navy)
+            Text("  Payment link · ${birr(donor.amount)} birr", style = MaterialTheme.typography.titleSmall, color = Brand.Navy)
         }
         Spacer(Modifier.height(6.dp))
         Text(link.removePrefix("https://"), style = MaterialTheme.typography.bodyMedium, color = Brand.Blue, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -42,7 +42,7 @@ fun PayLinkCard(donor: Donor, link: String, modifier: Modifier = Modifier) {
                 onClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Give your weekly ${birr(donor.amount)} birr to Omo Beeza on Ye-Buna: $link")
+                        putExtra(Intent.EXTRA_TEXT, "Give your weekly ${birr(donor.amount)} birr to Omo Beeza: $link")
                     }
                     context.startActivity(Intent.createChooser(send, "Share the payment link"))
                 },

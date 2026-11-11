@@ -31,35 +31,43 @@ class Api(baseUrl: String, private val token: String?) {
 
     suspend fun home(): Triple<User, GivingSettings, Stats> {
         val o = request("GET", "/api/mobile/home")
-        val s = o.getJSONObject("settings")
-        val amounts = s.optJSONArray("amounts")?.let { a -> List(a.length()) { a.getInt(it) } }.orEmpty()
         val st = o.optJSONObject("stats") ?: JSONObject()
         return Triple(
             user(o.getJSONObject("user")),
-            GivingSettings(
-                amounts = amounts.ifEmpty { GivingSettings().amounts },
-                minAmount = s.optInt("minAmount", 10),
-                defaultDay = s.optInt("defaultDay", 0),
-                yebunaUrl = s.optString("yebunaUrl"),
-                amountLinks = s.optJSONObject("amountLinks")?.let { links ->
-                    links.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to links.optString(k) } }
-                        .filter { it.second.startsWith("https://") }.toMap()
-                }.orEmpty(),
-                telegramBot = s.optString("telegramBot"),
-            ),
+            settings(o.getJSONObject("settings")),
             Stats(
                 active = st.optInt("active"),
                 weekly = st.optInt("weekly"),
                 paid7 = st.optInt("paid7"),
                 smsWaiting = st.optInt("smsWaiting"),
                 today = st.optInt("today"),
+                subAdmins = st.optInt("subAdmins"),
+                subRegistered = st.optInt("subRegistered"),
+                subTarget = st.optInt("subTarget"),
             ),
         )
     }
 
-    suspend fun donors(query: String, view: String): List<Donor> {
+    private fun settings(s: JSONObject): GivingSettings {
+        val amounts = s.optJSONArray("amounts")?.let { a -> List(a.length()) { a.getInt(it) } }.orEmpty()
+        return GivingSettings(
+            amounts = amounts.ifEmpty { GivingSettings().amounts },
+            minAmount = s.optInt("minAmount", 10),
+            defaultDay = s.optInt("defaultDay", 0),
+            yebunaUrl = s.optString("yebunaUrl"),
+            amountLinks = s.optJSONObject("amountLinks")?.let { links ->
+                links.keys().asSequence().mapNotNull { k -> k.toIntOrNull()?.let { it to links.optString(k) } }
+                    .filter { it.second.startsWith("https://") }.toMap()
+            }.orEmpty(),
+            telegramBot = s.optString("telegramBot"),
+            linkBase = s.optString("linkBase").takeIf { it.startsWith("https://") || it.startsWith("http://10.0.2.2") }.orEmpty(),
+        )
+    }
+
+    /** [registrar] = only the donors that sub-admin registered. */
+    suspend fun donors(query: String, view: String, registrar: Int? = null): List<Donor> {
         val q = URLEncoder.encode(query, "UTF-8")
-        val o = request("GET", "/api/mobile/donors?view=$view&q=$q")
+        val o = request("GET", "/api/mobile/donors?view=$view&q=$q" + (registrar?.let { "&registrar=$it" } ?: ""))
         val list: JSONArray = o.optJSONArray("donors") ?: JSONArray()
         return List(list.length()) { Donor.from(list.getJSONObject(it)) }
     }
@@ -68,11 +76,7 @@ class Api(baseUrl: String, private val token: String?) {
     data class Registered(val donor: Donor, val created: Boolean, val welcomeSms: String)
 
     suspend fun register(d: NewDonor): Registered {
-        val body = JSONObject()
-            .put("name", d.name).put("nickname", d.nickname).put("phone", d.phone).put("email", d.email)
-            .put("amount", d.amount).put("day", d.day).put("locale", d.locale)
-            .put("notes", d.notes).put("telegram", d.telegram).put("consent", true)
-        val o = request("POST", "/api/mobile/donors", body)
+        val o = request("POST", "/api/mobile/donors", donorJson(d))
         return Registered(Donor.from(o.getJSONObject("donor")), o.optBoolean("created", true), o.optString("welcome_sms"))
     }
 
@@ -89,6 +93,69 @@ class Api(baseUrl: String, private val token: String?) {
     suspend fun reportSms(id: Int, error: String?, kind: String = "reminder") {
         request("POST", "/api/mobile/sms", JSONObject().put("id", id).put("ok", error == null).put("error", error ?: "").put("kind", kind))
     }
+
+    // Sub-admins, managed from the admin app.
+
+    suspend fun subAdmins(): List<SubAdmin> {
+        val list = request("GET", "/api/mobile/registrars").optJSONArray("registrars") ?: JSONArray()
+        return List(list.length()) { SubAdmin.from(list.getJSONObject(it)) }
+    }
+
+    private fun SubAdminInput.json() = JSONObject().apply {
+        name?.let { put("name", it) }
+        phone?.let { put("phone", it) }
+        password?.let { put("password", it) }
+        target?.let { put("target", it) }
+        status?.let { put("status", it) }
+    }
+
+    suspend fun addSubAdmin(input: SubAdminInput): SubAdmin =
+        SubAdmin.from(request("POST", "/api/mobile/registrars", input.json()).getJSONObject("registrar"))
+
+    suspend fun updateSubAdmin(id: Int, input: SubAdminInput): SubAdmin =
+        SubAdmin.from(request("PATCH", "/api/mobile/registrars/$id", input.json()).getJSONObject("registrar"))
+
+    suspend fun removeSubAdmin(id: Int) {
+        request("POST", "/api/mobile/registrars/$id", JSONObject().put("delete", true))
+    }
+
+    // The Sub-admin app (/api/registrar/...).
+
+    suspend fun subLogin(phone: String, password: String): Pair<String, Progress> {
+        val o = request("POST", "/api/registrar/login", JSONObject().put("phone", phone).put("password", password))
+        return o.getString("token") to progress(o.getJSONObject("registrar"))
+    }
+
+    suspend fun subLogout() {
+        runCatching { request("POST", "/api/registrar/logout", JSONObject()) }
+    }
+
+    data class SubHome(val me: Progress, val settings: GivingSettings, val donors: List<Donor>)
+
+    suspend fun subHome(): SubHome {
+        val o = request("GET", "/api/registrar/home")
+        val list = o.optJSONArray("donors") ?: JSONArray()
+        return SubHome(progress(o.getJSONObject("registrar")), settings(o.getJSONObject("settings")), List(list.length()) { Donor.from(list.getJSONObject(it)) })
+    }
+
+    suspend fun subRegister(d: NewDonor): Donor {
+        val o = request("POST", "/api/registrar/donors", donorJson(d))
+        return Donor.from(o.getJSONObject("donor"))
+    }
+
+    private fun progress(o: JSONObject) = Progress(
+        id = o.optInt("id"),
+        name = o.optString("name"),
+        phone = o.optString("phone"),
+        target = o.optInt("target"),
+        registered = o.optInt("registered"),
+        today = o.optInt("today"),
+    )
+
+    private fun donorJson(d: NewDonor) = JSONObject()
+        .put("name", d.name).put("nickname", d.nickname).put("phone", d.phone).put("email", d.email)
+        .put("amount", d.amount).put("day", d.day).put("locale", d.locale)
+        .put("notes", d.notes).put("telegram", d.telegram).put("consent", true)
 
     private fun user(o: JSONObject) = User(o.optInt("id"), o.optString("name"), o.optString("email"))
 

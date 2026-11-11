@@ -11,7 +11,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.GivingSettings
+import org.omobeeza.donors.data.Progress
 import org.omobeeza.donors.data.Stats
+import org.omobeeza.donors.data.SubAdmin
 import org.omobeeza.donors.data.User
 import org.omobeeza.donors.ui.View
 import org.omobeeza.donors.ui.screens.DonorDetails
@@ -20,10 +22,13 @@ import org.omobeeza.donors.ui.screens.RegisterScreen
 import org.omobeeza.donors.ui.screens.SavedScreen
 import org.omobeeza.donors.ui.screens.SettingsScreen
 import org.omobeeza.donors.ui.screens.SignInScreen
+import org.omobeeza.donors.ui.screens.SubAdminEditor
+import org.omobeeza.donors.ui.screens.SubAdminsScreen
+import org.omobeeza.donors.ui.subadmin.SubHomeScreen
 import org.omobeeza.donors.ui.theme.Brand
 import org.omobeeza.donors.ui.theme.OmoTheme
 
-/** Renders each screen with sample data: ./gradlew recordPaparazziDebug */
+/** Renders each screen with sample data: ./gradlew recordPaparazziAdminDebug */
 class ScreensTest {
     @get:Rule
     val paparazzi = Paparazzi(
@@ -53,7 +58,7 @@ class ScreensTest {
     @Test fun home() = paparazzi.snapshot {
         OmoTheme {
             HomeScreen(
-                user, Stats(active = 42, weekly = 9850, paid7 = 31, smsWaiting = 7, today = 3), donors,
+                user, Stats(active = 42, weekly = 9850, paid7 = 31, smsWaiting = 7, today = 3, subAdmins = 3, subRegistered = 27, subTarget = 60), donors,
                 loading = false, loaded = true, query = "", view = View.All, snackbar = SnackbarHostState(),
                 onQuery = {}, onView = {}, onRefresh = {}, onRegister = {}, onSettings = {},
             )
@@ -72,5 +77,31 @@ class ScreensTest {
 
     @Test fun settings() = paparazzi.snapshot {
         OmoTheme { SettingsScreen(user, "https://omobeezaministry.com", {}, {}) }
+    }
+
+    private val subs = listOf(
+        SubAdmin(1, "Hiwot Alemu", "+251911000111", 20, "active", 14, lastLogin = "2026-11-10T08:00:00.000Z", lastRegistered = "2026-11-10T09:00:00.000Z"),
+        SubAdmin(2, "Dawit Mekonnen", "+251922000222", 10, "active", 10),
+        SubAdmin(3, "Selam Haile", "+251933000333", 30, "paused", 3),
+    )
+    private val settingsWithLinks = GivingSettings(yebunaUrl = "https://ye-buna.com/omobeeza", linkBase = "https://www.omobeezaministry.org/give")
+
+    @Test fun subAdmins() = paparazzi.snapshot {
+        OmoTheme { SubAdminsScreen(subs, false, false, null, SnackbarHostState(), {}, {}, { _, _, _ -> }, { _, _ -> }, { emptyList() }) }
+    }
+
+    @Test fun subAdminEditor() = paparazzi.snapshot {
+        OmoTheme { Box(Modifier.background(Brand.Sand)) { SubAdminEditor(subs[0], false, null, {}, {}, {}, { emptyList() }) } }
+    }
+
+    @Test fun subAdminSignIn() = paparazzi.snapshot { OmoTheme { SignInScreen("https://www.omobeezaministry.org", false, null, subAdmin = true) { _, _, _ -> } } }
+
+    @Test fun subAdminHome() = paparazzi.snapshot {
+        OmoTheme {
+            SubHomeScreen(
+                Progress(1, "Hiwot Alemu", "+251911000111", target = 20, registered = 14, today = 2), settingsWithLinks, donors,
+                loading = false, loaded = true, snackbar = SnackbarHostState(), onRefresh = {}, onRegister = {}, onSettings = {},
+            )
+        }
     }
 }

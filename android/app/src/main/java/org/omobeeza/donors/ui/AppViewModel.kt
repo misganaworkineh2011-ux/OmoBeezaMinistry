@@ -18,6 +18,8 @@ import org.omobeeza.donors.data.PhoneSms
 import org.omobeeza.donors.data.QueuedSms
 import org.omobeeza.donors.data.Prefs
 import org.omobeeza.donors.data.Stats
+import org.omobeeza.donors.data.SubAdmin
+import org.omobeeza.donors.data.SubAdminInput
 import org.omobeeza.donors.data.User
 import org.omobeeza.donors.data.errorText
 
@@ -27,6 +29,7 @@ sealed interface Screen {
     data object Register : Screen
     data class Saved(val donor: Donor, val created: Boolean) : Screen
     data object Settings : Screen
+    data object SubAdmins : Screen
 }
 
 /** The "Send SMS reminders" sheet: the donors waiting and how sending is going. */
@@ -82,6 +85,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var sms by mutableStateOf<SmsRun?>(null)
         private set
 
+    /** Sub-admins (people who only register donors) and their progress. */
+    var subAdmins by mutableStateOf<List<SubAdmin>>(emptyList())
+        private set
+    var subAdminsLoading by mutableStateOf(false)
+        private set
+
     private var searchJob: Job? = null
     private var smsStop = false
 
@@ -98,7 +107,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun back(): Boolean {
         when (screen) {
-            Screen.Register, Screen.Settings, is Screen.Saved -> go(Screen.Home)
+            Screen.Register, Screen.Settings, Screen.SubAdmins, is Screen.Saved -> go(Screen.Home)
             else -> return false
         }
         return true
@@ -277,6 +286,68 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    fun openSubAdmins() {
+        go(Screen.SubAdmins)
+        loadSubAdmins()
+    }
+
+    fun loadSubAdmins() {
+        subAdminsLoading = true
+        viewModelScope.launch {
+            try {
+                subAdmins = api().subAdmins()
+            } catch (e: ApiException) {
+                handle(e)
+            } finally {
+                subAdminsLoading = false
+            }
+        }
+    }
+
+    /** Add ([id] = null) or change a sub-admin; [done] runs after a successful save. */
+    fun saveSubAdmin(id: Int?, input: SubAdminInput, done: () -> Unit) {
+        busy = true
+        formError = null
+        viewModelScope.launch {
+            try {
+                val saved = if (id == null) api().addSubAdmin(input) else api().updateSubAdmin(id, input)
+                subAdmins = if (id == null) listOf(saved) + subAdmins else subAdmins.map { if (it.id == id) saved else it }
+                message = when {
+                    id == null -> "${saved.name} added. They can sign in to the Sub-admin app now."
+                    input.status == "paused" -> "${saved.name} paused."
+                    input.status == "active" -> "${saved.name} can register donors again."
+                    else -> "Saved."
+                }
+                done()
+                refresh()
+            } catch (e: ApiException) {
+                if (e.code == "unauthorized") handle(e) else formError = errorText(e.code)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    fun removeSubAdmin(sub: SubAdmin, done: () -> Unit) {
+        busy = true
+        viewModelScope.launch {
+            try {
+                api().removeSubAdmin(sub.id)
+                subAdmins = subAdmins.filter { it.id != sub.id }
+                message = "${sub.name} removed."
+                done()
+                refresh()
+            } catch (e: ApiException) {
+                handle(e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
+    /** The donors one sub-admin registered (for the sub-admin's sheet). */
+    suspend fun subAdminDonors(id: Int): List<Donor> = api().donors("", View.All.key, registrar = id)
 
     private fun handle(e: ApiException) {
         if (e.code == "unauthorized") {

@@ -9,6 +9,7 @@
     "prebuild": "node scripts/prepare-galleries.mjs && node scripts/prepare-videos.mjs && node scripts/build-knowledge.mjs",
     "build": "next build",
     "start": "next start",
+    "build:yegara": "node scripts/pack-yegara.mjs --build",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "videos": "node scripts/prepare-videos.mjs",

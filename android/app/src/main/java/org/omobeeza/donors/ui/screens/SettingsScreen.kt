@@ -90,7 +90,7 @@ fun SettingsScreen(
                 Text("  Sign out", style = MaterialTheme.typography.labelLarge)
             }
             Spacer(Modifier.height(16.dp))
-            Text("Omo Beeza Donors · version ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(bottom = 24.dp), style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
+            Text("${if (BuildConfig.SUB_ADMIN) "Omo Beeza Sub-admin" else "Omo Beeza Admin"} · version ${BuildConfig.VERSION_NAME}", Modifier.fillMaxWidth().padding(bottom = 24.dp), style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
         }
     }
 }

@@ -105,7 +105,9 @@ export default function GivingSettingsForm({
             <label>Ye-Buna payment link for each amount</label>
             <span className="a-hint" style={{ marginBottom: 8 }}>
               Each amount opens its own Ye-Buna payment page (on the Donations page, the thank-you page, and as the {"{link}"} in that donor’s
-              reminders). Other amounts use the Ye-Buna page link above.
+              reminders). Other amounts use the Ye-Buna page link above. Messages to donors carry the ministry’s own address, such as{" "}
+              <code>{origin}/give/250</code>, which forwards to the Ye-Buna link for that amount, so a link changed here also works for messages
+              already sent.
             </span>
             {[...new Set(amounts.split(/[,\s]+/).map(Number).filter((n) => n > 0))].map((n) => (
               <div key={n} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>

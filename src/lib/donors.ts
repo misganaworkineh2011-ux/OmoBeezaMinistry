@@ -2,8 +2,8 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
-import { isEmail, normalizePhone, normalizeTelegram, yebunaLink } from "@/lib/giving";
-import { donorMessage, emailDonor, type DonorForSms } from "@/lib/reminders";
+import { isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
+import { donorMessage, emailDonor, giveLink, type DonorForSms } from "@/lib/reminders";
 import { connectLink } from "@/lib/telegram";
 
 // Registering a weekly donor, shared by the website form (/api/donors, by
@@ -21,7 +21,11 @@ export interface RegisterInput {
   locale?: unknown;
   notes?: unknown;
   telegram?: unknown;
-  source: "website" | "app" | "telegram";
+  source: "website" | "app" | "telegram" | "registrar";
+  /** The sub-admin registering the donor (counts toward their target). */
+  registeredBy?: number;
+  /** Refuse a phone/email that is already registered instead of updating it (sub-admins). */
+  noUpdate?: boolean;
   /** Which contact detail is required: the website asks for email, the app and the bot for a phone number. */
   requires: "email" | "phone";
   /** Skip the welcome email (e.g. the bot welcomes them on Telegram instead). */
@@ -38,7 +42,7 @@ export type RegisterResult =
       /** For donors with a phone: the welcome SMS for the app to send from the ministry phone ("" = none). */
       welcomeSms: string;
     }
-  | { ok: false; error: "invalid_name" | "invalid_phone" | "invalid_email" | "invalid_amount" | "invalid_day" | "invalid_telegram" | "save_failed"; min?: number };
+  | { ok: false; error: "invalid_name" | "invalid_phone" | "invalid_email" | "invalid_amount" | "invalid_day" | "invalid_telegram" | "already_registered" | "save_failed"; min?: number };
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -76,6 +80,7 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
           "select id, status from donors where lower(email) = $1 order by (phone = '') desc, id limit 1",
           [email],
         );
+    if (existing && input.noUpdate) return { ok: false, error: "already_registered" };
     wasActive = existing?.status === "active";
     created = !existing;
     donor = existing
@@ -92,9 +97,9 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
           [name, nickname, phone, email, amount, day, locale, notes, telegram, existing.id],
         )
       : await queryOne(
-          `insert into donors (name, nickname, phone, email, amount, reminder_day, locale, token, notes, source, telegram_username)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning ${RETURNING}`,
-          [name, nickname, phone, email, amount, day, locale, randomBytes(9).toString("base64url"), notes, input.source, telegram],
+          `insert into donors (name, nickname, phone, email, amount, reminder_day, locale, token, notes, source, telegram_username, registered_by)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning ${RETURNING}`,
+          [name, nickname, phone, email, amount, day, locale, randomBytes(9).toString("base64url"), notes, input.source, telegram, input.registeredBy ?? null],
         );
   } catch (err) {
     console.error("donors: save failed", err);
@@ -110,7 +115,7 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
     ok: true,
     donor,
     created,
-    link: yebunaLink(giving, donor.amount),
+    link: giveLink(giving, donor.locale, donor.amount),
     telegramLink: await connectLink(donor.token),
     welcomeSms: welcome && donor.phone && !donor.email ? donorMessage("welcome", donor, giving) : "",
   };

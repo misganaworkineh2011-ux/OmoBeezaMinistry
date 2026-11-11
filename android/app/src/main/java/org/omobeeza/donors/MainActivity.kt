@@ -29,6 +29,8 @@ import org.omobeeza.donors.ui.screens.SavedScreen
 import org.omobeeza.donors.ui.screens.SettingsScreen
 import org.omobeeza.donors.ui.screens.SignInScreen
 import org.omobeeza.donors.ui.screens.SmsSheet
+import org.omobeeza.donors.ui.screens.SubAdminsScreen
+import org.omobeeza.donors.ui.subadmin.SubAdminApp
 import org.omobeeza.donors.ui.theme.OmoTheme
 
 class MainActivity : ComponentActivity() {
@@ -38,13 +40,14 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(0xFFF7F3EC.toInt(), 0xFFF7F3EC.toInt()),
         )
         super.onCreate(savedInstanceState)
-        setContent { OmoTheme { App() } }
+        // One code base, two apps: the Sub-admin app only registers donors.
+        setContent { OmoTheme { if (BuildConfig.SUB_ADMIN) SubAdminApp() else App() } }
     }
 }
 
 private fun depth(s: Screen): Int = when (s) {
     Screen.SignIn, Screen.Home -> 0
-    Screen.Register, Screen.Settings -> 1
+    Screen.Register, Screen.Settings, Screen.SubAdmins -> 1
     is Screen.Saved -> 2
 }
 
@@ -89,6 +92,7 @@ fun App(vm: AppViewModel = viewModel()) {
                 onRegister = { vm.go(Screen.Register) },
                 onSettings = { vm.go(Screen.Settings) },
                 onSms = vm::openSms,
+                onSubAdmins = vm::openSubAdmins,
                 payLink = { vm.settings.payLink(it.amount) },
             )
 
@@ -101,6 +105,20 @@ fun App(vm: AppViewModel = viewModel()) {
                 payLink = vm.settings.payLink(screen.donor.amount),
                 onAnother = { vm.go(Screen.Register) },
                 onDone = { vm.go(Screen.Home) },
+            )
+
+            Screen.SubAdmins -> SubAdminsScreen(
+                subs = vm.subAdmins,
+                loading = vm.subAdminsLoading,
+                busy = vm.busy,
+                error = vm.formError,
+                snackbar = snackbar,
+                onBack = { vm.back() },
+                onRefresh = vm::loadSubAdmins,
+                onSave = vm::saveSubAdmin,
+                onRemove = vm::removeSubAdmin,
+                loadDonors = vm::subAdminDonors,
+                onClearError = { vm.formError = null },
             )
 
             Screen.Settings -> SettingsScreen(
