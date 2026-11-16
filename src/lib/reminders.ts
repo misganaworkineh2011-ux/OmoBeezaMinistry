@@ -3,8 +3,9 @@ import { query } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
 import {
   callName,
-  dayName,
-  ethiopiaWeekday,
+  ethiopiaToday,
+  periodWords,
+  scheduleDay,
   fillTemplate,
   type GivingSettings,
   templateFor,
@@ -31,6 +32,10 @@ export interface DonorForSms {
   email?: string;
   amount: number;
   reminder_day: number;
+  /** "weekly" or "monthly" (missing = weekly). */
+  frequency?: string;
+  /** Day of the month 1–28, for monthly donors. */
+  month_day?: number;
   locale: string;
   token: string;
   telegram_chat_id?: string | null;
@@ -70,7 +75,8 @@ export function templateValues(
     name: callName(donor.name, donor.nickname),
     fullname: donor.name,
     amount: donor.amount.toLocaleString("en-US"),
-    day: dayName(donor.reminder_day, donor.locale),
+    day: scheduleDay(donor.frequency ?? "weekly", donor.reminder_day, donor.month_day ?? 1, donor.locale),
+    ...periodWords(donor.frequency ?? "weekly", donor.locale),
     link: giveLink(giving, donor.locale, donor.amount),
     stop:
       channel === "telegram"
@@ -154,6 +160,8 @@ export function giveButton(
 
 export interface ReminderRun {
   weekday: number;
+  /** Day of the month (Ethiopian time) for monthly donors. */
+  monthDay: number;
   due: number;
   /** Emails sent. */
   sent: number;
@@ -166,7 +174,8 @@ export interface ReminderRun {
 }
 
 /**
- * Sends today's weekly reminders: active donors whose reminder day is today
+ * Sends today's reminders: active donors whose reminder day is today — their
+ * weekday (weekly donors) or their day of the month (monthly donors)
  * (Ethiopian time) and who haven't been reminded in the last 20 hours. Donors
  * connected to the Telegram bot get it there, then the ministry's Telegram
  * account is tried, and everyone with an email gets the email (unless
@@ -176,9 +185,10 @@ export interface ReminderRun {
  */
 export async function runReminders(limit = 300): Promise<ReminderRun> {
   const giving = await readGivingNow();
-  const weekday = ethiopiaWeekday();
+  const { weekday, monthDay } = ethiopiaToday();
   const run: ReminderRun = {
     weekday,
+    monthDay,
     due: 0,
     sent: 0,
     telegram: 0,
@@ -196,14 +206,16 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
   const due = await query<
     DonorForSms & { email: string; paid_recently: boolean }
   >(
-    `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.token, d.telegram_chat_id,
+    `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.telegram_chat_id,
             d.telegram_username, d.telegram_user_status, d.telegram_user_checked_at,
-            exists (select 1 from donor_payments p where p.donor_id = d.id and p.paid_on > current_date - 6) as paid_recently
+            exists (select 1 from donor_payments p where p.donor_id = d.id
+              and p.paid_on > current_date - (case when d.frequency = 'monthly' then 25 else 6 end)) as paid_recently
      from donors d
-     where d.status = 'active' and d.reminder_day = $1
+     where d.status = 'active'
+       and ((d.frequency = 'monthly' and d.month_day = $3) or (d.frequency <> 'monthly' and d.reminder_day = $1))
        and (d.last_reminded_at is null or d.last_reminded_at < now() - interval '20 hours')
      order by d.id limit $2`,
-    [weekday, limit],
+    [weekday, limit, monthDay],
   );
   run.due = due.length;
 

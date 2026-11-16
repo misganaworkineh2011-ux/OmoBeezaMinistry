@@ -64,6 +64,7 @@ import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.NewDonor
 import org.omobeeza.donors.data.payLink
 import org.omobeeza.donors.data.birr
+import org.omobeeza.donors.data.ordinal
 import org.omobeeza.donors.data.normalizePhone
 import org.omobeeza.donors.data.normalizeTelegram
 import androidx.compose.material.icons.automirrored.rounded.Send
@@ -89,6 +90,8 @@ fun RegisterScreen(
     var amount by rememberSaveable { mutableIntStateOf(settings.amounts.getOrElse(1) { settings.amounts.firstOrNull() ?: 100 }) }
     var custom by rememberSaveable { mutableStateOf("") }
     var day by rememberSaveable { mutableIntStateOf(settings.defaultDay) }
+    var frequency by rememberSaveable { mutableStateOf(settings.defaultFrequency) }
+    var monthDay by rememberSaveable { mutableIntStateOf(settings.defaultMonthDay.coerceIn(1, 28)) }
     var locale by rememberSaveable { mutableStateOf("en") }
     var name by rememberSaveable { mutableStateOf("") }
     var nickname by rememberSaveable { mutableStateOf("") }
@@ -100,6 +103,7 @@ fun RegisterScreen(
     var tried by rememberSaveable { mutableStateOf(false) }
 
     val weekly = custom.toIntOrNull() ?: amount
+    val monthly = frequency == "monthly"
     val nameError = if (tried && name.isBlank()) "Enter the donor's name." else null
     val phoneError = if (tried && normalizePhone(phone) == null) "Enter a valid Ethiopian mobile number (09… or 07…)." else null
     val emailError = if (tried && email.isNotBlank() && !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) "Enter a valid email, or leave it empty." else null
@@ -112,8 +116,8 @@ fun RegisterScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White) }
                 Column(Modifier.padding(start = 4.dp)) {
-                    Text("New weekly donor", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                    Text("Weekly giving in birr", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
+                    Text("New donor", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text("Monthly or weekly giving in birr", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
                 }
             }
         }
@@ -121,7 +125,11 @@ fun RegisterScreen(
         Column(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 18.dp),
         ) {
-            SectionLabel("Weekly gift")
+            SectionLabel("Gives")
+            Spacer(Modifier.height(10.dp))
+            FrequencyToggle(frequency) { frequency = it }
+            Spacer(Modifier.height(16.dp))
+            SectionLabel(if (monthly) "Monthly gift" else "Weekly gift")
             Spacer(Modifier.height(10.dp))
             // Suggested amounts in a row that scrolls sideways.
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(end = 24.dp)) {
@@ -144,11 +152,19 @@ fun RegisterScreen(
             }
 
             Spacer(Modifier.height(18.dp))
-            SectionLabel("Remind every")
-            Spacer(Modifier.height(10.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DAYS_EN.forEachIndexed { i, d ->
-                    DayChip(if (locale == "am") DAYS_AM[i] else d.take(3), day == i) { day = i }
+            if (monthly) {
+                SectionLabel("Remind on this day of every month")
+                Spacer(Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (1..28).forEach { n -> DateChip(n, monthDay == n) { monthDay = n } }
+                }
+            } else {
+                SectionLabel("Remind every")
+                Spacer(Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    DAYS_EN.forEachIndexed { i, d ->
+                        DayChip(if (locale == "am") DAYS_AM[i] else d.take(3), day == i) { day = i }
+                    }
                 }
             }
 
@@ -156,8 +172,8 @@ fun RegisterScreen(
             SectionLabel("Message language")
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                LangOption("English", "Hi Abebe, your weekly…", locale == "en", Modifier.weight(1f)) { locale = "en" }
-                LangOption("አማርኛ", "ሰላም አበበ፣ የዚህ ሳምንት…", locale == "am", Modifier.weight(1f)) { locale = "am" }
+                LangOption("English", if (monthly) "Hi Abebe, your monthly…" else "Hi Abebe, your weekly…", locale == "en", Modifier.weight(1f)) { locale = "en" }
+                LangOption("አማርኛ", if (monthly) "ሰላም አበበ፣ የዚህ ወር…" else "ሰላም አበበ፣ የዚህ ሳምንት…", locale == "am", Modifier.weight(1f)) { locale = "am" }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -193,7 +209,7 @@ fun RegisterScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Checkbox(consent, { consent = it }, colors = CheckboxDefaults.colors(checkedColor = Brand.Blue))
-                Text("The donor agreed to receive a weekly SMS reminder (they can stop at any time).", style = MaterialTheme.typography.bodyMedium, color = Brand.Ink)
+                Text("The donor agreed to receive a ${if (monthly) "monthly" else "weekly"} SMS reminder (they can stop at any time).", style = MaterialTheme.typography.bodyMedium, color = Brand.Ink)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -203,9 +219,15 @@ fun RegisterScreen(
                         withStyle(SpanStyle(color = Brand.Muted)) { append(if (name.isBlank()) "This donor" else name.trim().substringBefore(' ')) }
                         append(" will give ")
                         withStyle(SpanStyle(color = Brand.Gold, fontWeight = FontWeight.Bold)) { append("${birr(weekly)} birr") }
-                        append(" every ")
-                        withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(if (locale == "am") DAYS_AM[day] else DAYS_EN[day]) }
-                        append(".")
+                        if (monthly) {
+                            append(" every month, on the ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(ordinal(monthDay)) }
+                            append(".")
+                        } else {
+                            append(" every ")
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(if (locale == "am") DAYS_AM[day] else DAYS_EN[day]) }
+                            append(".")
+                        }
                     },
                     fontFamily = Fraunces,
                     fontSize = 19.sp,
@@ -229,7 +251,7 @@ fun RegisterScreen(
                     val ok = name.isNotBlank() && normalizePhone(phone) != null && weekly >= settings.minAmount && consent &&
                         (email.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) &&
                         (telegram.isBlank() || normalizeTelegram(telegram) != null)
-                    if (ok) onSave(NewDonor(name.trim(), nickname.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim()))
+                    if (ok) onSave(NewDonor(name.trim(), nickname.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim(), frequency, monthDay))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Rounded.Check,
@@ -254,6 +276,51 @@ private fun AmountTile(amount: Int, selected: Boolean, modifier: Modifier, onCli
     ) {
         Text(birr(amount), fontFamily = Fraunces, fontSize = 24.sp, color = fg)
         Text("birr", style = MaterialTheme.typography.labelMedium, color = if (selected) Brand.GoldLight else Brand.Muted)
+    }
+}
+
+/** Monthly (default on the website) or weekly giving. */
+@Composable
+private fun FrequencyToggle(frequency: String, onChange: (String) -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(50))
+            .background(Color.White)
+            .border(1.dp, Brand.Line, RoundedCornerShape(50))
+            .padding(4.dp),
+    ) {
+        listOf("monthly" to "Monthly", "weekly" to "Weekly").forEach { (value, label) ->
+            val selected = frequency == value
+            val bg by animateColorAsState(if (selected) Brand.Navy else Color.White, label = "freq")
+            Box(
+                Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(50))
+                    .background(bg)
+                    .clickable { onChange(value) }
+                    .padding(vertical = 11.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(label, style = MaterialTheme.typography.titleSmall, color = if (selected) Color.White else Brand.Body)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateChip(n: Int, selected: Boolean, onClick: () -> Unit) {
+    val bg by animateColorAsState(if (selected) Brand.Gold else Color.White, label = "date")
+    Box(
+        Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(bg)
+            .border(1.dp, if (selected) Brand.Gold else Brand.Line, CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text("$n", style = MaterialTheme.typography.titleSmall, color = if (selected) Brand.Navy else Brand.Body)
     }
 }
 

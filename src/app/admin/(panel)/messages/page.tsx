@@ -17,7 +17,7 @@ export default async function MessagesPage() {
       <div className="page-head">
         <div>
           <h1>Message templates</h1>
-          <p>The words of the weekly reminders and welcome messages, in English and Amharic.</p>
+          <p>The words of the reminders and welcome messages, in English and Amharic.</p>
         </div>
       </div>
       <MessageTemplatesForm initial={pick(giving)} defaults={pick(DEFAULT_GIVING)} yebunaUrl={yebunaLink(giving, 100) ? `${publicOrigin()}/give/100` : ""} includeStopLink={giving.includeStopLink} origin={publicOrigin()} />

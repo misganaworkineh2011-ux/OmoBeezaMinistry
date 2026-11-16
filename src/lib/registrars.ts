@@ -108,3 +108,29 @@ export function registrarInput(body: Record<string, unknown>, partial: boolean) 
   }
   return { value: out } as const;
 }
+
+/** Most donors a sub-admin can add to their own target at once. */
+export const MAX_SELF_EXTEND = 500;
+
+/**
+ * A sub-admin who reached their target asks to register more: raises their
+ * target by `add` (1–500). Refused until the current target is reached.
+ */
+export async function extendTarget(
+  registrarId: number,
+  add: unknown,
+): Promise<{ ok: true; target: number; registered: number } | { ok: false; error: "invalid_target" | "target_not_reached" | "not_found" }> {
+  const n = Math.round(Number(add));
+  if (!Number.isFinite(n) || n < 1 || n > MAX_SELF_EXTEND) return { ok: false, error: "invalid_target" };
+  const row = await queryOne<{ target: number; registered: number }>(
+    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id) as registered
+     from registrars r where r.id = $1 and r.status = 'active'`,
+    [registrarId],
+  );
+  if (!row) return { ok: false, error: "not_found" };
+  if (row.registered < row.target) return { ok: false, error: "target_not_reached" };
+  // From what they've registered (not the old target), so the new goal is always ahead of them.
+  const target = Math.min(100_000, Math.max(row.target, row.registered) + n);
+  await query("update registrars set target = $1 where id = $2", [target, registrarId]);
+  return { ok: true, target, registered: row.registered };
+}

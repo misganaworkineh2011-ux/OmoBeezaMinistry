@@ -148,6 +148,8 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
                   amounts: giving.amounts,
                   minAmount: giving.minAmount,
                   defaultDay: giving.defaultDay,
+                  defaultFrequency: giving.defaultFrequency,
+                  defaultMonthDay: giving.defaultMonthDay,
                 }}
               />
             </div>

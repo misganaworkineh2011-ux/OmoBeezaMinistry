@@ -13,7 +13,7 @@ import DonorEditor, { type PaymentRow, type SmsRow } from "@/components/admin/Do
 export const metadata = { title: "Donor" };
 export const dynamic = "force-dynamic";
 
-const EMPTY: DonorInput = { name: "", nickname: "", phone: "", email: "", amount: 100, reminder_day: 0, status: "active", locale: "en", notes: "", telegram_username: "" };
+const EMPTY: DonorInput = { name: "", nickname: "", phone: "", email: "", amount: 100, reminder_day: 0, frequency: "monthly", month_day: 1, status: "active", locale: "en", notes: "", telegram_username: "" };
 
 export default async function DonorPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -27,7 +27,7 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
   if (!isNew) {
     if (!/^\d+$/.test(id)) notFound();
     donor = await queryOne(
-      "select id, name, nickname, phone, email, amount, reminder_day, status, locale, notes, telegram_username, telegram_chat_id is not null as telegram_linked, token, source, created_at from donors where id = $1",
+      "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, status, locale, notes, telegram_username, telegram_chat_id is not null as telegram_linked, token, source, created_at from donors where id = $1",
       [Number(id)],
     );
     if (!donor) notFound();
@@ -52,7 +52,7 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
           <p>
             {donor
               ? `${[donor.email, donor.phone ? displayPhone(donor.phone) : ""].filter(Boolean).join(" · ")} · registered ${new Date(donor.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} via ${({ admin: "the dashboard", app: "the app", telegram: "the Telegram bot", registrar: "a sub-admin (Sub-admin app)" } as Record<string, string>)[donor.source] ?? "the website"}`
-              : "For people who committed in person or by phone. They will get the weekly reminder too."}
+              : "For people who committed in person or by phone. They will get the reminders too."}
           </p>
         </div>
       </div>

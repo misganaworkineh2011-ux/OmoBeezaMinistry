@@ -14,7 +14,9 @@ import {
   isEmail,
   normalizePhone,
   normalizeTelegram,
+  asFrequency,
   type DonorStatus,
+  type Frequency,
   type GivingSettings,
   type TemplateKey,
 } from "@/lib/giving";
@@ -36,6 +38,8 @@ export interface DonorInput {
   email: string;
   amount: number;
   reminder_day: number;
+  frequency: Frequency;
+  month_day: number;
   status: DonorStatus;
   locale: string;
   notes: string;
@@ -50,13 +54,16 @@ export async function saveDonor(input: DonorInput): Promise<Result> {
   const email = s(input.email, 200).toLowerCase();
   const amount = Math.round(Number(input.amount));
   const day = Math.round(Number(input.reminder_day));
+  const frequency = asFrequency(input.frequency, "weekly");
+  const monthDay = Math.round(Number(input.month_day));
   const status: DonorStatus = DONOR_STATUSES.includes(input.status) ? input.status : "active";
   if (!name) return { ok: false, error: "Enter the donor’s name." };
   if (phone === null) return { ok: false, error: "Enter a valid Ethiopian mobile number (09… or 07…), or leave it empty." };
   if (email && !isEmail(email)) return { ok: false, error: "Enter a valid email address, or leave it empty." };
   if (!phone && !email) return { ok: false, error: "Enter an email address (for email reminders) or a mobile number (for SMS from the app)." };
-  if (!(amount > 0)) return { ok: false, error: "Enter the weekly amount in birr." };
+  if (!(amount > 0)) return { ok: false, error: "Enter the amount in birr." };
   if (!(day >= 0 && day <= 6)) return { ok: false, error: "Choose a reminder day." };
+  if (!(monthDay >= 1 && monthDay <= 28)) return { ok: false, error: "Choose a day of the month (1–28)." };
   const telegram = s(input.telegram_username, 60) ? normalizeTelegram(s(input.telegram_username, 60)) : "";
   if (telegram === null) return { ok: false, error: "That doesn't look like a Telegram username (5–32 letters, numbers or _)." };
 
@@ -65,20 +72,20 @@ export async function saveDonor(input: DonorInput): Promise<Result> {
     if (clash) return { ok: false, error: "Another donor already has this phone number.", id: clash.id };
   }
 
-  const values = [name, phone, email, amount, day, status, input.locale === "am" ? "am" : "en", s(input.notes, 2000), telegram, s(input.nickname, 40)];
+  const values = [name, phone, email, amount, day, status, input.locale === "am" ? "am" : "en", s(input.notes, 2000), telegram, s(input.nickname, 40), frequency, monthDay];
   if (input.id) {
     await query(
-      `update donors set name=$1, phone=$2, email=$3, amount=$4, reminder_day=$5, status=$6, locale=$7, notes=$8, telegram_username=$9, nickname=$10,
+      `update donors set name=$1, phone=$2, email=$3, amount=$4, reminder_day=$5, status=$6, locale=$7, notes=$8, telegram_username=$9, nickname=$10, frequency=$11, month_day=$12,
          stopped_at = case when $6 = 'stopped' then coalesce(stopped_at, now()) else null end
-       where id=$11`,
+       where id=$13`,
       [...values, input.id],
     );
     done();
     return { ok: true, id: input.id };
   }
   const row = await queryOne<{ id: number }>(
-    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, nickname, token, source)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'admin') returning id`,
+    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, nickname, frequency, month_day, token, source)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'admin') returning id`,
     [...values, randomBytes(9).toString("base64url")],
   );
   done();
@@ -114,11 +121,11 @@ export async function deletePayment(id: number): Promise<void> {
   done();
 }
 
-/** Email a donor now: their weekly reminder, or a custom message. */
+/** Email a donor now: their reminder, or a custom message. */
 export async function emailDonorNow(donorId: number, subject: string, custom: string): Promise<Result> {
   await requireUser();
   const donor = await queryOne<DonorForSms & { email: string }>(
-    "select id, name, nickname, phone, email, amount, reminder_day, locale, token from donors where id = $1",
+    "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, token from donors where id = $1",
     [donorId],
   );
   if (!donor) return { ok: false, error: "Donor not found." };
@@ -164,6 +171,8 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
     amountLinks,
     minAmount: Math.max(1, Math.round(Number(input.minAmount)) || DEFAULT_GIVING.minAmount),
     defaultDay: Math.min(6, Math.max(0, Math.round(Number(input.defaultDay)) || 0)),
+    defaultFrequency: asFrequency(input.defaultFrequency),
+    defaultMonthDay: Math.min(28, Math.max(1, Math.round(Number(input.defaultMonthDay)) || 1)),
     remindersEnabled: Boolean(input.remindersEnabled),
     welcomeEnabled: Boolean(input.welcomeEnabled),
     skipIfPaid: Boolean(input.skipIfPaid),
@@ -255,8 +264,8 @@ export async function connectTelegramBot(): Promise<Result> {
   if (!res.ok) return { ok: false, error: `Telegram: ${res.description ?? "failed"}` };
   await tg("setMyCommands", {
     commands: [
-      { command: "start", description: "Connect for weekly giving reminders" },
-      { command: "status", description: "Your weekly gift" },
+      { command: "start", description: "Connect for giving reminders" },
+      { command: "status", description: "Your gift" },
       { command: "stop", description: "Stop reminders here" },
     ],
   });
@@ -307,13 +316,14 @@ export async function connectSubBot(): Promise<Result> {
       { command: "register", description: "Register a donor" },
       { command: "progress", description: "Your progress" },
       { command: "donors", description: "The donors you registered" },
+      { command: "extend", description: "Register more than your target" },
       { command: "cancel", description: "Stop the current step" },
       { command: "language", description: "English / አማርኛ" },
       { command: "logout", description: "Sign out" },
     ],
   });
   await subBot("setMyDescription", {
-    description: "For Omo Beeza Ministry sub-admins: register weekly donors. Sign in with the phone number and password the admin gave you.",
+    description: "For Omo Beeza Ministry sub-admins: register monthly and weekly donors. Sign in with the phone number and password the admin gave you.",
   });
   return { ok: true };
 }
@@ -321,7 +331,7 @@ export async function connectSubBot(): Promise<Result> {
 export async function sendTelegramTest(donorId: number): Promise<Result> {
   await requireUser();
   const donor = await queryOne<DonorForSms>(
-    "select id, name, phone, amount, reminder_day, locale, token, telegram_chat_id from donors where id = $1",
+    "select id, name, phone, amount, reminder_day, frequency, month_day, locale, token, telegram_chat_id from donors where id = $1",
     [donorId],
   );
   if (!donor?.telegram_chat_id) return { ok: false, error: "This donor hasn't connected the Telegram bot yet." };
@@ -365,10 +375,10 @@ export async function inviteToTelegram(): Promise<Result & { sent?: number; fail
     const am = d.locale === "am";
     const res = await sendEmail({
       to: d.email,
-      subject: am ? "ሳምንታዊ ማሳሰቢያዎን በቴሌግራም ያግኙ" : "Get your weekly reminders on Telegram",
+      subject: am ? "የስጦታ ማሳሰቢያዎን በቴሌግራም ያግኙ" : "Get your giving reminders on Telegram",
       text: am
-        ? `ሰላም ${first}፣\n\nሳምንታዊ የኦሞ ቤዛ የስጦታ ማሳሰቢያዎን በቴሌግራም ማግኘት ይችላሉ። ከታች ያለውን ቁልፍ ይጫኑ፣ ከዚያ በቴሌግራም "Start" ይጫኑ።\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት`
-        : `Hi ${first},\n\nYou can get your weekly Omo Beeza giving reminders on Telegram. Tap the button below, then press "Start" in Telegram.\n\nWith gratitude,\nOmo Beeza Ministry`,
+        ? `ሰላም ${first}፣\n\nየኦሞ ቤዛ የስጦታ ማሳሰቢያዎን በቴሌግራም ማግኘት ይችላሉ። ከታች ያለውን ቁልፍ ይጫኑ፣ ከዚያ በቴሌግራም "Start" ይጫኑ።\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት`
+        : `Hi ${first},\n\nYou can get your Omo Beeza giving reminders on Telegram. Tap the button below, then press "Start" in Telegram.\n\nWith gratitude,\nOmo Beeza Ministry`,
       kind: "manual",
       donorId: d.id,
       button: { text: am ? "በቴሌግራም ይገናኙ" : "Connect on Telegram", url: link },

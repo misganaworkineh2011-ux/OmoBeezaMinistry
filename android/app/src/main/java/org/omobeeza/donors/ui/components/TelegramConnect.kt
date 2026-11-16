@@ -38,6 +38,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import org.omobeeza.donors.data.Donor
+import org.omobeeza.donors.data.period
 import org.omobeeza.donors.ui.theme.Brand
 
 /** Telegram's brand blue, for the connect card. */
@@ -71,7 +72,7 @@ fun TelegramConnectCard(donor: Donor, modifier: Modifier = Modifier) {
         ) {
             Icon(Icons.Rounded.CheckCircle, null, tint = TelegramBlue)
             Text(
-                "Connected on Telegram${if (donor.telegramUsername.isNotBlank()) " (@${donor.telegramUsername})" else ""}: weekly reminders go there.",
+                "Connected on Telegram${if (donor.telegramUsername.isNotBlank()) " (@${donor.telegramUsername})" else ""}: ${donor.period()} reminders go there.",
                 Modifier.padding(start = 10.dp),
                 color = Brand.Navy,
                 style = MaterialTheme.typography.titleSmall,
@@ -100,7 +101,7 @@ fun TelegramConnectCard(donor: Donor, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(14.dp))
             Text(
-                "Ask the donor to scan this with their phone camera and tap Start in Telegram. Their weekly reminders will then arrive there.",
+                "Ask the donor to scan this with their phone camera and tap Start in Telegram. Their ${donor.period()} reminders will then arrive there.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Brand.Body,
             )
@@ -112,7 +113,7 @@ fun TelegramConnectCard(donor: Donor, modifier: Modifier = Modifier) {
             onClick = {
                 val send = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "Get your Omo Beeza weekly giving reminders on Telegram: ${donor.telegramLink}")
+                    putExtra(Intent.EXTRA_TEXT, "Get your Omo Beeza ${donor.period()} giving reminders on Telegram: ${donor.telegramLink}")
                 }
                 context.startActivity(Intent.createChooser(send, "Send the Telegram link"))
             },

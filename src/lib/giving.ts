@@ -1,22 +1,26 @@
-// Weekly giving in birr: shared types, defaults and helpers (safe to import
+// Weekly or monthly giving in birr: shared types, defaults and helpers (safe to import
 // from client components). Donors register on the Donations page (with their
 // email) or in the Android app (with their phone), give on Ye-Buna, and get a
-// weekly reminder on the day they chose: on Telegram, by email (sent
+// reminder on the day they chose (a weekday, or a day of the month): on Telegram, by email (sent
 // automatically), or by SMS (sent from the ministry phone with the app).
 
 export interface GivingSettings {
   /** The ministry's Ye-Buna page, e.g. https://ye-buna.com/omobeeza */
   yebunaUrl: string;
-  /** Suggested weekly amounts in birr. */
+  /** Suggested amounts in birr (weekly and monthly). */
   amounts: number[];
   /** A Ye-Buna payment link for each amount ("100" → https://ye-buna.com/pay/…). */
   amountLinks: Record<string, string>;
   minAmount: number;
-  /** 0 = Sunday … 6 = Saturday. */
+  /** 0 = Sunday … 6 = Saturday (weekly donors). */
   defaultDay: number;
+  /** What new donors choose unless they pick the other one. */
+  defaultFrequency: Frequency;
+  /** Day of the month for monthly donors' reminders (1–28). */
+  defaultMonthDay: number;
   remindersEnabled: boolean;
   welcomeEnabled: boolean;
-  /** Skip the reminder when a payment was recorded in the last 6 days. */
+  /** Skip the reminder when a payment was recorded since the last one was due (6 days weekly, 25 days monthly). */
   skipIfPaid: boolean;
   /** Send weekly reminders on Telegram to donors who connected the bot. */
   telegramEnabled: boolean;
@@ -74,6 +78,8 @@ export const DEFAULT_GIVING: GivingSettings = {
   },
   minAmount: 10,
   defaultDay: 0,
+  defaultFrequency: "monthly",
+  defaultMonthDay: 1,
   remindersEnabled: true,
   welcomeEnabled: true,
   skipIfPaid: true,
@@ -81,6 +87,30 @@ export const DEFAULT_GIVING: GivingSettings = {
   telegramReplacesSms: true,
   telegramUserEnabled: true,
   includeStopLink: false,
+  reminderEn: "Hi {name}, your {period} {amount} birr gift for the children of Omo Beeza: {link} Stop reminders: {stop}",
+  reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች {this} የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
+  welcomeEn: "Thank you {name}! You now give {amount} birr {every} to Omo Beeza. We'll remind you every {day}. Give: {link}",
+  welcomeAm: "እናመሰግናለን {name}! {every} {amount} ብር ለኦሞ ቤዛ ይሰጣሉ። በየ{day} እናስታውስዎታለን። ይስጡ፦ {link}",
+  emailReminderSubjectEn: "Your {period} gift for the children of Omo Beeza",
+  emailReminderSubjectAm: "ለኦሞ ቤዛ ልጆች {period} ስጦታዎ",
+  emailReminderEn:
+    "Hi {name},\n\nThis is your {period} reminder for your {amount} birr gift to the children of Omo Beeza. Thank you for standing with them {every}.\n\nGive {this} gift: {link}\n\nWith gratitude,\nOmo Beeza Ministry\n\nTo stop these reminders: {stop}",
+  emailReminderAm:
+    "ሰላም {name}፣\n\nይህ ለኦሞ ቤዛ ልጆች የሚሰጡት {period} የ{amount} ብር ስጦታ ማሳሰቢያ ነው። {every} ከልጆቹ ጋር ስለቆሙ እናመሰግናለን።\n\n{this} ስጦታዎን ይስጡ፦ {link}\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት\n\nማሳሰቢያዎቹን ለማቆም፦ {stop}",
+  emailWelcomeSubjectEn: "Thank you for giving {period}, {name}!",
+  emailWelcomeSubjectAm: "{name}፣ ስለ {period} ስጦታዎ እናመሰግናለን!",
+  emailWelcomeEn:
+    "Hi {name},\n\nThank you for committing {amount} birr {every} to the children of Omo Beeza. We'll send you a short reminder every {day}.\n\nGive your first gift: {link}\n\nWith gratitude,\nOmo Beeza Ministry\n\nTo stop these reminders: {stop}",
+  emailWelcomeAm:
+    "ሰላም {name}፣\n\nለኦሞ ቤዛ ልጆች {every} {amount} ብር ለመስጠት ስለወሰኑ እናመሰግናለን። በየ{day} አጭር ማሳሰቢያ እንልክልዎታለን።\n\nየመጀመሪያ ስጦታዎን ይስጡ፦ {link}\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት\n\nማሳሰቢያዎቹን ለማቆም፦ {stop}",
+};
+
+/**
+ * The templates as first shipped (weekly only). Settings saved before monthly
+ * giving existed hold these texts; a saved template that is still exactly one
+ * of them is replaced by the new default, which fits weekly and monthly donors.
+ */
+const TEMPLATES_V1: Partial<Record<TemplateKey, string>> = {
   reminderEn: "Hi {name}, your weekly {amount} birr gift for the children of Omo Beeza: {link} Stop reminders: {stop}",
   reminderAm: "ሰላም {name}፣ ለኦሞ ቤዛ ልጆች የዚህ ሳምንት የ{amount} ብር ስጦታዎ፦ {link} ለማቆም፦ {stop}",
   welcomeEn: "Thank you {name}! You now give {amount} birr weekly to Omo Beeza. We'll remind you every {day}. Give: {link}",
@@ -98,6 +128,15 @@ export const DEFAULT_GIVING: GivingSettings = {
   emailWelcomeAm:
     "ሰላም {name}፣\n\nለኦሞ ቤዛ ልጆች በየሳምንቱ {amount} ብር ለመስጠት ስለወሰኑ እናመሰግናለን። በየ{day} አጭር ማሳሰቢያ እንልክልዎታለን።\n\nየመጀመሪያ ስጦታዎን ይስጡ፦ {link}\n\nከምስጋና ጋር፣\nኦሞ ቤዛ አገልግሎት\n\nማሳሰቢያዎቹን ለማቆም፦ {stop}",
 };
+
+/** Saved settings → settings, with untouched old templates upgraded. */
+export function withDefaults(saved: Partial<GivingSettings>): GivingSettings {
+  const out: GivingSettings = { ...DEFAULT_GIVING, ...saved };
+  for (const key of TEMPLATE_KEYS) {
+    if (saved[key] !== undefined && saved[key] === TEMPLATES_V1[key]) out[key] = DEFAULT_GIVING[key];
+  }
+  return out;
+}
 
 export type DonorStatus = "active" | "paused" | "stopped";
 export const DONOR_STATUSES: DonorStatus[] = ["active", "paused", "stopped"];
@@ -191,4 +230,50 @@ export function normalizeTelegram(input: string): string | null {
 /** Today's weekday in Ethiopia (UTC+3, no daylight saving). */
 export function ethiopiaWeekday(now = new Date()): number {
   return new Date(now.getTime() + 3 * 3_600_000).getUTCDay();
+}
+
+// ---- Weekly or monthly ----------------------------------------------------
+
+export type Frequency = "weekly" | "monthly";
+export const FREQUENCIES: Frequency[] = ["weekly", "monthly"];
+
+export function asFrequency(value: unknown, fallback: Frequency = "monthly"): Frequency {
+  return value === "weekly" || value === "monthly" ? value : fallback;
+}
+
+/** Monthly reminders go out on day 1–28, so every month has the day. */
+export const MONTH_DAYS = Array.from({ length: 28 }, (_, i) => i + 1);
+
+/** 1 → "1st", 22 → "22nd". */
+export function ordinal(n: number): string {
+  const s = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
+  return `${n}${s}`;
+}
+
+/**
+ * When the donor is reminded, to follow "every" ("every Monday", "every 5th of
+ * the month") or "በየ" ("በየሰኞ", "በየወሩ 5ኛ ቀን").
+ */
+export function scheduleDay(frequency: string, weekday: number, monthDay: number, locale: string): string {
+  if (frequency !== "monthly") return dayName(weekday, locale);
+  return locale === "am" ? `ወሩ ${monthDay}ኛ ቀን` : `${ordinal(monthDay)} of the month`;
+}
+
+/** Words for templates and pages: {period} "weekly", {every} "every week", {this} "this week's". */
+export function periodWords(frequency: string, locale: string): { period: string; every: string; this: string; per: string } {
+  const monthly = frequency === "monthly";
+  if (locale === "am") {
+    return monthly
+      ? { period: "ወርሃዊ", every: "በየወሩ", this: "የዚህ ወር", per: "በወር" }
+      : { period: "ሳምንታዊ", every: "በየሳምንቱ", this: "የዚህ ሳምንት", per: "በሳምንት" };
+  }
+  return monthly
+    ? { period: "monthly", every: "every month", this: "this month's", per: "a month" }
+    : { period: "weekly", every: "every week", this: "this week's", per: "a week" };
+}
+
+/** Today in Ethiopia (UTC+3): the weekday and the day of the month. */
+export function ethiopiaToday(now = new Date()): { weekday: number; monthDay: number } {
+  const d = new Date(now.getTime() + 3 * 3_600_000);
+  return { weekday: d.getUTCDay(), monthDay: d.getUTCDate() };
 }

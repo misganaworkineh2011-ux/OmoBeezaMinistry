@@ -10,6 +10,32 @@ val DAYS_AM = listOf("እሑድ", "ሰኞ", "ማክሰኞ", "ረቡዕ", "ሐሙ
 
 fun dayName(day: Int, locale: String = "en"): String = (if (locale == "am") DAYS_AM else DAYS_EN)[((day % 7) + 7) % 7]
 
+/** 1 → "1st", 2 → "2nd", 11 → "11th", 22 → "22nd". */
+fun ordinal(n: Int): String {
+    val suffix = if (n % 100 in 11..13) "th" else when (n % 10) { 1 -> "st"; 2 -> "nd"; 3 -> "rd"; else -> "th" }
+    return "$n$suffix"
+}
+
+/** "every Monday" / "monthly · 5th" (Amharic: "በየሰኞ" / "በየወሩ 5ኛ ቀን"). */
+fun schedule(frequency: String, day: Int, monthDay: Int, locale: String = "en"): String = when {
+    frequency == "monthly" && locale == "am" -> "በየወሩ ${monthDay}ኛ ቀን"
+    frequency == "monthly" -> "monthly · ${ordinal(monthDay)}"
+    locale == "am" -> "በየ${dayName(day, "am")}"
+    else -> "every ${dayName(day)}"
+}
+
+/** The app's own (English) wording of a donor's schedule: "every Monday" / "monthly · 5th". */
+fun Donor.schedule(): String = schedule(frequency, reminderDay, monthDay)
+
+/** Short form for list pills: "Mon" / "5th monthly". */
+fun Donor.shortSchedule(): String = if (monthly) "${ordinal(monthDay)} monthly" else dayName(reminderDay).take(3)
+
+/** "weekly" / "monthly". */
+fun Donor.period(): String = if (monthly) "monthly" else "weekly"
+
+/** "/week" or "/month". */
+fun Donor.per(): String = if (monthly) "/month" else "/week"
+
 /**
  * Ethiopian mobile numbers → +2519XXXXXXXX / +2517XXXXXXXX. Accepts 09…, 07…,
  * 9…, 2519…, +251 9… with spaces or dashes. Same rules as the website.
@@ -63,14 +89,15 @@ fun errorText(code: String, min: Int? = null): String = when (code) {
     "invalid_name" -> "Enter the donor's name."
     "invalid_phone" -> "Enter a valid Ethiopian mobile number (09… or 07…)."
     "invalid_email" -> "Enter a valid email, or leave it empty."
-    "invalid_amount" -> "The weekly amount must be at least ${min ?: 10} birr."
-    "invalid_day" -> "Choose a reminder day."
+    "invalid_amount" -> "The amount must be at least ${min ?: 10} birr."
+    "invalid_day" -> "Choose a reminder day (for monthly: 1–28)."
     "invalid_telegram" -> "That doesn't look like a Telegram username (like @abebe_k)."
     "consent_required" -> "Confirm that the donor agreed to SMS reminders."
     "already_registered" -> "This phone number is already registered as a donor."
     "paused" -> "Your account is paused. Ask the ministry admin to turn it back on."
     "weak_password" -> "The password needs at least 8 characters."
-    "invalid_target" -> "Enter how many donors they should register (0 or more)."
+    "invalid_target" -> if (org.omobeeza.donors.BuildConfig.SUB_ADMIN) "Choose how many more donors (1–500)." else "Enter how many donors they should register (0 or more)."
+    "target_not_reached" -> "You can add more once you've reached your current target."
     "phone_taken" -> "There is already a sub-admin with this phone number."
     "not_found" -> "The website doesn't have the app connection yet. Deploy the latest website update, or check the website address."
     "not_api" -> "That address didn't answer like the Omo Beeza website. Check the website address on the sign-in screen."

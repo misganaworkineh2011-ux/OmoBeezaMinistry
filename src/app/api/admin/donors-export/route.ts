@@ -1,6 +1,6 @@
 import { query } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { dayName, displayPhone } from "@/lib/giving";
+import { dayName, displayPhone, ordinal } from "@/lib/giving";
 
 // GET /api/admin/donors-export — all donors as a CSV file (signed-in admins only).
 
@@ -23,6 +23,8 @@ export async function GET(): Promise<Response> {
     email: string;
     amount: number;
     reminder_day: number;
+    frequency: string;
+    month_day: number;
     status: string;
     locale: string;
     source: string;
@@ -32,13 +34,13 @@ export async function GET(): Promise<Response> {
     total: number;
     payments: number;
   }>(
-    `select d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.status, d.locale, d.source, d.notes, d.created_at::text,
+    `select d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.frequency, d.month_day, d.status, d.locale, d.source, d.notes, d.created_at::text,
             (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
             (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total,
             (select count(*)::int from donor_payments p where p.donor_id = d.id) as payments
      from donors d order by d.created_at`,
   );
-  const header = ["Name", "Nickname", "Phone", "Email", "Weekly amount (birr)", "Reminder day", "Status", "Language", "Source", "Registered", "Last payment", "Payments", "Total given (birr)", "Notes"];
+  const header = ["Name", "Nickname", "Phone", "Email", "Amount (birr)", "Frequency", "Reminder day", "Status", "Language", "Source", "Registered", "Last payment", "Payments", "Total given (birr)", "Notes"];
   const lines = rows.map((r) =>
     [
       r.name,
@@ -46,7 +48,8 @@ export async function GET(): Promise<Response> {
       r.phone ? displayPhone(r.phone) : "",
       r.email,
       r.amount,
-      dayName(r.reminder_day, "en"),
+      r.frequency === "monthly" ? "Monthly" : "Weekly",
+      r.frequency === "monthly" ? `${ordinal(r.month_day)} of the month` : dayName(r.reminder_day, "en"),
       r.status,
       r.locale === "am" ? "Amharic" : "English",
       r.source,

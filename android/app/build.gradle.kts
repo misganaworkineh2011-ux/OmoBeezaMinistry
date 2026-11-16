@@ -20,8 +20,8 @@ android {
         applicationId = "org.omobeeza.donors"
         minSdk = 24
         targetSdk = 34
-        versionCode = 12
-        versionName = "1.5.0"
+        versionCode = 13
+        versionName = "1.6.0"
         // The ministry website the app talks to (can be changed on the sign-in screen).
         buildConfigField("String", "DEFAULT_SITE", "\"https://www.omobeezaministry.org\"")
     }

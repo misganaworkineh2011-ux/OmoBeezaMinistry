@@ -1,6 +1,6 @@
 import { hasDb, query, queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
-import { dayName, normalizePhone, type GivingSettings } from "@/lib/giving";
+import { MONTH_DAYS, dayName, normalizePhone, periodWords, scheduleDay, type Frequency, type GivingSettings } from "@/lib/giving";
 import { registerDonor } from "@/lib/donors";
 import { giveButton } from "@/lib/reminders";
 import { sendTelegram, tg, webhookSecret } from "@/lib/telegram";
@@ -10,8 +10,8 @@ import { sendTelegram, tg, webhookSecret } from "@/lib/telegram";
 //   • connects a chat to an existing weekly donor, by the personal link from
 //     the app / thank-you page (/start <token>), the @username saved with
 //     their registration, or the phone number they share;
-//   • signs up new weekly donors step by step: phone → name → amount → day →
-//     language → confirm;
+//   • signs up new donors step by step: phone → name → monthly or weekly →
+//     amount → day (of the week or of the month) → language → confirm;
 //   • answers /status, /stop, /cancel and /help.
 
 export const runtime = "nodejs";
@@ -42,76 +42,88 @@ interface LinkDonor {
   name: string;
   amount: number;
   reminder_day: number;
+  frequency: string;
+  month_day: number;
   locale: string;
   status: string;
   telegram_chat_id: string | null;
 }
 type Lang = "en" | "am";
-type Step = "phone" | "name" | "amount" | "amount_custom" | "day" | "lang" | "confirm";
+type Step = "phone" | "name" | "freq" | "amount" | "amount_custom" | "day" | "mday" | "lang" | "confirm";
 interface Signup {
   phone?: string;
   name?: string;
+  frequency?: Frequency;
   amount?: number;
   day?: number;
+  monthDay?: number;
   locale?: Lang;
 }
 
 const ok = () => new Response("ok");
-const DONOR_COLS = "id, name, amount, reminder_day, locale, status, telegram_chat_id";
+const DONOR_COLS = "id, name, amount, reminder_day, frequency, month_day, locale, status, telegram_chat_id";
 const birr = (n: number) => n.toLocaleString("en-US");
 
 const T = {
   en: {
-    linked: (name: string, amount: string, day: string) =>
-      `Hello ${name}! 🎉 You're connected.\n\nEvery ${day} I'll send you a short reminder for your weekly gift of ${amount} birr to the children of Omo Beeza. Thank you for standing with them!\n\nSend /stop at any time to stop reminders here.`,
+    linked: (name: string, amount: string, day: string, period: string) =>
+      `Hello ${name}! 🎉 You're connected.\n\nEvery ${day} I'll send you a short reminder for your ${period} gift of ${amount} birr to the children of Omo Beeza. Thank you for standing with them!\n\nSend /stop at any time to stop reminders here.`,
     welcome:
-      "Welcome to Omo Beeza Ministry! 👋\n\nI send weekly giving reminders. Already a weekly giver, or would you like to become one? Tap “Share my phone number” below to start.",
+      "Welcome to Omo Beeza Ministry! 👋\n\nI send giving reminders. Already a monthly or weekly giver, or would you like to become one? Tap “Share my phone number” below to start.",
     share: "📱 Share my phone number",
     notOwn: "Please share your own number using the button below.",
-    askName: "Thank you! You're not registered yet, so let's sign you up as a weekly giver. 🙌\n\nWhat's your full name? Tap your name below or type it.",
+    askName: "Thank you! You're not registered yet, so let's sign you up as a regular giver. 🙌\n\nWhat's your full name? Tap your name below or type it.",
+    askFreq: "Would you like to give every month or every week?",
+    monthly: "📅 Monthly",
+    weekly: "🗓 Weekly",
     badName: "Please type your full name (2–80 letters).",
-    askAmount: (min: number) => `How much would you like to give every week (in birr)? Choose an amount, or tap “Other” to type one (at least ${min} birr).`,
+    askAmount: (min: number, every: string) => `How much would you like to give ${every} (in birr)? Choose an amount, or tap “Other” to type one (at least ${min} birr).`,
     other: "Other amount",
-    typeAmount: (min: number) => `Type the weekly amount in birr (at least ${min}).`,
+    typeAmount: (min: number) => `Type the amount in birr (at least ${min}).`,
     badAmount: (min: number) => `Please type a number of at least ${min} birr.`,
     askDay: "Which day of the week should I remind you?",
+    askMonthDay: "Which day of the month should I remind you?",
     askLang: "Which language for your reminders?",
-    confirm: (name: string, amount: string, day: string) =>
-      `Please check:\n\n👤 ${name}\n💛 ${amount} birr every week\n📅 Reminder every ${day}\n\nYou'll get a short reminder here each week, and you can stop at any time with /stop.`,
+    confirm: (name: string, amount: string, day: string, every: string) =>
+      `Please check:\n\n👤 ${name}\n💛 ${amount} birr ${every}\n📅 Reminder every ${day}\n\nYou'll get a short reminder here each time, and you can stop at any time with /stop.`,
     yes: "✅ Confirm",
     restart: "↺ Start over",
     cancelled: "Sign-up cancelled. Send /start whenever you're ready.",
     failed: "Sorry, something went wrong saving your registration. Please try again with /start, or contact us.",
     stopped: "You won't get reminders here any more. Send /start whenever you'd like them back. Thank you for every gift! 🙏",
-    status: (amount: string, day: string, state: string) => `Your weekly gift: ${amount} birr, reminder every ${day}. Status: ${state}.`,
-    notLinked: "This chat isn't connected to a weekly giver yet. Send /start to connect or sign up.",
-    help: "I send weekly giving reminders for Omo Beeza Ministry.\n\n/start – connect or sign up\n/status – your weekly gift\n/stop – stop reminders here\n/cancel – cancel signing up",
+    status: (amount: string, day: string, state: string, every: string) => `Your gift: ${amount} birr ${every}, reminder every ${day}. Status: ${state}.`,
+    notLinked: "This chat isn't connected to a giver yet. Send /start to connect or sign up.",
+    help: "I send giving reminders for Omo Beeza Ministry.\n\n/start – connect or sign up\n/status – your gift\n/stop – stop reminders here\n/cancel – cancel signing up",
   },
   am: {
-    linked: (name: string, amount: string, day: string) =>
-      `ሰላም ${name}! 🎉 ተገናኝተዋል።\n\nበየ${day} ለኦሞ ቤዛ ልጆች ስለሚሰጡት ሳምንታዊ የ${amount} ብር ስጦታ አጭር ማሳሰቢያ እልክልዎታለሁ። ከእነርሱ ጋር ስለቆሙ እናመሰግናለን!\n\nማሳሰቢያዎቹን ለማቆም በማንኛውም ጊዜ /stop ይላኩ።`,
+    linked: (name: string, amount: string, day: string, period: string) =>
+      `ሰላም ${name}! 🎉 ተገናኝተዋል።\n\nበየ${day} ለኦሞ ቤዛ ልጆች ስለሚሰጡት ${period} የ${amount} ብር ስጦታ አጭር ማሳሰቢያ እልክልዎታለሁ። ከእነርሱ ጋር ስለቆሙ እናመሰግናለን!\n\nማሳሰቢያዎቹን ለማቆም በማንኛውም ጊዜ /stop ይላኩ።`,
     welcome:
-      "ወደ ኦሞ ቤዛ ሚኒስትሪ እንኳን ደህና መጡ! 👋\n\nሳምንታዊ የስጦታ ማሳሰቢያዎችን እልካለሁ። ሳምንታዊ ሰጪ ነዎት ወይስ መሆን ይፈልጋሉ? ለመጀመር ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ።",
+      "ወደ ኦሞ ቤዛ ሚኒስትሪ እንኳን ደህና መጡ! 👋\n\nየስጦታ ማሳሰቢያዎችን እልካለሁ። ወርሃዊ ወይም ሳምንታዊ ሰጪ ነዎት ወይስ መሆን ይፈልጋሉ? ለመጀመር ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ።",
     share: "📱 ስልክ ቁጥሬን አጋራ",
     notOwn: "እባክዎ ከታች ባለው ቁልፍ የራስዎን ቁጥር ያጋሩ።",
-    askName: "እናመሰግናለን! ገና አልተመዘገቡም፤ እንደ ሳምንታዊ ሰጪ እንመዝግብዎ። 🙌\n\nሙሉ ስምዎ ማን ነው? ከታች ያለውን ስም ይጫኑ ወይም ይጻፉ።",
+    askName: "እናመሰግናለን! ገና አልተመዘገቡም፤ እንደ መደበኛ ሰጪ እንመዝግብዎ። 🙌\n\nሙሉ ስምዎ ማን ነው? ከታች ያለውን ስም ይጫኑ ወይም ይጻፉ።",
+    askFreq: "በየወሩ ወይስ በየሳምንቱ መስጠት ይፈልጋሉ?",
+    monthly: "📅 በየወሩ",
+    weekly: "🗓 በየሳምንቱ",
     badName: "እባክዎ ሙሉ ስምዎን ይጻፉ።",
-    askAmount: (min: number) => `በየሳምንቱ ምን ያህል ብር መስጠት ይፈልጋሉ? መጠን ይምረጡ ወይም “ሌላ” ተጭነው ይጻፉ (ቢያንስ ${min} ብር)።`,
+    askAmount: (min: number, every: string) => `${every} ምን ያህል ብር መስጠት ይፈልጋሉ? መጠን ይምረጡ ወይም “ሌላ” ተጭነው ይጻፉ (ቢያንስ ${min} ብር)።`,
     other: "ሌላ መጠን",
-    typeAmount: (min: number) => `ሳምንታዊ መጠኑን በብር ይጻፉ (ቢያንስ ${min})።`,
+    typeAmount: (min: number) => `መጠኑን በብር ይጻፉ (ቢያንስ ${min})።`,
     badAmount: (min: number) => `እባክዎ ቢያንስ ${min} ብር የሆነ ቁጥር ይጻፉ።`,
     askDay: "በሳምንቱ በየትኛው ቀን ላስታውስዎ?",
+    askMonthDay: "በወሩ በየትኛው ቀን ላስታውስዎ?",
     askLang: "ማሳሰቢያዎቹ በየትኛው ቋንቋ ይሁኑ?",
-    confirm: (name: string, amount: string, day: string) =>
-      `እባክዎ ያረጋግጡ፦\n\n👤 ${name}\n💛 በየሳምንቱ ${amount} ብር\n📅 ማሳሰቢያ በየ${day}\n\nበየሳምንቱ አጭር ማሳሰቢያ እዚህ ይደርስዎታል፤ በማንኛውም ጊዜ በ /stop ማቆም ይችላሉ።`,
+    confirm: (name: string, amount: string, day: string, every: string) =>
+      `እባክዎ ያረጋግጡ፦\n\n👤 ${name}\n💛 ${every} ${amount} ብር\n📅 ማሳሰቢያ በየ${day}\n\nአጭር ማሳሰቢያ እዚህ ይደርስዎታል፤ በማንኛውም ጊዜ በ /stop ማቆም ይችላሉ።`,
     yes: "✅ አረጋግጥ",
     restart: "↺ እንደገና ጀምር",
     cancelled: "ምዝገባው ተሰርዟል። ሲዘጋጁ /start ይላኩ።",
     failed: "ይቅርታ፣ ምዝገባዎን ማስቀመጥ አልተቻለም። እባክዎ በ /start እንደገና ይሞክሩ ወይም ያግኙን።",
     stopped: "ከእንግዲህ እዚህ ማሳሰቢያ አይደርስዎትም። እንደገና ሲፈልጉ /start ይላኩ። ስለ ስጦታዎ ሁሉ እናመሰግናለን! 🙏",
-    status: (amount: string, day: string, state: string) => `ሳምንታዊ ስጦታዎ፦ ${amount} ብር፣ ማሳሰቢያ በየ${day}። ሁኔታ፦ ${state}።`,
-    notLinked: "ይህ ቻት ገና ከሳምንታዊ ሰጪ ጋር አልተገናኘም። ለመገናኘት ወይም ለመመዝገብ /start ይላኩ።",
-    help: "ለኦሞ ቤዛ ሚኒስትሪ ሳምንታዊ የስጦታ ማሳሰቢያዎችን እልካለሁ።\n\n/start – ለመገናኘት ወይም ለመመዝገብ\n/status – ሳምንታዊ ስጦታዎ\n/stop – ማሳሰቢያዎቹን ለማቆም\n/cancel – ምዝገባውን ለመሰረዝ",
+    status: (amount: string, day: string, state: string, every: string) => `ስጦታዎ፦ ${every} ${amount} ብር፣ ማሳሰቢያ በየ${day}። ሁኔታ፦ ${state}።`,
+    notLinked: "ይህ ቻት ገና ከሰጪ ጋር አልተገናኘም። ለመገናኘት ወይም ለመመዝገብ /start ይላኩ።",
+    help: "ለኦሞ ቤዛ ሚኒስትሪ የስጦታ ማሳሰቢያዎችን እልካለሁ።\n\n/start – ለመገናኘት ወይም ለመመዝገብ\n/status – ስጦታዎ\n/stop – ማሳሰቢያዎቹን ለማቆም\n/cancel – ምዝገባውን ለመሰረዝ",
   },
 };
 
@@ -136,7 +148,12 @@ async function link(donor: LinkDonor, chatId: number, from: TgUser): Promise<voi
   const giving = await readGivingNow();
   await sendTelegram({
     chatId: String(chatId),
-    text: t.linked(donor.name.split(/\s+/)[0] ?? donor.name, birr(donor.amount), dayName(donor.reminder_day, donor.locale)),
+    text: t.linked(
+      donor.name.split(/\s+/)[0] ?? donor.name,
+      birr(donor.amount),
+      scheduleDay(donor.frequency, donor.reminder_day, donor.month_day, donor.locale),
+      periodWords(donor.frequency, donor.locale).period,
+    ),
     button: giveButton(giving, donor.locale, donor.amount),
     kind: "welcome",
     donorId: donor.id,
@@ -184,8 +201,11 @@ async function ask(chatId: number, step: Step, data: Signup, lang: Lang, giving:
       );
       return;
     }
+    case "freq":
+      await reply(chatId, t.askFreq, inline([[{ text: t.monthly, data: "freq:monthly" }, { text: t.weekly, data: "freq:weekly" }]]));
+      return;
     case "amount":
-      await reply(chatId, t.askAmount(giving.minAmount), {
+      await reply(chatId, t.askAmount(giving.minAmount, periodWords(data.frequency ?? "weekly", lang).every), {
         ...inline([
           ...chunk(giving.amounts.map((a) => ({ text: `${birr(a)} ${lang === "am" ? "ብር" : "birr"}`, data: `amt:${a}` })), 4),
           [{ text: `✏️ ${t.other}`, data: "amt:other" }],
@@ -198,6 +218,9 @@ async function ask(chatId: number, step: Step, data: Signup, lang: Lang, giving:
     case "day":
       await reply(chatId, t.askDay, inline(chunk([0, 1, 2, 3, 4, 5, 6].map((d) => ({ text: dayName(d, lang), data: `day:${d}` })), 4)));
       return;
+    case "mday":
+      await reply(chatId, t.askMonthDay, inline(chunk(MONTH_DAYS.map((d) => ({ text: String(d), data: `mday:${d}` })), 7)));
+      return;
     case "lang":
       await reply(chatId, t.askLang, inline([[{ text: "English", data: "lang:en" }, { text: "አማርኛ", data: "lang:am" }]]));
       return;
@@ -205,7 +228,12 @@ async function ask(chatId: number, step: Step, data: Signup, lang: Lang, giving:
       const l = data.locale ?? lang;
       await reply(
         chatId,
-        T[l].confirm(data.name ?? "", birr(data.amount ?? 0), dayName(data.day ?? 0, l)),
+        T[l].confirm(
+          data.name ?? "",
+          birr(data.amount ?? 0),
+          scheduleDay(data.frequency ?? "weekly", data.day ?? 0, data.monthDay ?? 1, l),
+          periodWords(data.frequency ?? "weekly", l).every,
+        ),
         inline([[{ text: T[l].yes, data: "ok" }, { text: T[l].restart, data: "restart" }]]),
       );
     }
@@ -217,7 +245,9 @@ async function finishSignup(chatId: number, data: Signup, from: TgUser, lang: La
     name: data.name,
     phone: data.phone,
     amount: data.amount,
+    frequency: data.frequency ?? "weekly",
     day: data.day,
+    monthDay: data.monthDay,
     locale: data.locale ?? lang,
     telegram: from.username ?? "",
     source: "telegram",
@@ -315,7 +345,15 @@ async function onMessage(msg: TgMessage): Promise<void> {
         return reply(chatId, t.stopped, { reply_markup: { remove_keyboard: true } });
       case "/status":
         if (!linked) return reply(chatId, t.notLinked);
-        return reply(chatId, t.status(birr(linked.amount), dayName(linked.reminder_day, linked.locale), linked.status));
+        return reply(
+          chatId,
+          t.status(
+            birr(linked.amount),
+            scheduleDay(linked.frequency, linked.reminder_day, linked.month_day, linked.locale),
+            linked.status,
+            periodWords(linked.frequency, linked.locale).every,
+          ),
+        );
       default:
         return reply(chatId, linked ? t.help : `${t.help}\n\n${t.notLinked}`);
     }
@@ -325,12 +363,12 @@ async function onMessage(msg: TgMessage): Promise<void> {
   if (session?.step === "name") {
     const name = text.replace(/\s+/g, " ").trim();
     if (name.length < 2 || name.length > 80 || /[<>{}]/.test(name)) return reply(chatId, t.badName);
-    return ask(chatId, "amount", { ...session.data, name }, lang, giving);
+    return ask(chatId, "freq", { ...session.data, name }, lang, giving);
   }
   if (session?.step === "amount_custom") {
     const amount = Math.round(Number(text.replace(/[^\d.]/g, "")));
     if (!(amount >= giving.minAmount && amount <= 1_000_000)) return reply(chatId, t.badAmount(giving.minAmount));
-    return ask(chatId, "day", { ...session.data, amount }, lang, giving);
+    return ask(chatId, session.data.frequency === "monthly" ? "mday" : "day", { ...session.data, amount }, lang, giving);
   }
   if (session) return ask(chatId, session.step, session.data, lang, giving, from); // repeat the question
 
@@ -349,14 +387,21 @@ async function onButton(cb: TgCallback): Promise<void> {
   const [key, value = ""] = (cb.data ?? "").split(":");
   const data = session.data;
 
+  if (key === "freq" && session.step === "freq" && (value === "monthly" || value === "weekly")) {
+    return ask(chatId, "amount", { ...data, frequency: value }, lang, giving);
+  }
   if (key === "amt" && session.step === "amount") {
     if (value === "other") return ask(chatId, "amount_custom", data, lang, giving);
     const amount = Number(value);
-    if (giving.amounts.includes(amount)) return ask(chatId, "day", { ...data, amount }, lang, giving);
+    if (giving.amounts.includes(amount)) return ask(chatId, data.frequency === "monthly" ? "mday" : "day", { ...data, amount }, lang, giving);
   }
   if (key === "day" && session.step === "day") {
     const day = Number(value);
     if (day >= 0 && day <= 6) return ask(chatId, "lang", { ...data, day }, lang, giving);
+  }
+  if (key === "mday" && session.step === "mday") {
+    const monthDay = Number(value);
+    if (monthDay >= 1 && monthDay <= 28) return ask(chatId, "lang", { ...data, monthDay }, lang, giving);
   }
   if (key === "lang" && session.step === "lang" && (value === "en" || value === "am")) {
     return ask(chatId, "confirm", { ...data, locale: value }, value, giving);

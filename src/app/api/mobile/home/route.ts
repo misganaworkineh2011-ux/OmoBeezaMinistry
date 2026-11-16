@@ -15,12 +15,13 @@ export async function GET(request: Request): Promise<Response> {
   return withAppUser(request, async (user) => {
     const [giving, stats, bot] = await Promise.all([
       readGivingNow(),
-      queryOne<{ active: number; weekly: number; paid7: number; smsWaiting: number; today: number; subAdmins: number; subRegistered: number; subTarget: number }>(
+      queryOne<{ active: number; weekly: number; monthly: number; paid7: number; smsWaiting: number; today: number; subAdmins: number; subRegistered: number; subTarget: number }>(
         `select (select count(*)::int from donors where status = 'active') as active,
-                (select coalesce(sum(amount), 0)::int from donors where status = 'active') as weekly,
+                (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency <> 'monthly') as weekly,
+                (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency = 'monthly') as monthly,
                 (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
                 (select count(*)::int from donors where status = 'active' and phone <> ''
-                   and (last_reminded_at is null or last_reminded_at < now() - interval '7 days')) as "smsWaiting",
+                   and (last_reminded_at is null or last_reminded_at < now() - (case when frequency = 'monthly' then interval '25 days' else interval '7 days' end))) as "smsWaiting",
                 (select count(*)::int from donors where created_at > now() - interval '24 hours') as today,
                 (select count(*)::int from registrars where status = 'active') as "subAdmins",
                 (select count(*)::int from donors where registered_by in (select id from registrars where status = 'active')) as "subRegistered",
@@ -30,7 +31,7 @@ export async function GET(request: Request): Promise<Response> {
     ]);
     return json(200, {
       user,
-      settings: { amounts: giving.amounts, minAmount: giving.minAmount, defaultDay: giving.defaultDay, yebunaUrl: giving.yebunaUrl, amountLinks: giving.amountLinks, telegramBot: bot, linkBase: `${publicOrigin()}/give` },
+      settings: { amounts: giving.amounts, minAmount: giving.minAmount, defaultDay: giving.defaultDay, defaultFrequency: giving.defaultFrequency, defaultMonthDay: giving.defaultMonthDay, yebunaUrl: giving.yebunaUrl, amountLinks: giving.amountLinks, telegramBot: bot, linkBase: `${publicOrigin()}/give` },
       stats,
     });
   });

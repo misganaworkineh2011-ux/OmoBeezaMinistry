@@ -2,7 +2,7 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
-import { isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
+import { asFrequency, isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
 import { donorMessage, emailDonor, giveLink, type DonorForSms } from "@/lib/reminders";
 import { connectLink } from "@/lib/telegram";
 
@@ -17,7 +17,12 @@ export interface RegisterInput {
   phone?: unknown;
   email?: unknown;
   amount: unknown;
-  day: unknown;
+  /** Weekday 0–6 (weekly donors). */
+  day?: unknown;
+  /** "weekly" or "monthly"; left out (older apps) = weekly. */
+  frequency?: unknown;
+  /** Day of the month 1–28 (monthly donors). */
+  monthDay?: unknown;
   locale?: unknown;
   notes?: unknown;
   telegram?: unknown;
@@ -46,7 +51,7 @@ export type RegisterResult =
 
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
-const RETURNING = "id, name, nickname, phone, email, amount, reminder_day, locale, token, telegram_chat_id";
+const RETURNING = "id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, token, telegram_chat_id";
 
 export async function registerDonor(input: RegisterInput): Promise<RegisterResult> {
   const giving = await readGivingNow();
@@ -56,14 +61,17 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
   const phone = phoneRaw ? normalizePhone(phoneRaw) : "";
   const email = text(input.email, 200).toLowerCase();
   const amount = Math.round(Number(input.amount));
-  const day = Math.round(Number(input.day));
+  const frequency = asFrequency(input.frequency, "weekly");
+  const given = (v: unknown) => v !== undefined && v !== null && v !== "";
+  const day = given(input.day) ? Math.round(Number(input.day)) : giving.defaultDay;
+  const monthDay = given(input.monthDay) ? Math.round(Number(input.monthDay)) : giving.defaultMonthDay;
   const locale = input.locale === "am" ? "am" : "en";
 
   if (!name) return { ok: false, error: "invalid_name" };
   if (phone === null || (input.requires === "phone" && !phone)) return { ok: false, error: "invalid_phone" };
   if ((email && !isEmail(email)) || (input.requires === "email" && !email)) return { ok: false, error: "invalid_email" };
   if (!Number.isFinite(amount) || amount < giving.minAmount || amount > 1_000_000) return { ok: false, error: "invalid_amount", min: giving.minAmount };
-  if (!(day >= 0 && day <= 6)) return { ok: false, error: "invalid_day" };
+  if (!(day >= 0 && day <= 6) || !(monthDay >= 1 && monthDay <= 28)) return { ok: false, error: "invalid_day" };
   const telegramRaw = text(input.telegram, 60);
   const telegram = telegramRaw ? normalizeTelegram(telegramRaw) : "";
   if (telegram === null) return { ok: false, error: "invalid_telegram" };
@@ -92,14 +100,15 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
              amount = $5, reminder_day = $6, locale = $7,
              notes = case when $8 <> '' then $8 else notes end,
              telegram_username = case when $9 <> '' then $9 else telegram_username end,
+             frequency = $11, month_day = $12,
              status = 'active', stopped_at = null
            where id = $10 returning ${RETURNING}`,
-          [name, nickname, phone, email, amount, day, locale, notes, telegram, existing.id],
+          [name, nickname, phone, email, amount, day, locale, notes, telegram, existing.id, frequency, monthDay],
         )
       : await queryOne(
-          `insert into donors (name, nickname, phone, email, amount, reminder_day, locale, token, notes, source, telegram_username, registered_by)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) returning ${RETURNING}`,
-          [name, nickname, phone, email, amount, day, locale, randomBytes(9).toString("base64url"), notes, input.source, telegram, input.registeredBy ?? null],
+          `insert into donors (name, nickname, phone, email, amount, reminder_day, locale, token, notes, source, telegram_username, registered_by, frequency, month_day)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) returning ${RETURNING}`,
+          [name, nickname, phone, email, amount, day, locale, randomBytes(9).toString("base64url"), notes, input.source, telegram, input.registeredBy ?? null, frequency, monthDay],
         );
   } catch (err) {
     console.error("donors: save failed", err);

@@ -135,6 +135,22 @@ class SubAdminViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** After reaching their target: register [add] more (raises their own target). */
+    fun extendTarget(add: Int) {
+        busy = true
+        viewModelScope.launch {
+            try {
+                val (target, registered) = api().subExtendTarget(add)
+                me = me.copy(target = target, registered = registered)
+                message = "Your new target is $target donors. Thank you!"
+            } catch (e: ApiException) {
+                handle(e)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     private fun handle(e: ApiException) {
         if (e.code == "unauthorized") {
             // Signed out, paused or removed by an admin.

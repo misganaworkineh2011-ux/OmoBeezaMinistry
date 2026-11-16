@@ -34,6 +34,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
       title: "Giving",
       items: [
         { href: "/admin/donors", label: "Donors", icon: "heart" },
+        { href: "/admin/subadmins", label: "Sub-admins", icon: "users" },
         { href: "/admin/giving", label: "Giving & reminders", icon: "send" },
         { href: "/admin/messages", label: "Message templates", icon: "mail" },
       ],

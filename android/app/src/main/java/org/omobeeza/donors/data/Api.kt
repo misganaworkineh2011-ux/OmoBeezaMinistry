@@ -38,6 +38,7 @@ class Api(baseUrl: String, private val token: String?) {
             Stats(
                 active = st.optInt("active"),
                 weekly = st.optInt("weekly"),
+                monthly = st.optInt("monthly"),
                 paid7 = st.optInt("paid7"),
                 smsWaiting = st.optInt("smsWaiting"),
                 today = st.optInt("today"),
@@ -61,6 +62,8 @@ class Api(baseUrl: String, private val token: String?) {
             }.orEmpty(),
             telegramBot = s.optString("telegramBot"),
             linkBase = s.optString("linkBase").takeIf { it.startsWith("https://") || it.startsWith("http://10.0.2.2") }.orEmpty(),
+            defaultFrequency = if (s.optString("defaultFrequency") == "monthly") "monthly" else "weekly",
+            defaultMonthDay = s.optInt("defaultMonthDay", 1).coerceIn(1, 28),
         )
     }
 
@@ -143,6 +146,12 @@ class Api(baseUrl: String, private val token: String?) {
         return Donor.from(o.getJSONObject("donor"))
     }
 
+    /** The sub-admin raises their own target by [add] after reaching it. Returns the new progress numbers. */
+    suspend fun subExtendTarget(add: Int): Pair<Int, Int> {
+        val o = request("POST", "/api/registrar/target", JSONObject().put("add", add))
+        return o.optInt("target") to o.optInt("registered")
+    }
+
     private fun progress(o: JSONObject) = Progress(
         id = o.optInt("id"),
         name = o.optString("name"),
@@ -156,6 +165,7 @@ class Api(baseUrl: String, private val token: String?) {
         .put("name", d.name).put("nickname", d.nickname).put("phone", d.phone).put("email", d.email)
         .put("amount", d.amount).put("day", d.day).put("locale", d.locale)
         .put("notes", d.notes).put("telegram", d.telegram).put("consent", true)
+        .put("frequency", d.frequency).put("monthDay", d.monthDay)
 
     private fun user(o: JSONObject) = User(o.optInt("id"), o.optString("name"), o.optString("email"))
 

@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<Response> {
         [r.id],
       ),
       query(
-        `select id, name, nickname, phone, email, amount, reminder_day, locale, status, source, '' as notes, created_at,
+        `select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, status, source, '' as notes, created_at,
                 null as last_reminded_at, null as last_paid, 0 as total
          from donors where registered_by = $1 order by created_at desc limit 500`,
         [r.id],
@@ -33,6 +33,8 @@ export async function GET(request: Request): Promise<Response> {
         amounts: giving.amounts,
         minAmount: giving.minAmount,
         defaultDay: giving.defaultDay,
+        defaultFrequency: giving.defaultFrequency,
+        defaultMonthDay: giving.defaultMonthDay,
         yebunaUrl: giving.yebunaUrl,
         amountLinks: giving.amountLinks,
         linkBase: `${publicOrigin()}/give`,

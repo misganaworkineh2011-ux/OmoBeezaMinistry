@@ -65,11 +65,12 @@ import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.Progress
 import org.omobeeza.donors.data.User
 import org.omobeeza.donors.data.birr
-import org.omobeeza.donors.data.dayName
+import org.omobeeza.donors.data.shortSchedule
 import org.omobeeza.donors.data.localPhone
 import org.omobeeza.donors.data.payLink
 import org.omobeeza.donors.data.prettyDate
 import org.omobeeza.donors.ui.components.Avatar
+import org.omobeeza.donors.ui.components.ExtendTargetCard
 import org.omobeeza.donors.ui.components.Emblem
 import org.omobeeza.donors.ui.components.Pill
 import org.omobeeza.donors.ui.components.SectionLabel
@@ -124,13 +125,15 @@ fun SubAdminApp(vm: SubAdminViewModel = viewModel()) {
                 onRefresh = vm::refresh,
                 onRegister = { vm.go(SubScreen.Register) },
                 onSettings = { vm.go(SubScreen.Settings) },
+                busy = vm.busy,
+                onExtend = vm::extendTarget,
             )
 
             SubScreen.Register -> RegisterScreen(
                 vm.settings, vm.busy, vm.formError,
                 onBack = { vm.back() },
                 onSave = vm::register,
-                welcomeNote = "The ministry sends the weekly reminders. This donor counts toward your target.",
+                welcomeNote = "The ministry sends the reminders. This donor counts toward your target.",
             )
 
             is SubScreen.Saved -> SavedScreen(
@@ -164,6 +167,8 @@ fun SubHomeScreen(
     onRefresh: () -> Unit,
     onRegister: () -> Unit,
     onSettings: () -> Unit,
+    busy: Boolean = false,
+    onExtend: (Int) -> Unit = {},
 ) {
     var selected by remember { mutableStateOf<Donor?>(null) }
 
@@ -202,7 +207,7 @@ fun SubHomeScreen(
                             Text(
                                 when {
                                     me.target <= 0 -> "You have registered ${birr(me.registered)} donor${if (me.registered == 1) "" else "s"}."
-                                    me.done -> "Target reached! Thank you. You can keep registering."
+                                    me.done -> "Target reached! Thank you."
                                     else -> "${birr(me.left)} more to reach your target of ${birr(me.target)}."
                                 },
                                 style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.8f),
@@ -220,6 +225,15 @@ fun SubHomeScreen(
                     if (loading) {
                         LinearProgressIndicator(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)), color = Brand.Gold, trackColor = Brand.GoldSoft)
                         Spacer(Modifier.height(10.dp))
+                    }
+                    if (me.done) {
+                        ExtendTargetCard(
+                            title = "Target reached 🎉",
+                            text = "You registered all ${birr(me.target)}. Would you like to register more? Choose how many to add to your target:",
+                            busy = busy,
+                            onAdd = onExtend,
+                        )
+                        Spacer(Modifier.height(16.dp))
                     }
                     SectionLabel("Donors you registered")
                 }
@@ -240,7 +254,7 @@ fun SubHomeScreen(
                             Text(d.name, style = MaterialTheme.typography.titleMedium, color = Brand.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text("${localPhone(d.phone)} · ${prettyDate(d.createdAt)}", style = MaterialTheme.typography.bodyMedium, color = Brand.Muted)
                         }
-                        Pill("${birr(d.amount)} · ${dayName(d.reminderDay).take(3)}", Brand.GoldSoft, Brand.Navy)
+                        Pill("${birr(d.amount)} · ${d.shortSchedule()}", Brand.GoldSoft, Brand.Navy)
                     }
                 }
             }

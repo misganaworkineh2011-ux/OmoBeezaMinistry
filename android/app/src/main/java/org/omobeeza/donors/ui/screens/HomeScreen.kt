@@ -83,7 +83,8 @@ import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.Stats
 import org.omobeeza.donors.data.User
 import org.omobeeza.donors.data.birr
-import org.omobeeza.donors.data.dayName
+import org.omobeeza.donors.data.schedule
+import org.omobeeza.donors.data.shortSchedule
 import org.omobeeza.donors.data.localPhone
 import org.omobeeza.donors.data.prettyDate
 import org.omobeeza.donors.ui.View
@@ -152,7 +153,7 @@ fun HomeScreen(
                         Emblem(40.dp)
                         Column(Modifier.padding(start = 10.dp).weight(1f)) {
                             Text("Omo Beeza", style = MaterialTheme.typography.titleLarge, color = Color.White)
-                            Text("WEEKLY DONORS", style = MaterialTheme.typography.labelSmall, color = Brand.GoldLight)
+                            Text("DONORS", style = MaterialTheme.typography.labelSmall, color = Brand.GoldLight)
                         }
                         IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, "Refresh", tint = Color.White) }
                         IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, "Settings", tint = Color.White) }
@@ -162,10 +163,16 @@ fun HomeScreen(
                     Text(user?.firstName?.ifBlank { null } ?: "friend", style = MaterialTheme.typography.headlineMedium, color = Color.White)
                     Spacer(Modifier.height(18.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        StatTile(birr(stats.active), "weekly donors", Modifier.weight(1f))
-                        StatTile(birr(stats.weekly), "birr every week", Modifier.weight(1f), gold = true)
-                        StatTile("${stats.paid7}/${stats.active}", "paid this week", Modifier.weight(1f))
+                        StatTile(birr(stats.active), "active donors", Modifier.weight(1f))
+                        StatTile(birr(stats.monthly), "birr / month", Modifier.weight(1f), gold = true)
+                        StatTile(birr(stats.weekly), "birr / week", Modifier.weight(1f))
                     }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "${stats.paid7} of ${stats.active} paid in the last 7 days",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.White.copy(alpha = 0.75f),
+                    )
                 }
             }
 
@@ -295,7 +302,7 @@ private fun DonorRow(d: Donor, modifier: Modifier, onClick: () -> Unit) {
                 Text(localPhone(d.phone), style = MaterialTheme.typography.bodyMedium, color = Brand.Muted)
                 Spacer(Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Pill("${birr(d.amount)} birr · ${dayName(d.reminderDay).take(3)}", Brand.GoldSoft, Brand.Navy)
+                    Pill("${birr(d.amount)} birr · ${d.shortSchedule()}", Brand.GoldSoft, Brand.Navy)
                     if (d.status != "active") Pill(d.status, Color(0xFFEDEBE7), Brand.Muted)
                 }
             }
@@ -310,7 +317,7 @@ private fun EmptyState(filtered: Boolean) {
         Spacer(Modifier.height(16.dp))
         Text(if (filtered) "No donors match" else "No donors yet", style = MaterialTheme.typography.titleLarge, color = Brand.Ink)
         Text(
-            if (filtered) "Try another search or filter." else "Tap “Register donor” to add the first weekly supporter.",
+            if (filtered) "Try another search or filter." else "Tap “Register donor” to add the first supporter.",
             style = MaterialTheme.typography.bodyMedium, color = Brand.Muted, textAlign = TextAlign.Center,
         )
     }
@@ -345,8 +352,8 @@ internal fun DonorDetails(d: Donor, payLink: String = "", full: Boolean = true) 
         Spacer(Modifier.height(16.dp))
         SoftCard(Modifier.fillMaxWidth(), padding = 16.dp) {
             DetailLine(Icons.Rounded.Call, "Phone", localPhone(d.phone))
-            DetailLine(Icons.Rounded.Favorite, "Weekly gift", "${birr(d.amount)} birr")
-            DetailLine(Icons.Rounded.DateRange, "Reminder", "Every ${dayName(d.reminderDay)} · ${if (d.locale == "am") "Amharic" else "English"}" + if (full) " · last ${prettyDate(d.lastReminded)}" else "")
+            DetailLine(Icons.Rounded.Favorite, if (d.monthly) "Monthly gift" else "Weekly gift", "${birr(d.amount)} birr")
+            DetailLine(Icons.Rounded.DateRange, "Reminder", "${d.schedule().replaceFirstChar { it.uppercase() }} · ${if (d.locale == "am") "Amharic" else "English"}" + if (full) " · last ${prettyDate(d.lastReminded)}" else "")
             if (d.email.isNotBlank()) DetailLine(Icons.Rounded.Email, "Email", d.email)
             if (full) DetailLine(Icons.Rounded.CheckCircle, "Given so far", "${birr(d.total)} birr · last ${prettyDate(d.lastPaid)}")
             DetailLine(Icons.Rounded.Info, "Registered", prettyDate(d.createdAt), last = d.notes.isBlank())

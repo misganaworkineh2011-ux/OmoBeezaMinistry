@@ -39,16 +39,17 @@ class ScreensTest {
     )
 
     private val user = User(1, "Misgana Worku", "admin@omobeeza.org")
-    private fun donor(id: Int, name: String, phone: String, amount: Int, day: Int, linked: Boolean, locale: String = "en") = Donor(
+    private fun donor(id: Int, name: String, phone: String, amount: Int, day: Int, linked: Boolean, locale: String = "en", monthDay: Int = 0) = Donor(
         id, name, if (linked) "" else "Almi", phone, "", amount, day, locale, "active", "app", "Met at the carnival day", "2026-11-02T09:30:00.000Z",
         if (linked) "2026-11-02T10:00:00.000Z" else null, if (linked) "2026-11-01" else null, if (linked) 300 else 0,
         telegramUsername = if (linked) "abebe_k" else "", telegramLinked = linked,
         telegramLink = "https://t.me/OmoBeezaBot?start=AbC123xYz9AB",
+        frequency = if (monthDay > 0) "monthly" else "weekly", monthDay = monthDay.coerceAtLeast(1),
     )
     private val donors = listOf(
         donor(1, "Almaz Bekele", "+251922111333", 250, 3, false, "am"),
         donor(2, "Abebe Kebede", "+251911234567", 100, 0, true),
-        donor(3, "Sara Tesfaye", "+251712345678", 500, 5, true),
+        donor(3, "Sara Tesfaye", "+251712345678", 500, 5, true, monthDay = 5),
         donor(4, "ዮናስ ታደሰ", "+251933444555", 50, 1, false, "am"),
         donor(5, "Hanna Girma", "+251944777888", 200, 0, true),
     )
@@ -58,7 +59,7 @@ class ScreensTest {
     @Test fun home() = paparazzi.snapshot {
         OmoTheme {
             HomeScreen(
-                user, Stats(active = 42, weekly = 9850, paid7 = 31, smsWaiting = 7, today = 3, subAdmins = 3, subRegistered = 27, subTarget = 60), donors,
+                user, Stats(active = 42, weekly = 9850, monthly = 24500, paid7 = 31, smsWaiting = 7, today = 3, subAdmins = 3, subRegistered = 27, subTarget = 60), donors,
                 loading = false, loaded = true, query = "", view = View.All, snackbar = SnackbarHostState(),
                 onQuery = {}, onView = {}, onRefresh = {}, onRegister = {}, onSettings = {},
             )
@@ -66,6 +67,12 @@ class ScreensTest {
     }
 
     @Test fun register() = paparazzi.snapshot { OmoTheme { RegisterScreen(GivingSettings(), false, null, {}, {}) } }
+
+    @Test fun registerMonthly() = paparazzi.snapshot {
+        OmoTheme { RegisterScreen(GivingSettings(defaultFrequency = "monthly", defaultMonthDay = 5), false, null, {}, {}) }
+    }
+
+    @Test fun savedMonthly() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[2], true, null, onAnother = {}, onDone = {}, animate = false) } }
 
     @Test fun saved() = paparazzi.snapshot { OmoTheme { SavedScreen(donors[0], true, "Welcome SMS sent from this phone.", "https://ye-buna.com/pay/250", {}, {}, animate = false) } }
 
@@ -92,6 +99,19 @@ class ScreensTest {
 
     @Test fun subAdminEditor() = paparazzi.snapshot {
         OmoTheme { Box(Modifier.background(Brand.Sand)) { SubAdminEditor(subs[0], false, null, {}, {}, {}, { emptyList() }) } }
+    }
+
+    @Test fun subAdminEditorTargetReached() = paparazzi.snapshot {
+        OmoTheme { Box(Modifier.background(Brand.Sand)) { SubAdminEditor(subs[1], false, null, {}, {}, {}, { emptyList() }) } }
+    }
+
+    @Test fun subAdminHomeTargetReached() = paparazzi.snapshot {
+        OmoTheme {
+            SubHomeScreen(
+                Progress(2, "Dawit Mekonnen", "+251922000222", target = 10, registered = 10, today = 1), settingsWithLinks, donors,
+                loading = false, loaded = true, snackbar = SnackbarHostState(), onRefresh = {}, onRegister = {}, onSettings = {},
+            )
+        }
     }
 
     @Test fun subAdminSignIn() = paparazzi.snapshot { OmoTheme { SignInScreen("https://www.omobeezaministry.org", false, null, subAdmin = true) { _, _, _ -> } } }

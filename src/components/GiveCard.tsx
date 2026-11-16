@@ -6,7 +6,7 @@ import { Field, focusFirstError, type FieldErrors } from "@/components/FormKit";
 import DonateForm from "@/components/DonateForm";
 import Icon from "@/components/Icon";
 import { useRouter } from "@/i18n/navigation";
-import { dayName, isEmail, normalizeTelegram, yebunaLink } from "@/lib/giving";
+import { MONTH_DAYS, dayName, isEmail, normalizeTelegram, ordinal, yebunaLink, type Frequency } from "@/lib/giving";
 
 type Tab = "weekly" | "once" | "abroad";
 
@@ -17,6 +17,8 @@ export interface GiveCardSettings {
   amounts: number[];
   minAmount: number;
   defaultDay: number;
+  defaultFrequency: Frequency;
+  defaultMonthDay: number;
 }
 
 /** The thank-you page, personalised through its address. */
@@ -93,6 +95,8 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
   const locale = useLocale();
   const [amount, setAmount] = useState(String(settings.amounts[1] ?? settings.amounts[0] ?? 100));
   const [day, setDay] = useState(settings.defaultDay);
+  const [freq, setFreq] = useState<Frequency>(settings.defaultFrequency);
+  const [monthDay, setMonthDay] = useState(settings.defaultMonthDay);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -124,7 +128,7 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       const res = await fetch("/api/donors", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, telegram, amount: numeric, day, locale, consent: true, website: data.get("website") }),
+        body: JSON.stringify({ name, email, telegram, amount: numeric, frequency: freq, day, monthDay, locale, consent: true, website: data.get("website") }),
       });
       const body = (await res.json().catch(() => ({}))) as { telegram?: string };
       if (!res.ok) {
@@ -132,7 +136,15 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       } else {
         // Registered: the thank-you page confirms it and offers the Ye-Buna button.
         router.push(
-          thankYouHref({ kind: "weekly", name: name.split(/\s+/)[0] ?? name, amount: numeric, day, ...(body.telegram ? { tg: body.telegram } : {}) }),
+          thankYouHref({
+            kind: "weekly",
+            freq,
+            name: name.split(/\s+/)[0] ?? name,
+            amount: numeric,
+            day,
+            mday: monthDay,
+            ...(body.telegram ? { tg: body.telegram } : {}),
+          }),
         );
         return;
       }
@@ -147,9 +159,21 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       <p className="give-lead">{t("weeklyLead")}</p>
 
       <fieldset>
-        <legend>{t("amountLegend")}</legend>
+        <legend>{t("frequencyLegend")}</legend>
+        <div className="segmented give-frequency" role="radiogroup" aria-label={t("frequencyLegend")}>
+          {(["monthly", "weekly"] as const).map((f) => (
+            <label key={f} className={freq === f ? "is-active" : undefined}>
+              <input type="radio" name="frequency" value={f} checked={freq === f} onChange={() => setFreq(f)} />
+              {t(`frequency.${f}`)}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>{t("amountLegend", { freq })}</legend>
         {/* A scrollable row of suggested amounts; "Other" sits below it. */}
-        <div className="amount-scroll" role="radiogroup" aria-label={t("amountLegend")}>
+        <div className="amount-scroll" role="radiogroup" aria-label={t("amountLegend", { freq })}>
           {settings.amounts.map((a) => (
             <label key={a} className={`amount amount--chip${preset && numeric === a ? " is-active" : ""}`}>
               <input
@@ -196,16 +220,29 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
         ) : null}
       </fieldset>
 
-      <div className="field">
-        <label htmlFor="give-day">{t("dayLabel")}</label>
-        <select id="give-day" value={day} onChange={(e) => setDay(Number(e.target.value))}>
-          {[0, 1, 2, 3, 4, 5, 6].map((d) => (
-            <option key={d} value={d}>
-              {dayName(d, locale)}
-            </option>
-          ))}
-        </select>
-      </div>
+      {freq === "monthly" ? (
+        <div className="field">
+          <label htmlFor="give-day">{t("monthDayLabel")}</label>
+          <select id="give-day" value={monthDay} onChange={(e) => setMonthDay(Number(e.target.value))}>
+            {MONTH_DAYS.map((d) => (
+              <option key={d} value={d}>
+                {t("monthDay", { day: locale === "am" ? String(d) : ordinal(d) })}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : (
+        <div className="field">
+          <label htmlFor="give-day">{t("dayLabel")}</label>
+          <select id="give-day" value={day} onChange={(e) => setDay(Number(e.target.value))}>
+            {[0, 1, 2, 3, 4, 5, 6].map((d) => (
+              <option key={d} value={d}>
+                {dayName(d, locale)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="form__row">
         <Field id="give-name" name="name" label={t("name")} autoComplete="name" error={errors.name} />
@@ -228,12 +265,12 @@ function WeeklyForm({ settings }: { settings: GiveCardSettings }) {
       ) : null}
 
       <button type="submit" className="btn btn--gold btn--lg btn--block btn--wrap" disabled={busy}>
-        <Icon name="heart" /> {t("submit", { amount: numeric > 0 ? numeric.toLocaleString("en-US") : "…" })}
+        <Icon name="heart" /> {t("submit", { freq, amount: numeric > 0 ? numeric.toLocaleString("en-US") : "…" })}
       </button>
       <p className="donate-card__note">
         <Icon name="info" />
         <span>
-          {t("note")} {numeric > 0 ? `(${birr(numeric)})` : ""}
+          {t("note", { freq })} {numeric > 0 ? `(${birr(numeric)})` : ""}
         </span>
       </p>
     </form>

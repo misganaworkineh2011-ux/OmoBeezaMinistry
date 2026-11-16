@@ -3,7 +3,7 @@ import { clientIp, json, limited } from "@/lib/ratelimit";
 import { readGivingNow } from "@/lib/data/giving";
 import { registerDonor } from "@/lib/donors";
 
-// POST /api/donors — a visitor commits to give weekly in birr (Donations page).
+// POST /api/donors — a visitor commits to give monthly or weekly in birr (Donations page).
 // Registering again with the same email updates the commitment. Returns
 // the Ye-Buna link so the browser can continue there to give.
 
@@ -31,6 +31,8 @@ export async function POST(request: Request): Promise<Response> {
     email: body.email,
     amount: body.amount,
     day: body.day,
+    frequency: body.frequency,
+    monthDay: body.monthDay,
     locale: body.locale,
     telegram: body.telegram,
     source: "website",

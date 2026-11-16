@@ -13,7 +13,13 @@ the same list as the website (Dashboard → Donors).
   with the phone number and password an admin gave them. It can only register new
   donors (an already registered phone number is refused) and see the donors they
   registered and their progress toward the target. No SMS permission, no other
-  donors, no dashboard access.
+  donors, no dashboard access. Once they reach their target they can add more
+  to it themselves (+5, +10 or any number).
+
+Donors give **monthly** (the default, reminded on a day of the month, 1–28) or
+**weekly** (reminded on a weekday). The register form has a Monthly / Weekly
+switch; the default comes from the website's giving settings. In the Admin app a
+sub-admin who reached their target shows "Extend target" (+5, +10, other).
 
 ## Install
 Copy `release/OmoBeezaAdmin-v….apk` or `release/OmoBeezaSubAdmin-v….apk` to the

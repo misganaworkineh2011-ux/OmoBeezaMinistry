@@ -317,12 +317,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     id == null -> "${saved.name} added. They can sign in to the Sub-admin app now."
                     input.status == "paused" -> "${saved.name} paused."
                     input.status == "active" -> "${saved.name} can register donors again."
+                    input.name == null && input.target != null -> "${saved.name}'s target is now ${saved.target} donors."
                     else -> "Saved."
                 }
                 done()
                 refresh()
             } catch (e: ApiException) {
-                if (e.code == "unauthorized") handle(e) else formError = errorText(e.code)
+                when {
+                    e.code == "unauthorized" -> handle(e)
+                    // Quick actions from the list ("Extend target"): no form to show the error in.
+                    input.name == null -> message = errorText(e.code)
+                    else -> formError = errorText(e.code)
+                }
             } finally {
                 busy = false
             }

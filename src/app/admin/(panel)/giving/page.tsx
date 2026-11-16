@@ -2,7 +2,7 @@ import Link from "next/link";
 import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { readGivingNow } from "@/lib/data/giving";
-import { displayPhone, ethiopiaWeekday } from "@/lib/giving";
+import { displayPhone, ethiopiaToday } from "@/lib/giving";
 import { emailConfig } from "@/lib/email";
 import { publicOrigin } from "@/lib/origin";
 import GivingSettingsForm from "@/components/admin/GivingSettingsForm";
@@ -33,9 +33,10 @@ export default async function GivingPage() {
   const [giving, due, log, totals, telegram, invites, subBot] = await Promise.all([
     readGivingNow(),
     queryOne<{ n: number }>(
-      `select count(*)::int as n from donors where status = 'active' and reminder_day = $1
+      `select count(*)::int as n from donors where status = 'active'
+       and ((frequency = 'monthly' and month_day = $2) or (frequency <> 'monthly' and reminder_day = $1))
        and (last_reminded_at is null or last_reminded_at < now() - interval '20 hours')`,
-      [ethiopiaWeekday()],
+      [ethiopiaToday().weekday, ethiopiaToday().monthDay],
     ),
     query<LogRow>(
       `select l.id, l.donor_id, d.name, l.to_phone, l.message, l.kind, l.status, l.error, l.created_at, l.channel, l.provider_id
@@ -55,7 +56,7 @@ export default async function GivingPage() {
       <div className="page-head">
         <div>
           <h1>Giving &amp; reminders</h1>
-          <p>Weekly giving in birr through Ye-Buna, and the weekly reminders: Telegram and email (automatic), SMS (from the Android app).</p>
+          <p>Monthly and weekly giving in birr through Ye-Buna, and the reminders: Telegram and email (automatic), SMS (from the Android app).</p>
         </div>
       </div>
 

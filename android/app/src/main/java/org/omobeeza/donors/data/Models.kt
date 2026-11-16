@@ -17,6 +17,10 @@ data class GivingSettings(
     val telegramBot: String = "",
     /** The ministry's own payment links, e.g. https://www.omobeezaministry.org/give ("" = older website). */
     val linkBase: String = "",
+    /** How new donors give by default: "monthly" or "weekly". */
+    val defaultFrequency: String = "weekly",
+    /** Default reminder day of the month (1–28) for monthly donors. */
+    val defaultMonthDay: Int = 1,
 )
 
 /**
@@ -33,6 +37,8 @@ fun GivingSettings.payLink(amount: Int): String {
 data class Stats(
     val active: Int = 0,
     val weekly: Int = 0,
+    /** Active monthly donors' amounts added up (birr a month). */
+    val monthly: Int = 0,
     val paid7: Int = 0,
     /** Active donors with a phone who haven't had a reminder in 7 days. */
     val smsWaiting: Int = 0,
@@ -117,7 +123,13 @@ data class Donor(
     val telegramLink: String = "",
     /** The sub-admin who registered them ("" = not a sub-admin). */
     val registeredBy: String = "",
+    /** "weekly" or "monthly". */
+    val frequency: String = "weekly",
+    /** Reminder day of the month (1–28) for monthly donors. */
+    val monthDay: Int = 1,
 ) {
+    val monthly: Boolean get() = frequency == "monthly"
+
     companion object {
         fun from(o: JSONObject) = Donor(
             id = o.getInt("id"),
@@ -139,6 +151,8 @@ data class Donor(
             telegramLinked = o.optBoolean("telegram_linked"),
             telegramLink = o.optString("telegram_link"),
             registeredBy = o.optString("registered_by_name"),
+            frequency = if (o.optString("frequency") == "monthly") "monthly" else "weekly",
+            monthDay = o.optInt("month_day", 1).coerceIn(1, 28),
         )
     }
 }
@@ -154,6 +168,10 @@ data class NewDonor(
     val locale: String,
     val notes: String,
     val telegram: String = "",
+    /** "weekly" or "monthly". */
+    val frequency: String = "weekly",
+    /** Day of the month (1–28) for monthly donors. */
+    val monthDay: Int = 1,
 )
 
 internal fun JSONObject.optStringOrNull(key: String): String? =

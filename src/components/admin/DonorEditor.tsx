@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteDonor, deletePayment, emailDonorNow, recordPayment, saveDonor, type DonorInput } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { DAYS_EN, DONOR_STATUSES } from "@/lib/giving";
+import { DAYS_EN, DONOR_STATUSES, MONTH_DAYS, ordinal } from "@/lib/giving";
 
 export interface PaymentRow {
   id: number;
@@ -87,26 +87,43 @@ export default function DonorEditor({
             <div className="a-field">
               <label htmlFor="dn-email">Email</label>
               <input id="dn-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
-              <span className="a-hint">Weekly reminders by email, sent automatically.</span>
+              <span className="a-hint">Reminders by email, sent automatically.</span>
             </div>
             <div className="a-field">
               <label htmlFor="dn-phone">Mobile number</label>
               <input id="dn-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="09…" />
-              <span className="a-hint">Weekly SMS from the ministry phone (Android app).</span>
+              <span className="a-hint">SMS reminders from the ministry phone (Android app).</span>
             </div>
             <div className="a-field">
-              <label htmlFor="dn-amount">Weekly amount (birr)</label>
+              <label htmlFor="dn-freq">Gives</label>
+              <select id="dn-freq" value={form.frequency} onChange={(e) => set("frequency", e.target.value as DonorInput["frequency"])}>
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+            <div className="a-field">
+              <label htmlFor="dn-amount">{form.frequency === "monthly" ? "Monthly" : "Weekly"} amount (birr)</label>
               <input id="dn-amount" type="number" min={1} value={form.amount} onChange={(e) => set("amount", Number(e.target.value))} />
             </div>
             <div className="a-field">
               <label htmlFor="dn-day">Reminder day</label>
-              <select id="dn-day" value={form.reminder_day} onChange={(e) => set("reminder_day", Number(e.target.value))}>
-                {DAYS_EN.map((d, i) => (
-                  <option key={d} value={i}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+              {form.frequency === "monthly" ? (
+                <select id="dn-day" value={form.month_day} onChange={(e) => set("month_day", Number(e.target.value))}>
+                  {MONTH_DAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {ordinal(d)} of each month
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <select id="dn-day" value={form.reminder_day} onChange={(e) => set("reminder_day", Number(e.target.value))}>
+                  {DAYS_EN.map((d, i) => (
+                    <option key={d} value={i}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="a-field">
               <label htmlFor="dn-locale">Message language</label>
@@ -131,7 +148,7 @@ export default function DonorEditor({
             <input id="dn-tg" value={form.telegram_username} onChange={(e) => set("telegram_username", e.target.value)} placeholder="@username" />
             <span className="a-hint">
               {telegram?.linked
-                ? "✓ Connected to the reminder bot: weekly reminders go to their Telegram."
+                ? "✓ Connected to the reminder bot: reminders go to their Telegram."
                 : "Not connected yet. They connect by pressing Start on the bot (with the link below, this username, or their phone number)."}
             </span>
             {telegram && !telegram.linked && telegram.link ? (
@@ -290,7 +307,7 @@ export default function DonorEditor({
                 dir="auto"
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
-                placeholder={`Leave empty to send their weekly reminder:\n\n${reminderPreview.text}`}
+                placeholder={`Leave empty to send their reminder:\n\n${reminderPreview.text}`}
               />
             </div>
             <button
@@ -309,7 +326,7 @@ export default function DonorEditor({
                 })
               }
             >
-              <Icon name="send" /> {custom.trim() ? "Send email" : "Email weekly reminder now"}
+              <Icon name="send" /> {custom.trim() ? "Send email" : "Email their reminder now"}
             </button>
           </section>
 

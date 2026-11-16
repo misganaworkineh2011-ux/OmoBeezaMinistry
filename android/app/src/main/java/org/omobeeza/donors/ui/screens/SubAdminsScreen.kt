@@ -68,7 +68,9 @@ import org.omobeeza.donors.data.birr
 import org.omobeeza.donors.data.localPhone
 import org.omobeeza.donors.data.normalizePhone
 import org.omobeeza.donors.data.prettyDate
+import org.omobeeza.donors.data.shortSchedule
 import org.omobeeza.donors.ui.components.Avatar
+import org.omobeeza.donors.ui.components.ExtendTargetCard
 import org.omobeeza.donors.ui.components.Field
 import org.omobeeza.donors.ui.components.GoldButton
 import org.omobeeza.donors.ui.components.Pill
@@ -164,7 +166,10 @@ fun SubAdminsScreen(
                 }
             }
             items(subs, key = { it.id }) { s ->
-                SubAdminRow(s, Modifier.padding(horizontal = 18.dp, vertical = 5.dp)) { onClearError(); editing = SubAdminEdit.Existing(s) }
+                SubAdminRow(
+                    s, Modifier.padding(horizontal = 18.dp, vertical = 5.dp), busy,
+                    onExtend = { n -> onClearError(); onSave(s.id, SubAdminInput(target = s.target + n)) {} },
+                ) { onClearError(); editing = SubAdminEdit.Existing(s) }
             }
         }
     }
@@ -180,6 +185,7 @@ fun SubAdminsScreen(
                 error = error,
                 onSave = { input -> onSave(current?.id, input) { editing = null } },
                 onPause = { s -> onSave(s.id, SubAdminInput(status = if (s.active) "paused" else "active")) {} },
+                onExtend = { s, n -> onSave(s.id, SubAdminInput(target = s.target + n)) {} },
                 onRemove = { s -> onRemove(s) { editing = null } },
                 loadDonors = loadDonors,
             )
@@ -188,7 +194,7 @@ fun SubAdminsScreen(
 }
 
 @Composable
-private fun SubAdminRow(s: SubAdmin, modifier: Modifier, onClick: () -> Unit) {
+private fun SubAdminRow(s: SubAdmin, modifier: Modifier, busy: Boolean, onExtend: (Int) -> Unit, onClick: () -> Unit) {
     SoftCard(modifier.fillMaxWidth().clickable(onClick = onClick), padding = 14.dp) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Avatar(s.name, s.id)
@@ -219,6 +225,15 @@ private fun SubAdminRow(s: SubAdmin, modifier: Modifier, onClick: () -> Unit) {
                 if (s.target > 0 && s.registered >= s.target) Pill("target reached", Brand.GreenSoft, Brand.Green)
             }
         }
+        if (s.active && s.target > 0 && s.registered >= s.target) {
+            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Extend target", style = MaterialTheme.typography.bodyMedium, color = Brand.Muted, modifier = Modifier.weight(1f))
+                OutlinedButton(onClick = { onExtend(5) }, enabled = !busy, shape = RoundedCornerShape(12.dp)) { Text("+5") }
+                OutlinedButton(onClick = { onExtend(10) }, enabled = !busy, shape = RoundedCornerShape(12.dp)) { Text("+10") }
+                TextButton(onClick = onClick, enabled = !busy) { Text("Other…") }
+            }
+        }
     }
 }
 
@@ -231,11 +246,13 @@ internal fun SubAdminEditor(
     onPause: (SubAdmin) -> Unit,
     onRemove: (SubAdmin) -> Unit,
     loadDonors: suspend (Int) -> List<Donor>,
+    onExtend: (SubAdmin, Int) -> Unit = { _, _ -> },
 ) {
     var name by rememberSaveable(sub?.id) { mutableStateOf(sub?.name.orEmpty()) }
     var phone by rememberSaveable(sub?.id) { mutableStateOf(sub?.phone?.let(::localPhone).orEmpty()) }
     var password by rememberSaveable(sub?.id) { mutableStateOf("") }
-    var target by rememberSaveable(sub?.id) { mutableStateOf(sub?.target?.toString() ?: "") }
+    // Keyed by the target too, so the field follows an "Extend target" press.
+    var target by rememberSaveable(sub?.id, sub?.target) { mutableStateOf(sub?.target?.toString() ?: "") }
     var showPassword by remember { mutableStateOf(false) }
     var tried by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
@@ -260,6 +277,14 @@ internal fun SubAdminEditor(
             else "Registered ${birr(sub.registered)}${if (sub.target > 0) " of ${birr(sub.target)}" else ""} donors · last ${prettyDate(sub.lastRegistered)} · signed in ${prettyDate(sub.lastLogin)}",
             style = MaterialTheme.typography.bodyMedium, color = Brand.Muted,
         )
+        if (sub != null && sub.active && sub.target > 0 && sub.registered >= sub.target) {
+            Spacer(Modifier.height(14.dp))
+            ExtendTargetCard(
+                title = "Target reached 🎉",
+                text = "${sub.name.substringBefore(' ')} registered all ${birr(sub.target)}. Give them more to register:",
+                busy = busy,
+            ) { n -> onExtend(sub, n) }
+        }
         Spacer(Modifier.height(16.dp))
         Field(name, { name = it.take(80) }, "Full name", Icons.Rounded.Person, error = nameError)
         Spacer(Modifier.height(8.dp))
@@ -334,7 +359,10 @@ internal fun SubAdminEditor(
                                     Text(d.name, style = MaterialTheme.typography.titleSmall, color = Brand.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     Text("${localPhone(d.phone)} · ${prettyDate(d.createdAt)}", style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
                                 }
-                                Text("${birr(d.amount)} birr", style = MaterialTheme.typography.titleSmall, color = Brand.Navy)
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("${birr(d.amount)} birr", style = MaterialTheme.typography.titleSmall, color = Brand.Navy)
+                                    Text(d.shortSchedule(), style = MaterialTheme.typography.bodySmall, color = Brand.Muted)
+                                }
                             }
                             if (i < list.lastIndex) HorizontalDivider(color = Brand.Line)
                         }

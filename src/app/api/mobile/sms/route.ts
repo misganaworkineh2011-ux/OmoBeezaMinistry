@@ -6,7 +6,7 @@ import { donorMessage, type DonorForSms } from "@/lib/reminders";
 
 // Reminders sent as ordinary SMS from the ministry's own phone (the Android
 // app's "Send SMS reminders" button).
-//   GET  /api/mobile/sms                         active donors not reminded in 7 days, with their message
+//   GET  /api/mobile/sms                         active donors not reminded in 7 days (monthly: 25), with their message
 //   POST /api/mobile/sms { id, ok, error?, kind? } the phone reports each send; a sent reminder counts as reminded
 //                                                (kind "welcome": the welcome SMS after registering in the app)
 
@@ -19,11 +19,12 @@ export async function GET(request: Request): Promise<Response> {
   return withAppUser(request, async () => {
     const giving = await readGivingNow();
     const rows = await query<DonorForSms & { last_reminded_at: string | null }>(
-      `select d.id, d.name, d.nickname, d.phone, d.amount, d.reminder_day, d.locale, d.token, d.last_reminded_at
+      `select d.id, d.name, d.nickname, d.phone, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.last_reminded_at
        from donors d
        where d.status = 'active' and d.phone <> ''
-         and (d.last_reminded_at is null or d.last_reminded_at < now() - interval '7 days')
-         and not ($1 and exists (select 1 from donor_payments p where p.donor_id = d.id and p.paid_on > current_date - 7))
+         and (d.last_reminded_at is null or d.last_reminded_at < now() - (case when d.frequency = 'monthly' then interval '25 days' else interval '7 days' end))
+         and not ($1 and exists (select 1 from donor_payments p where p.donor_id = d.id
+                  and p.paid_on > current_date - (case when d.frequency = 'monthly' then 25 else 7 end)))
        order by d.last_reminded_at nulls first, d.id
        limit $2`,
       [giving.skipIfPaid, QUEUE_LIMIT],
@@ -53,7 +54,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!Number.isInteger(id) || id <= 0 || typeof body.ok !== "boolean") return json(400, { error: "bad_request" });
     const giving = await readGivingNow();
     const donor = await queryOne<DonorForSms>(
-      "select id, name, nickname, phone, amount, reminder_day, locale, token from donors where id = $1",
+      "select id, name, nickname, phone, amount, reminder_day, frequency, month_day, locale, token from donors where id = $1",
       [id],
     );
     if (!donor) return json(404, { error: "not_found" });

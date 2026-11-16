@@ -18,6 +18,8 @@ export interface AppDonor {
   email: string;
   amount: number;
   reminder_day: number;
+  frequency: string;
+  month_day: number;
   locale: string;
   status: string;
   source: string;
@@ -40,7 +42,7 @@ async function withLinks(donors: AppDonor[]): Promise<AppDonor[]> {
   return donors.map(({ token, ...d }) => ({ ...d, telegram_link: bot && token ? `https://t.me/${bot}?start=${token}` : "" }));
 }
 
-const SELECT = `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.locale, d.status, d.source, d.notes,
+const SELECT = `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.status, d.source, d.notes,
   d.created_at, d.last_reminded_at, d.telegram_username, d.telegram_chat_id is not null as telegram_linked, d.token,
   coalesce((select r.name from registrars r where r.id = d.registered_by), '') as registered_by_name,
   (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
@@ -87,6 +89,8 @@ export async function POST(request: Request): Promise<Response> {
       email: body.email,
       amount: body.amount,
       day: body.day,
+      frequency: body.frequency,
+      monthDay: body.monthDay,
       locale: body.locale,
       notes: body.notes,
       telegram: body.telegram,

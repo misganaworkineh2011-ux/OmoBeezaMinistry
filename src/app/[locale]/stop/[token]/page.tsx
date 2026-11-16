@@ -26,7 +26,7 @@ export default async function StopPage({
 
   const donor = /^[A-Za-z0-9_-]{8,40}$/.test(token)
     ? await safeRead(
-        () => queryOne<{ name: string; amount: number; status: string }>("select name, amount, status from donors where token = $1", [token]),
+        () => queryOne<{ name: string; amount: number; status: string; frequency: string }>("select name, amount, status, frequency from donors where token = $1", [token]),
         null,
       )
     : null;
@@ -38,7 +38,7 @@ export default async function StopPage({
   else {
     body = (
       <>
-        <p>{t("lead", { name: donor.name.split(/\s+/)[0] ?? donor.name, amount: donor.amount.toLocaleString("en-US") })}</p>
+        <p>{t("lead", { name: donor.name.split(/\s+/)[0] ?? donor.name, amount: donor.amount.toLocaleString("en-US"), freq: donor.frequency })}</p>
         <form action={stopReminders.bind(null, locale, token)}>
           <button type="submit" className="btn btn--lg">
             {t("button")}

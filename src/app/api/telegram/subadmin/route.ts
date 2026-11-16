@@ -1,17 +1,18 @@
 import { hasDb, query, queryOne } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { readGivingNow } from "@/lib/data/giving";
-import { dayName, displayPhone, isEmail, normalizePhone, type GivingSettings } from "@/lib/giving";
+import { MONTH_DAYS, dayName, displayPhone, isEmail, normalizePhone, periodWords, scheduleDay, type Frequency, type GivingSettings } from "@/lib/giving";
 import { registerDonor } from "@/lib/donors";
 import { limited } from "@/lib/ratelimit";
+import { extendTarget, MAX_SELF_EXTEND } from "@/lib/registrars";
 import { donorMessage, giveLink } from "@/lib/reminders";
 import { subBot, subBotSecret } from "@/lib/telegram-subadmin";
 
 // POST /api/telegram/subadmin — the sub-admin Telegram bot, for sub-admins
 // without an Android phone (iPhone users). The same as the Sub-admin app:
 //   • sign in once: share their phone number, then type their password;
-//   • register donors step by step: name → phone → weekly amount → day →
-//     language → email (optional) → confirm. It counts toward their target, and
+//   • register donors step by step: name → phone → monthly or weekly →
+//     amount → day (of the month or week) → language → email (optional) → confirm. It counts toward their target, and
 //     a number that is already registered is refused;
 //   • after each registration, a message to forward to the donor (thank-you
 //     and payment link);
@@ -49,15 +50,17 @@ interface Me {
   lang: Lang;
 }
 type Lang = "en" | "am";
-type Step = "password" | "name" | "phone" | "amount" | "amount_custom" | "day" | "lang" | "email" | "confirm";
+type Step = "password" | "name" | "phone" | "freq" | "amount" | "amount_custom" | "day" | "mday" | "lang" | "email" | "confirm" | "extend";
 interface Data {
   /** Signing in: the sub-admin whose password we're waiting for. */
   rid?: number;
   ui?: Lang;
   name?: string;
   phone?: string;
+  frequency?: Frequency;
   amount?: number;
   day?: number;
+  monthDay?: number;
   locale?: Lang;
   email?: string;
 }
@@ -69,7 +72,7 @@ const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 const T = {
   en: {
     welcome:
-      "Welcome to the Omo Beeza sub-admin bot! 👋\n\nHere you register weekly donors for Omo Beeza Ministry. To sign in, tap “Share my phone number” below (the number the admin registered you with).",
+      "Welcome to the Omo Beeza sub-admin bot! 👋\n\nHere you register monthly and weekly donors for Omo Beeza Ministry. To sign in, tap “Share my phone number” below (the number the admin registered you with).",
     share: "📱 Share my phone number",
     notOwn: "Please share your own number with the button below.",
     notSubAdmin: "This number isn't registered as a sub-admin. Please ask the ministry's admin to add you, then send /start again.",
@@ -86,6 +89,12 @@ const T = {
             registered >= target ? "🎉 You've reached your target. Thank you!" : `${target - registered} to go.`
           }`
         : `📊 You've registered ${registered} donor${registered === 1 ? "" : "s"}${today ? ` (${today} in the last 24 hours)` : ""}.`,
+    extendOffer: "You've reached your target 🎉 Would you like to register more donors? Choose how many to add to your target.",
+    extendOther: "✏️ Other",
+    typeExtend: `How many more donors will you register? Type a number (1–${MAX_SELF_EXTEND}).`,
+    badExtend: `Please type a number from 1 to ${MAX_SELF_EXTEND}.`,
+    extended: (target: number) => `✅ Your new target is ${target} donors. Thank you!`,
+    notReached: "You can add more once you've reached your current target.",
     noDonors: "You haven't registered any donors yet. Tap “Register a donor” to start.",
     donorsTitle: (shown: number, total: number) => (shown < total ? `Your latest ${shown} of ${total} donors:` : `Your donors (${total}):`),
     askName: "New donor ✍️\n\nWhat is the donor's full name?\n\n(Send /cancel at any time to stop.)",
@@ -93,19 +102,23 @@ const T = {
     askPhone: "The donor's phone number? For example 0911 234 567. You can also send their contact card.",
     badPhone: "That isn't an Ethiopian mobile number. Please type it like 0911 234 567.",
     taken: "This phone number is already registered as a donor. Please type a different number, or /cancel.",
-    askAmount: (min: number) => `How much will they give every week (birr)? Choose, or tap “Other” to type an amount (at least ${min} birr).`,
+    askFreq: "Will they give every month or every week?",
+    monthly: "📅 Monthly",
+    weekly: "🗓 Weekly",
+    askAmount: (min: number, every: string) => `How much will they give ${every} (birr)? Choose, or tap “Other” to type an amount (at least ${min} birr).`,
     other: "✏️ Other",
-    typeAmount: (min: number) => `Type the weekly amount in birr (at least ${min}).`,
+    typeAmount: (min: number) => `Type the amount in birr (at least ${min}).`,
     badAmount: (min: number) => `Please type a number of at least ${min} birr.`,
     askDay: "Which day of the week should we remind them?",
+    askMonthDay: "Which day of the month should we remind them?",
     askLang: "Which language for their messages?",
     askEmail: "The donor's email address (optional). Reminders are emailed automatically. Type it, or tap “Skip”.",
     skip: "Skip",
     badEmail: "That doesn't look like an email address. Type it again, or tap “Skip”.",
     confirm: (d: Required<Pick<Data, "name" | "phone" | "amount">> & Data, day: string) =>
-      `Please check:\n\n👤 ${d.name}\n📱 ${displayPhone(d.phone)}\n💛 ${birr(d.amount)} birr every week\n📅 Reminder every ${day}\n🌐 ${
+      `Please check:\n\n👤 ${d.name}\n📱 ${displayPhone(d.phone)}\n💛 ${birr(d.amount)} birr ${periodWords(d.frequency ?? "weekly", "en").every}\n📅 Reminder every ${day}\n🌐 ${
         d.locale === "am" ? "Amharic" : "English"
-      }${d.email ? `\n✉️ ${d.email}` : ""}\n\nBy confirming, you confirm that the donor agreed to receive weekly reminders (they can stop at any time).`,
+      }${d.email ? `\n✉️ ${d.email}` : ""}\n\nBy confirming, you confirm that the donor agreed to receive reminders (they can stop at any time).`,
     yes: "✅ Confirm",
     restart: "↺ Start over",
     cancel: "✖ Cancel",
@@ -113,7 +126,7 @@ const T = {
     saved: (name: string) => `✅ ${name} is registered. Thank you!`,
     forward: (name: string) => `👇 Forward the next message to ${name} (or tap the button to send it on Telegram).`,
     sendTg: "📤 Send on Telegram",
-    reminders: "Weekly reminders on Telegram (tap Start):",
+    reminders: "Reminders on Telegram (tap Start):",
     failed: {
       already_registered: "This phone number is already registered as a donor.",
       save_failed: "Sorry, saving failed. Please try again.",
@@ -121,12 +134,12 @@ const T = {
     },
     notSignedIn: "Please sign in first: send /start.",
     langSet: "Language: English.",
-    help: "Sub-admin bot for Omo Beeza Ministry.\n\n/register – register a donor\n/progress – your progress\n/donors – the donors you registered\n/cancel – stop the current step\n/language – English / አማርኛ\n/logout – sign out",
+    help: "Sub-admin bot for Omo Beeza Ministry.\n\n/register – register a donor\n/progress – your progress\n/donors – the donors you registered\n/extend – register more than your target\n/cancel – stop the current step\n/language – English / አማርኛ\n/logout – sign out",
     unavailable: "The bot isn't available right now. Please try again later.",
   },
   am: {
     welcome:
-      "ወደ ኦሞ ቤዛ ንዑስ አስተዳዳሪ ቦት እንኳን ደህና መጡ! 👋\n\nእዚህ ለኦሞ ቤዛ ሚኒስትሪ ሳምንታዊ ለጋሾችን ይመዘግባሉ። ለመግባት ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ (አስተዳዳሪው የመዘገበዎት ቁጥር)።",
+      "ወደ ኦሞ ቤዛ ንዑስ አስተዳዳሪ ቦት እንኳን ደህና መጡ! 👋\n\nእዚህ ለኦሞ ቤዛ ሚኒስትሪ ወርሃዊና ሳምንታዊ ለጋሾችን ይመዘግባሉ። ለመግባት ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ (አስተዳዳሪው የመዘገበዎት ቁጥር)።",
     share: "📱 ስልክ ቁጥሬን አጋራ",
     notOwn: "እባክዎ ከታች ባለው ቁልፍ የራስዎን ቁጥር ያጋሩ።",
     notSubAdmin: "ይህ ቁጥር እንደ ንዑስ አስተዳዳሪ አልተመዘገበም። እባክዎ የሚኒስትሪውን አስተዳዳሪ እንዲጨምርዎ ይጠይቁ፤ ከዚያ /start እንደገና ይላኩ።",
@@ -143,6 +156,12 @@ const T = {
             registered >= target ? "🎉 ግብዎን አሳክተዋል። እናመሰግናለን!" : `${target - registered} ይቀራሉ።`
           }`
         : `📊 ${registered} ለጋሾችን መዝግበዋል${today ? ` (ባለፉት 24 ሰዓታት ${today})` : ""}።`,
+    extendOffer: "ግብዎን አሳክተዋል 🎉 ተጨማሪ ለጋሾችን መመዝገብ ይፈልጋሉ? በግብዎ ላይ ምን ያህል እንደሚጨምሩ ይምረጡ።",
+    extendOther: "✏️ ሌላ",
+    typeExtend: `ስንት ተጨማሪ ለጋሾችን ይመዘግባሉ? ቁጥር ይጻፉ (1–${MAX_SELF_EXTEND})።`,
+    badExtend: `እባክዎ ከ1 እስከ ${MAX_SELF_EXTEND} ያለ ቁጥር ይጻፉ።`,
+    extended: (target: number) => `✅ አዲሱ ግብዎ ${target} ለጋሾች ነው። እናመሰግናለን!`,
+    notReached: "አሁን ያለውን ግብዎን ካሳኩ በኋላ መጨመር ይችላሉ።",
     noDonors: "እስካሁን ምንም ለጋሽ አልመዘገቡም። ለመጀመር “ለጋሽ መዝግብ” ይጫኑ።",
     donorsTitle: (shown: number, total: number) => (shown < total ? `ከ${total} ለጋሾችዎ የቅርብ ${shown}፦` : `ለጋሾችዎ (${total})፦`),
     askName: "አዲስ ለጋሽ ✍️\n\nየለጋሹ ሙሉ ስም ማን ነው?\n\n(ለማቆም በማንኛውም ጊዜ /cancel ይላኩ።)",
@@ -150,19 +169,23 @@ const T = {
     askPhone: "የለጋሹ ስልክ ቁጥር? ለምሳሌ 0911 234 567። የእውቂያ ካርዳቸውንም መላክ ይችላሉ።",
     badPhone: "ይህ የኢትዮጵያ የሞባይል ቁጥር አይደለም። እባክዎ እንደ 0911 234 567 ይጻፉ።",
     taken: "ይህ ስልክ ቁጥር አስቀድሞ እንደ ለጋሽ ተመዝግቧል። እባክዎ ሌላ ቁጥር ይጻፉ ወይም /cancel ይላኩ።",
-    askAmount: (min: number) => `በየሳምንቱ ምን ያህል ብር ይሰጣሉ? ይምረጡ ወይም “ሌላ” ተጭነው ይጻፉ (ቢያንስ ${min} ብር)።`,
+    askFreq: "በየወሩ ወይስ በየሳምንቱ ይሰጣሉ?",
+    monthly: "📅 በየወሩ",
+    weekly: "🗓 በየሳምንቱ",
+    askAmount: (min: number, every: string) => `${every} ምን ያህል ብር ይሰጣሉ? ይምረጡ ወይም “ሌላ” ተጭነው ይጻፉ (ቢያንስ ${min} ብር)።`,
     other: "✏️ ሌላ",
-    typeAmount: (min: number) => `ሳምንታዊ መጠኑን በብር ይጻፉ (ቢያንስ ${min})።`,
+    typeAmount: (min: number) => `መጠኑን በብር ይጻፉ (ቢያንስ ${min})።`,
     badAmount: (min: number) => `እባክዎ ቢያንስ ${min} ብር የሆነ ቁጥር ይጻፉ።`,
     askDay: "በሳምንቱ በየትኛው ቀን እናስታውሳቸው?",
+    askMonthDay: "በወሩ በየትኛው ቀን እናስታውሳቸው?",
     askLang: "መልእክቶቻቸው በየትኛው ቋንቋ ይሁኑ?",
     askEmail: "የለጋሹ ኢሜይል (አማራጭ)። ማሳሰቢያዎች በራሳቸው በኢሜይል ይላካሉ። ይጻፉ ወይም “ዝለል” ይጫኑ።",
     skip: "ዝለል",
     badEmail: "ይህ ኢሜይል አይመስልም። እንደገና ይጻፉ ወይም “ዝለል” ይጫኑ።",
     confirm: (d: Required<Pick<Data, "name" | "phone" | "amount">> & Data, day: string) =>
-      `እባክዎ ያረጋግጡ፦\n\n👤 ${d.name}\n📱 ${displayPhone(d.phone)}\n💛 በየሳምንቱ ${birr(d.amount)} ብር\n📅 ማሳሰቢያ በየ${day}\n🌐 ${
+      `እባክዎ ያረጋግጡ፦\n\n👤 ${d.name}\n📱 ${displayPhone(d.phone)}\n💛 ${periodWords(d.frequency ?? "weekly", "am").every} ${birr(d.amount)} ብር\n📅 ማሳሰቢያ በየ${day}\n🌐 ${
         d.locale === "am" ? "አማርኛ" : "English"
-      }${d.email ? `\n✉️ ${d.email}` : ""}\n\nበማረጋገጥዎ ለጋሹ ሳምንታዊ ማሳሰቢያ ለመቀበል መስማማታቸውን ያረጋግጣሉ (በማንኛውም ጊዜ ማቆም ይችላሉ)።`,
+      }${d.email ? `\n✉️ ${d.email}` : ""}\n\nበማረጋገጥዎ ለጋሹ ማሳሰቢያ ለመቀበል መስማማታቸውን ያረጋግጣሉ (በማንኛውም ጊዜ ማቆም ይችላሉ)።`,
     yes: "✅ አረጋግጥ",
     restart: "↺ እንደገና ጀምር",
     cancel: "✖ ሰርዝ",
@@ -170,7 +193,7 @@ const T = {
     saved: (name: string) => `✅ ${name} ተመዝግበዋል። እናመሰግናለን!`,
     forward: (name: string) => `👇 የሚቀጥለውን መልእክት ለ${name} ያስተላልፉ (ወይም በቴሌግራም ለመላክ ቁልፉን ይጫኑ)።`,
     sendTg: "📤 በቴሌግራም ላክ",
-    reminders: "ሳምንታዊ ማሳሰቢያ በቴሌግራም (Start ይጫኑ)፦",
+    reminders: "ማሳሰቢያ በቴሌግራም (Start ይጫኑ)፦",
     failed: {
       already_registered: "ይህ ስልክ ቁጥር አስቀድሞ እንደ ለጋሽ ተመዝግቧል።",
       save_failed: "ይቅርታ፣ ማስቀመጥ አልተቻለም። እባክዎ እንደገና ይሞክሩ።",
@@ -178,7 +201,7 @@ const T = {
     },
     notSignedIn: "እባክዎ መጀመሪያ ይግቡ፦ /start ይላኩ።",
     langSet: "ቋንቋ፦ አማርኛ።",
-    help: "የኦሞ ቤዛ ሚኒስትሪ ንዑስ አስተዳዳሪ ቦት።\n\n/register – ለጋሽ መመዝገብ\n/progress – ሂደትዎ\n/donors – የመዘገቧቸው ለጋሾች\n/cancel – የአሁኑን ደረጃ ለማቆም\n/language – English / አማርኛ\n/logout – ለመውጣት",
+    help: "የኦሞ ቤዛ ሚኒስትሪ ንዑስ አስተዳዳሪ ቦት።\n\n/register – ለጋሽ መመዝገብ\n/progress – ሂደትዎ\n/donors – የመዘገቧቸው ለጋሾች\n/extend – ከግብዎ በላይ ለመመዝገብ\n/cancel – የአሁኑን ደረጃ ለማቆም\n/language – English / አማርኛ\n/logout – ለመውጣት",
     unavailable: "ቦቱ አሁን አይሰራም። እባክዎ ቆይተው ይሞክሩ።",
   },
 };
@@ -241,22 +264,29 @@ async function endSession(chatId: number): Promise<void> {
 
 // ---- Screens ---------------------------------------------------------------
 
-async function progressText(me: Me): Promise<string> {
+async function counts(me: Me): Promise<{ registered: number; today: number }> {
   const c = await queryOne<{ registered: number; today: number }>(
     `select count(*)::int as registered, count(*) filter (where created_at > now() - interval '24 hours')::int as today
      from donors where registered_by = $1`,
     [me.id],
   );
-  return T[me.lang].progress(c?.registered ?? 0, me.target, c?.today ?? 0);
+  return { registered: c?.registered ?? 0, today: c?.today ?? 0 };
 }
 
+/** Progress, and once the target is reached, an offer to register more. */
 async function showMenu(chatId: number, me: Me, before = ""): Promise<void> {
-  await reply(chatId, `${before ? `${before}\n\n` : ""}${await progressText(me)}`, menuKeyboard(me.lang));
+  const target = (await queryOne<{ target: number }>("select target from registrars where id = $1", [me.id]))?.target ?? me.target;
+  const c = await counts(me);
+  const t = T[me.lang];
+  await reply(chatId, `${before ? `${before}\n\n` : ""}${t.progress(c.registered, target, c.today)}`, menuKeyboard(me.lang));
+  if (target > 0 && c.registered >= target) {
+    await reply(chatId, t.extendOffer, inline([[{ text: "+5", data: "ext:5" }, { text: "+10", data: "ext:10" }, { text: t.extendOther, data: "ext:other" }]]));
+  }
 }
 
 async function showDonors(chatId: number, me: Me): Promise<void> {
-  const rows = await query<{ name: string; phone: string; amount: number; reminder_day: number; status: string }>(
-    "select name, phone, amount, reminder_day, status from donors where registered_by = $1 order by created_at desc limit 30",
+  const rows = await query<{ name: string; phone: string; amount: number; reminder_day: number; frequency: string; month_day: number; status: string }>(
+    "select name, phone, amount, reminder_day, frequency, month_day, status from donors where registered_by = $1 order by created_at desc limit 30",
     [me.id],
   );
   const total = (await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1", [me.id]))?.n ?? 0;
@@ -264,7 +294,7 @@ async function showDonors(chatId: number, me: Me): Promise<void> {
   if (!total) return reply(chatId, t.noDonors, menuKeyboard(me.lang));
   const lines = rows.map(
     (d, i) =>
-      `${i + 1}. ${d.name} · ${displayPhone(d.phone)}\n    ${birr(d.amount)} ${me.lang === "am" ? "ብር" : "birr"} · ${dayName(d.reminder_day, me.lang)}${
+      `${i + 1}. ${d.name} · ${displayPhone(d.phone)}\n    ${birr(d.amount)} ${me.lang === "am" ? "ብር" : "birr"} · ${periodWords(d.frequency, me.lang).every} · ${scheduleDay(d.frequency, d.reminder_day, d.month_day, me.lang)}${
         d.status === "active" ? "" : ` · ${d.status}`
       }`,
   );
@@ -283,10 +313,12 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
       return reply(chatId, t.askName, noKeyboard);
     case "phone":
       return reply(chatId, t.askPhone);
+    case "freq":
+      return reply(chatId, t.askFreq, inline([[{ text: t.monthly, data: "freq:monthly" }, { text: t.weekly, data: "freq:weekly" }], cancelRow]));
     case "amount":
       return reply(
         chatId,
-        t.askAmount(giving.minAmount),
+        t.askAmount(giving.minAmount, periodWords(data.frequency ?? "weekly", lang).every),
         inline([
           ...chunk(giving.amounts.map((a) => ({ text: `${birr(a)}`, data: `amt:${a}` })), 4),
           [{ text: t.other, data: "amt:other" }, ...cancelRow],
@@ -300,6 +332,10 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
         t.askDay,
         inline([...chunk([0, 1, 2, 3, 4, 5, 6].map((d) => ({ text: dayName(d, lang), data: `day:${d}` })), 4), cancelRow]),
       );
+    case "mday":
+      return reply(chatId, t.askMonthDay, inline([...chunk(MONTH_DAYS.map((d) => ({ text: String(d), data: `mday:${d}` })), 7), cancelRow]));
+    case "extend":
+      return reply(chatId, t.typeExtend);
     case "lang":
       return reply(chatId, t.askLang, inline([[{ text: "English", data: "lang:en" }, { text: "አማርኛ", data: "lang:am" }], cancelRow]));
     case "email":
@@ -309,7 +345,7 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
       const full = { ...data, name: data.name, phone: data.phone, amount: data.amount };
       return reply(
         chatId,
-        t.confirm(full, dayName(data.day ?? giving.defaultDay, lang)),
+        t.confirm(full, scheduleDay(data.frequency ?? "weekly", data.day ?? giving.defaultDay, data.monthDay ?? giving.defaultMonthDay, lang)),
         inline([[{ text: t.yes, data: "ok" }], [{ text: t.restart, data: "restart" }, ...cancelRow]]),
       );
     }
@@ -324,7 +360,9 @@ async function finish(chatId: number, me: Me, data: Data): Promise<void> {
     phone: data.phone,
     email: data.email ?? "",
     amount: data.amount,
+    frequency: data.frequency ?? "weekly",
     day: data.day,
+    monthDay: data.monthDay,
     locale: data.locale ?? me.lang,
     source: "registrar",
     requires: "phone",
@@ -454,6 +492,8 @@ async function onMessage(msg: TgMessage): Promise<void> {
     switch (command) {
       case "/register":
         return ask(chatId, "name", {}, lang, giving);
+      case "/extend":
+        return ask(chatId, "extend", {}, lang, giving);
       case "/progress":
       case "/start":
         await endSession(chatId);
@@ -488,12 +528,18 @@ async function onMessage(msg: TgMessage): Promise<void> {
       const phone = normalizePhone(msg.contact?.phone_number ?? text);
       if (!phone) return reply(chatId, t.badPhone);
       if (await queryOne("select 1 from donors where phone = $1", [phone])) return reply(chatId, t.taken);
-      return ask(chatId, "amount", { ...data, phone }, lang, giving);
+      return ask(chatId, "freq", { ...data, phone }, lang, giving);
     }
     case "amount_custom": {
       const amount = Math.round(Number(text.replace(/[^\d.]/g, "")));
       if (!(amount >= giving.minAmount && amount <= 1_000_000)) return reply(chatId, t.badAmount(giving.minAmount));
-      return ask(chatId, "day", { ...data, amount }, lang, giving);
+      return ask(chatId, data.frequency === "monthly" ? "mday" : "day", { ...data, amount }, lang, giving);
+    }
+    case "extend": {
+      const n = Math.round(Number(text.replace(/[^\d]/g, "")));
+      if (!(n >= 1 && n <= MAX_SELF_EXTEND)) return reply(chatId, t.badExtend);
+      await endSession(chatId);
+      return extend(chatId, me, n);
     }
     case "email": {
       const email = text.toLowerCase();
@@ -504,6 +550,12 @@ async function onMessage(msg: TgMessage): Promise<void> {
       // A button question: ask it again.
       return ask(chatId, session.step, data, lang, giving);
   }
+}
+
+async function extend(chatId: number, me: Me, n: number): Promise<void> {
+  const res = await extendTarget(me.id, n);
+  if (res.ok) return showMenu(chatId, { ...me, target: res.target }, T[me.lang].extended(res.target));
+  return showMenu(chatId, me, res.error === "target_not_reached" ? T[me.lang].notReached : T[me.lang].badExtend);
 }
 
 async function chooseLanguage(chatId: number, lang: Lang): Promise<void> {
@@ -539,13 +591,24 @@ async function onButton(cb: TgCallback): Promise<void> {
     await endSession(chatId);
     return showMenu(chatId, me, T[lang].cancelled);
   }
+  if (key === "ext") {
+    if (value === "other") return ask(chatId, "extend", {}, lang, giving);
+    return extend(chatId, me, Number(value));
+  }
   if (!session) return showMenu(chatId, me);
   const data = session.data;
 
+  if (key === "freq" && session.step === "freq" && (value === "monthly" || value === "weekly")) {
+    return ask(chatId, "amount", { ...data, frequency: value }, lang, giving);
+  }
+  if (key === "mday" && session.step === "mday") {
+    const monthDay = Number(value);
+    if (monthDay >= 1 && monthDay <= 28) return ask(chatId, "lang", { ...data, monthDay }, lang, giving);
+  }
   if (key === "amt" && session.step === "amount") {
     if (value === "other") return ask(chatId, "amount_custom", data, lang, giving);
     const amount = Number(value);
-    if (giving.amounts.includes(amount)) return ask(chatId, "day", { ...data, amount }, lang, giving);
+    if (giving.amounts.includes(amount)) return ask(chatId, data.frequency === "monthly" ? "mday" : "day", { ...data, amount }, lang, giving);
   }
   if (key === "day" && session.step === "day") {
     const day = Number(value);

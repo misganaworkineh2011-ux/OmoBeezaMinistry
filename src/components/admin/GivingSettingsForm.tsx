@@ -14,7 +14,7 @@ import {
   type TelegramStatus,
 } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { DAYS_EN, dayName, type GivingSettings } from "@/lib/giving";
+import { DAYS_EN, MONTH_DAYS, dayName, ordinal, type GivingSettings } from "@/lib/giving";
 
 type Msg = { ok: boolean; text: string } | null;
 
@@ -88,7 +88,7 @@ export default function GivingSettingsForm({
           </div>
           <div className="form-grid">
             <div className="a-field">
-              <label htmlFor="g-amounts">Suggested weekly amounts (birr)</label>
+              <label htmlFor="g-amounts">Suggested amounts (birr)</label>
               <input id="g-amounts" value={amounts} onChange={(e) => setAmounts(e.target.value)} placeholder="50, 100, 250, 500, 1000, 2000, 5000, 10000" />
             </div>
             <div className="a-field">
@@ -96,7 +96,25 @@ export default function GivingSettingsForm({
               <input id="g-min" type="number" min={1} value={form.minAmount} onChange={(e) => set("minAmount", Number(e.target.value))} />
             </div>
             <div className="a-field">
-              <label htmlFor="g-day">Default reminder day</label>
+              <label htmlFor="g-freq">New donors give</label>
+              <select id="g-freq" value={form.defaultFrequency} onChange={(e) => set("defaultFrequency", e.target.value as GivingSettings["defaultFrequency"])}>
+                <option value="monthly">Monthly (default)</option>
+                <option value="weekly">Weekly</option>
+              </select>
+              <span className="a-hint">Selected first on the website, in the apps and in the bots. Donors can still pick the other one.</span>
+            </div>
+            <div className="a-field">
+              <label htmlFor="g-mday">Default day for monthly reminders</label>
+              <select id="g-mday" value={form.defaultMonthDay} onChange={(e) => set("defaultMonthDay", Number(e.target.value))}>
+                {MONTH_DAYS.map((d) => (
+                  <option key={d} value={d}>
+                    {ordinal(d)} of each month
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="a-field">
+              <label htmlFor="g-day">Default day for weekly reminders</label>
               <select id="g-day" value={form.defaultDay} onChange={(e) => set("defaultDay", Number(e.target.value))}>
                 {DAYS_EN.map((d, i) => (
                   <option key={d} value={i}>
@@ -127,13 +145,13 @@ export default function GivingSettingsForm({
             ))}
           </div>
           <label className="a-check">
-            <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} /> Send weekly
+            <input type="checkbox" checked={form.remindersEnabled} onChange={(e) => set("remindersEnabled", e.target.checked)} /> Send
             reminders automatically by Telegram and email (every day at 9:00 Ethiopian time, to donors whose day it is). Donors with only a
             phone number get theirs as SMS from the Android app’s “Send SMS reminders”.
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.skipIfPaid} onChange={(e) => set("skipIfPaid", e.target.checked)} /> Don’t remind donors who already
-            have a payment recorded in the last 6 days
+            have a payment recorded in the last 6 days (monthly donors: 25 days)
           </label>
           <label className="a-check">
             <input type="checkbox" checked={form.telegramEnabled} onChange={(e) => set("telegramEnabled", e.target.checked)} /> Send reminders on

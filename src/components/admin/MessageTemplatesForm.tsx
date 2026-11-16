@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveTemplates } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
-import { dayName, fillTemplate, smsSegments, withoutStop, type TemplateKey } from "@/lib/giving";
+import { fillTemplate, periodWords, scheduleDay, smsSegments, withoutStop, type TemplateKey } from "@/lib/giving";
 
 type Templates = Record<TemplateKey, string>;
 
@@ -21,8 +21,8 @@ const GROUPS: { title: string; hint: string; email: boolean; items: Item[] }[] =
     hint: "Sent automatically by the website to donors who registered with an email address. A “Give” button is added below the text.",
     email: true,
     items: [
-      { label: "Weekly reminder · English", locale: "en", subject: "emailReminderSubjectEn", body: "emailReminderEn" },
-      { label: "Weekly reminder · Amharic", locale: "am", subject: "emailReminderSubjectAm", body: "emailReminderAm" },
+      { label: "Reminder · English", locale: "en", subject: "emailReminderSubjectEn", body: "emailReminderEn" },
+      { label: "Reminder · Amharic", locale: "am", subject: "emailReminderSubjectAm", body: "emailReminderAm" },
       { label: "Welcome · English", locale: "en", subject: "emailWelcomeSubjectEn", body: "emailWelcomeEn" },
       { label: "Welcome · Amharic", locale: "am", subject: "emailWelcomeSubjectAm", body: "emailWelcomeAm" },
     ],
@@ -32,8 +32,8 @@ const GROUPS: { title: string; hint: string; email: boolean; items: Item[] }[] =
     hint: "SMS are sent from the ministry phone with the Android app (“Send SMS reminders”, and the welcome SMS after registering a donor). Telegram reminders use the same text; there {stop} (when included) becomes the bot’s /stop command.",
     email: false,
     items: [
-      { label: "Weekly reminder · English", locale: "en", body: "reminderEn" },
-      { label: "Weekly reminder · Amharic", locale: "am", body: "reminderAm" },
+      { label: "Reminder · English", locale: "en", body: "reminderEn" },
+      { label: "Reminder · Amharic", locale: "am", body: "reminderAm" },
       { label: "Welcome · English", locale: "en", body: "welcomeEn" },
       { label: "Welcome · Amharic", locale: "am", body: "welcomeAm" },
     ],
@@ -66,7 +66,8 @@ export default function MessageTemplatesForm({
     name: locale === "am" ? "አቤ" : "Abebe",
     fullname: locale === "am" ? "አበበ ከበደ" : "Abebe Kebede",
     amount: "100",
-    day: dayName(0, locale),
+    day: scheduleDay("monthly", 0, 5, locale),
+    ...periodWords("monthly", locale),
     link: yebunaUrl || `${origin}${locale === "am" ? "/am" : ""}/donations`,
     stop: `${origin}${locale === "am" ? "/am" : ""}/stop/AbC123xYz9`,
   });
@@ -97,11 +98,23 @@ export default function MessageTemplatesForm({
           </li>
           <li>
             <code>{"{amount}"}</code>
-            <span>Their weekly amount in birr</span>
+            <span>Their amount in birr (each time they give)</span>
           </li>
           <li>
             <code>{"{day}"}</code>
-            <span>Their reminder day</span>
+            <span>Their reminder day: “Monday” for weekly donors, “5th of the month” (ወሩ 5ኛ ቀን) for monthly ones. Write “every {"{day}"}” / “በየ{"{day}"}”.</span>
+          </li>
+          <li>
+            <code>{"{period}"}</code>
+            <span>“monthly” or “weekly” (ወርሃዊ / ሳምንታዊ)</span>
+          </li>
+          <li>
+            <code>{"{every}"}</code>
+            <span>“every month” or “every week” (በየወሩ / በየሳምንቱ)</span>
+          </li>
+          <li>
+            <code>{"{this}"}</code>
+            <span>“this month’s” or “this week’s” (የዚህ ወር / የዚህ ሳምንት)</span>
           </li>
           <li>
             <code>{"{link}"}</code>

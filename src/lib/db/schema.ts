@@ -264,6 +264,9 @@ export const SCHEMA: string[] = [
     lang text not null default 'en',
     linked_at timestamptz not null default now()
   )`,
+  // Weekly or monthly giving. Donors from before it existed gave weekly.
+  `alter table donors add column if not exists frequency text not null default 'weekly'`,
+  `alter table donors add column if not exists month_day int not null default 1`,
   `create table if not exists registrar_bot_sessions (
     chat_id text primary key,
     step text not null,

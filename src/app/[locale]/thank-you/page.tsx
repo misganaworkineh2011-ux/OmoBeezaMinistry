@@ -4,7 +4,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { pageMetadata } from "@/lib/metadata";
 import { richEm } from "@/lib/rich";
-import { dayName, yebunaLink } from "@/lib/giving";
+import { scheduleDay, yebunaLink } from "@/lib/giving";
 import { getGiving } from "@/lib/data/giving";
 import { botUsername } from "@/lib/telegram";
 import Icon, { isIconName } from "@/components/Icon";
@@ -30,7 +30,7 @@ interface Step {
   descr: string;
 }
 
-type Search = Promise<{ name?: string; amount?: string; day?: string; kind?: string; tg?: string }>;
+type Search = Promise<{ name?: string; amount?: string; day?: string; kind?: string; tg?: string; freq?: string; mday?: string }>;
 
 // Rising sparks in the hero: fixed positions so server and browser agree.
 const SPARKS = Array.from({ length: 16 }, (_, i) => ({
@@ -51,7 +51,11 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
   const name = (sp.name ?? "").replace(/[^\p{L}\p{M}' -]/gu, "").trim().split(/\s+/)[0]?.slice(0, 30) ?? "";
   const amount = Math.round(Number(sp.amount));
   const day = Number(sp.day);
-  const weekly = sp.kind === "weekly" && amount > 0 && day >= 0 && day <= 6;
+  const freq = sp.freq === "monthly" ? "monthly" : "weekly";
+  const mday = Number(sp.mday);
+  // A regular (weekly or monthly) giver who just registered.
+  const weekly = sp.kind === "weekly" && amount > 0 && (freq === "monthly" ? mday >= 1 && mday <= 28 : day >= 0 && day <= 6);
+  const when = weekly ? scheduleDay(freq, day, mday, locale) : "";
   // The Ye-Buna payment page for their weekly amount (or the general page).
   const yebunaUrl = yebunaLink(await getGiving(), weekly ? amount : undefined);
   // One-tap link to the reminder bot (only for a valid personal token).
@@ -92,16 +96,16 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
             <div className="thanks-ticket">
               <div className="thanks-ticket__stub">
                 <Icon name={weekly ? "repeat" : "gift"} />
-                <span>{weekly ? t("ticket.weekly") : t("ticket.once")}</span>
+                <span>{weekly ? t("ticket.weekly", { freq }) : t("ticket.once")}</span>
               </div>
               <div className="thanks-ticket__main">
                 {weekly ? (
                   <>
                     <strong>
                       {t("ticket.amount", { amount: amount.toLocaleString("en-US") })}{" "}
-                      <span>{t("ticket.every", { day: dayName(day, locale) })}</span>
+                      <span>{t("ticket.every", { day: when })}</span>
                     </strong>
-                    <p>{t("ticket.sms", { day: dayName(day, locale) })}</p>
+                    <p>{t("ticket.sms", { day: when })}</p>
                     {telegramLink ? (
                       <a className="btn btn--sm thanks-ticket__give thanks-ticket__telegram" href={telegramLink} target="_blank" rel="noopener">
                         <Icon name="telegram" /> {t("ticket.telegram")}
@@ -109,7 +113,7 @@ export default async function ThankYouPage({ params, searchParams }: { params: P
                     ) : null}{" "}
                     {yebunaUrl ? (
                       <a className="btn btn--gold btn--sm thanks-ticket__give" href={yebunaUrl} target="_blank" rel="noopener">
-                        <Icon name="heart" /> {t("ticket.giveNow")} <Icon name="arrowRight" />
+                        <Icon name="heart" /> {t("ticket.giveNow", { freq })} <Icon name="arrowRight" />
                       </a>
                     ) : null}
                   </>

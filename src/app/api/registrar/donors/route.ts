@@ -26,6 +26,8 @@ export async function POST(request: Request): Promise<Response> {
       email: body.email,
       amount: body.amount,
       day: body.day,
+      frequency: body.frequency,
+      monthDay: body.monthDay,
       locale: body.locale,
       notes: body.notes,
       telegram: body.telegram,
@@ -39,7 +41,7 @@ export async function POST(request: Request): Promise<Response> {
       return json(status, { error: res.error, min: res.min });
     }
     const donor = await queryOne(
-      `select id, name, nickname, phone, email, amount, reminder_day, locale, status, source, notes, created_at,
+      `select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, status, source, notes, created_at,
               null as last_reminded_at, null as last_paid, 0 as total
        from donors where id = $1`,
       [res.donor.id],

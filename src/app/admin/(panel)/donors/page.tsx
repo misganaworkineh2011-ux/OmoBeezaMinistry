@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
-import { dayName, displayPhone } from "@/lib/giving";
+import { dayName, displayPhone, ordinal } from "@/lib/giving";
 import Icon, { type IconName } from "@/components/Icon";
 
 export const metadata = { title: "Donors" };
@@ -10,8 +10,10 @@ export const dynamic = "force-dynamic";
 const VIEWS = {
   active: { label: "Active", where: "d.status = 'active'" },
   unpaid: {
-    label: "Not paid in 7 days",
-    where: "d.status = 'active' and not exists (select 1 from donor_payments p where p.donor_id = d.id and p.paid_on > current_date - 7)",
+    label: "Not paid this period",
+    // Weekly donors: nothing in the last 7 days; monthly donors: nothing in the last 31.
+    where:
+      "d.status = 'active' and not exists (select 1 from donor_payments p where p.donor_id = d.id and p.paid_on > current_date - (case when d.frequency = 'monthly' then 31 else 7 end))",
   },
   paused: { label: "Paused", where: "d.status = 'paused'" },
   stopped: { label: "Stopped", where: "d.status = 'stopped'" },
@@ -27,6 +29,8 @@ interface DonorRow {
   email: string;
   amount: number;
   reminder_day: number;
+  frequency: string;
+  month_day: number;
   status: string;
   locale: string;
   created_at: string;
@@ -49,7 +53,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
 
   const [rows, counts, stats] = await Promise.all([
     query<DonorRow>(
-      `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.status, d.locale, d.created_at, d.last_reminded_at, d.source, d.telegram_chat_id is not null as telegram,
+      `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.frequency, d.month_day, d.status, d.locale, d.created_at, d.last_reminded_at, d.source, d.telegram_chat_id is not null as telegram,
               (select max(p.paid_on) from donor_payments p where p.donor_id = d.id)::text as last_paid,
               (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total
        from donors d
@@ -63,9 +67,10 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
         async (v) => [v, (await queryOne<{ n: number }>(`select count(*)::int as n from donors d where ${VIEWS[v].where}`))?.n ?? 0] as const,
       ),
     ),
-    queryOne<{ active: number; weekly: number; received30: number; paid7: number; sms7: number }>(
+    queryOne<{ active: number; weekly: number; monthly: number; received30: number; paid7: number; sms7: number }>(
       `select (select count(*)::int from donors where status = 'active') as active,
-              (select coalesce(sum(amount), 0)::int from donors where status = 'active') as weekly,
+              (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency <> 'monthly') as weekly,
+              (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency = 'monthly') as monthly,
               (select coalesce(sum(amount), 0)::int from donor_payments where paid_on > current_date - 30) as received30,
               (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
               (select count(*)::int from sms_log where status = 'sent' and created_at > now() - interval '7 days') as sms7`,
@@ -73,8 +78,12 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
   ]);
 
   const cards: { icon: IconName; value: string; label: string }[] = [
-    { icon: "users", value: String(stats?.active ?? 0), label: "Active weekly donors" },
-    { icon: "heart", value: (stats?.weekly ?? 0).toLocaleString("en-US"), label: "Birr committed every week" },
+    { icon: "users", value: String(stats?.active ?? 0), label: "Active donors" },
+    {
+      icon: "heart",
+      value: (stats?.monthly ?? 0).toLocaleString("en-US"),
+      label: `Birr a month${stats?.weekly ? `, plus ${stats.weekly.toLocaleString("en-US")} a week` : ""}`,
+    },
     { icon: "check", value: `${stats?.paid7 ?? 0}/${stats?.active ?? 0}`, label: "Paid in the last 7 days" },
     { icon: "bank", value: (stats?.received30 ?? 0).toLocaleString("en-US"), label: "Birr recorded, last 30 days" },
     { icon: "send", value: String(stats?.sms7 ?? 0), label: "Messages sent, last 7 days" },
@@ -87,7 +96,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
       <div className="page-head">
         <div>
           <h1>Donors</h1>
-          <p>People who committed to give weekly in birr. Record payments as they arrive on Ye-Buna to keep totals up to date.</p>
+          <p>People who committed to give monthly or weekly in birr. Record payments as they arrive on Ye-Buna to keep totals up to date.</p>
         </div>
         <div className="btn-group">
           <a className="a-btn a-btn--ghost a-btn--sm" href="/api/admin/donors-export">
@@ -126,7 +135,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
       <section className="panel" style={{ overflowX: "auto" }}>
         {rows.length === 0 ? (
           <p className="empty">
-            {view === "active" && !q ? "No weekly donors yet. They appear here when people register on the Donations page." : "No donors match."}
+            {view === "active" && !q ? "No donors yet. They appear here when people register on the Donations page." : "No donors match."}
           </p>
         ) : (
           <table className="a-table">
@@ -134,7 +143,7 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
               <tr>
                 <th>Name</th>
                 <th>Email / phone</th>
-                <th className="num">Weekly</th>
+                <th className="num">Amount</th>
                 <th>Reminder</th>
                 <th>Status</th>
                 <th>Last payment</th>
@@ -155,15 +164,18 @@ export default async function DonorsPage({ searchParams }: { searchParams: Promi
                     {d.email || null}
                     {d.phone ? d.email ? <div className="a-hint">{displayPhone(d.phone)}</div> : displayPhone(d.phone) : null}
                   </td>
-                  <td className="num">{birr(d.amount)}</td>
+                  <td className="num">
+                    {birr(d.amount)}
+                    <div className="a-hint">{d.frequency === "monthly" ? "a month" : "a week"}</div>
+                  </td>
                   <td>
-                    {dayName(d.reminder_day, "en")}
+                    {d.frequency === "monthly" ? `Monthly, ${ordinal(d.month_day)}` : `Weekly, ${dayName(d.reminder_day, "en")}`}
                     {d.locale === "am" ? " · አማ" : ""}
                   </td>
                   <td>
                     <span className={`pill ${d.status === "active" ? "pill--ok" : d.status === "paused" ? "pill--blue" : ""}`}>{d.status}</span>
                     {d.telegram ? (
-                      <span className="pill pill--blue" title="Gets weekly reminders on Telegram" style={{ marginLeft: 4 }}>
+                      <span className="pill pill--blue" title="Gets reminders on Telegram" style={{ marginLeft: 4 }}>
                         Telegram ✓
                       </span>
                     ) : null}

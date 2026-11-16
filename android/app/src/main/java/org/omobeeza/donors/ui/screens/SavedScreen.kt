@@ -49,7 +49,8 @@ import kotlin.math.sin
 import kotlin.random.Random
 import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.birr
-import org.omobeeza.donors.data.dayName
+import org.omobeeza.donors.data.period
+import org.omobeeza.donors.data.schedule
 import org.omobeeza.donors.data.localPhone
 import org.omobeeza.donors.ui.components.Avatar
 import org.omobeeza.donors.ui.components.GoldButton
@@ -139,8 +140,8 @@ fun SavedScreen(
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Pill("${birr(donor.amount)} birr weekly", Brand.GoldSoft, Brand.Navy)
-                    Pill("Every ${dayName(donor.reminderDay)}", Color(0xFFEEF3FA), Brand.Blue)
+                    Pill("${birr(donor.amount)} birr ${donor.period()}", Brand.GoldSoft, Brand.Navy)
+                    Pill(donor.schedule().replaceFirstChar { it.uppercase() }, Color(0xFFEEF3FA), Brand.Blue)
                     Pill(if (donor.locale == "am") "አማርኛ SMS" else "English SMS", Color(0xFFEDEBE7), Brand.Body)
                 }
             }

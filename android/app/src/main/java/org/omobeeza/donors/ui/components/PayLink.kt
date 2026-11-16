@@ -23,9 +23,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.omobeeza.donors.data.Donor
 import org.omobeeza.donors.data.birr
+import org.omobeeza.donors.data.period
 import org.omobeeza.donors.ui.theme.Brand
 
-/** The donor's payment link for their weekly amount (the ministry's address, forwarding to Ye-Buna), to open or share. */
+/** The donor's payment link for their weekly or monthly amount (the ministry's address, forwarding to Ye-Buna), to open or share. */
 @Composable
 fun PayLinkCard(donor: Donor, link: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
@@ -42,7 +43,7 @@ fun PayLinkCard(donor: Donor, link: String, modifier: Modifier = Modifier) {
                 onClick = {
                     val send = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Give your weekly ${birr(donor.amount)} birr to Omo Beeza: $link")
+                        putExtra(Intent.EXTRA_TEXT, "Give your ${donor.period()} ${birr(donor.amount)} birr to Omo Beeza: $link")
                     }
                     context.startActivity(Intent.createChooser(send, "Share the payment link"))
                 },
