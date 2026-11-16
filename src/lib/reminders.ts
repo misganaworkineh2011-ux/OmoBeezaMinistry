@@ -147,13 +147,7 @@ export function giveButton(
   amount?: number,
 ): InlineButton & { url: string } {
   const am = locale === "am";
-  const text = yebunaLink(giving, amount)
-    ? am
-      ? "❤ በየቡና ይስጡ"
-      : "❤ Give on Ye-Buna"
-    : am
-      ? "❤ ይስጡ"
-      : "❤ Give";
+  const text = am ? "❤ ይለግሱ" : "❤ Donate";
   return { text, url: giveLink(giving, locale, amount) };
 }
 
