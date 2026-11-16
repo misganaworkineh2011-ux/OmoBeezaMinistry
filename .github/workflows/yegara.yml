@@ -21,8 +21,15 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Check the DATABASE_URL secret
+        run: test -n "$DATABASE_URL" || (echo "Add the DATABASE_URL repository secret first (see DEPLOY-YEGARA.md)." && exit 1)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
       - run: npm run build:yegara
         env:
+          # Pages are built from the database: add the Neon connection string as
+          # a repository secret named DATABASE_URL (Settings → Secrets and variables → Actions).
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           IMAGES_UNOPTIMIZED: ${{ inputs.unoptimized_images && '1' || '' }}
           NEXT_TELEMETRY_DISABLED: "1"
       - uses: actions/upload-artifact@v4

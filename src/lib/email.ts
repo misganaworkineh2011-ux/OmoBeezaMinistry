@@ -77,7 +77,7 @@ export async function sendEmail(opts: {
 
   if (!emailConfigured()) {
     await log("failed", "", "Email is not set up (SMTP_HOST, SMTP_USER, SMTP_PASS)");
-    return { ok: false, error: "Email is not set up yet (SMTP_HOST, SMTP_USER and SMTP_PASS in Vercel)." };
+    return { ok: false, error: "Email is not set up yet (SMTP_HOST, SMTP_USER and SMTP_PASS in the environment variables)." };
   }
   try {
     const info = await (await transporter()).sendMail({

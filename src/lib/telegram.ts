@@ -21,7 +21,7 @@ export function webhookSecret(): string {
   return createHash("sha256").update(`omobeeza-webhook:${process.env.TELEGRAM_BOT_TOKEN ?? ""}`).digest("hex").slice(0, 48);
 }
 
-interface TgResult<T> {
+export interface TgResult<T> {
   ok: boolean;
   result?: T;
   description?: string;
@@ -31,6 +31,11 @@ interface TgResult<T> {
 export async function tg<T = unknown>(method: string, body?: Record<string, unknown>): Promise<TgResult<T>> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return { ok: false, description: "TELEGRAM_BOT_TOKEN is not set" };
+  return callBot<T>(token, method, body);
+}
+
+/** Calls the Bot API for any bot token (the donor bot above, or the sub-admin bot). */
+export async function callBot<T = unknown>(token: string, method: string, body?: Record<string, unknown>): Promise<TgResult<T>> {
   try {
     const res = await fetch(`${API}/bot${token}/${method}`, {
       method: "POST",

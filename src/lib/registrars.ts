@@ -53,9 +53,10 @@ function bearer(request: Request): string | null {
   return m ? m[1] : null;
 }
 
-/** Signs the sub-admin out everywhere (after a password change, pause or removal). */
+/** Signs the sub-admin out everywhere, the app and the Telegram bot (after a password change, pause or removal). */
 export async function endRegistrarSessions(registrarId: number): Promise<void> {
   await query("delete from registrar_sessions where registrar_id = $1", [registrarId]);
+  await query("delete from registrar_telegram where registrar_id = $1", [registrarId]);
 }
 
 export async function revokeRegistrarToken(request: Request): Promise<void> {

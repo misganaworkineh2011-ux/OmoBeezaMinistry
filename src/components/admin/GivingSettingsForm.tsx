@@ -3,12 +3,14 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  connectSubBot,
   connectTelegramBot,
   inviteToTelegram,
   runRemindersNow,
   saveGiving,
   sendTestEmail,
   telegramAccountStatus,
+  type SubBotStatus,
   type TelegramStatus,
 } from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
@@ -27,6 +29,7 @@ export default function GivingSettingsForm({
   dueToday,
   telegram,
   invites,
+  subBot,
   accountConfigured,
 }: {
   initial: GivingSettings;
@@ -36,6 +39,7 @@ export default function GivingSettingsForm({
   telegram: TelegramStatus;
   /** Donors with an email who aren't on the bot and haven't been invited yet. */
   invites: { withEmail: number };
+  subBot: SubBotStatus;
   accountConfigured: boolean;
 }) {
   const router = useRouter();
@@ -47,6 +51,7 @@ export default function GivingSettingsForm({
   const [testMsg, setTestMsg] = useState<Msg>(null);
   const [runMsg, setRunMsg] = useState<Msg>(null);
   const [tgMsg, setTgMsg] = useState<Msg>(null);
+  const [subMsg, setSubMsg] = useState<Msg>(null);
   const [inviteMsg, setInviteMsg] = useState<Msg>(null);
   const [accountMsg, setAccountMsg] = useState<Msg>(null);
 
@@ -190,7 +195,7 @@ export default function GivingSettingsForm({
           </ul>
           {!email.ready ? (
             <p className="a-hint" style={{ marginTop: 10 }}>
-              Add SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS in Vercel → Settings → Environment Variables, then redeploy. With Gmail: smtp.gmail.com,
+              Add SMTP_HOST, SMTP_PORT, SMTP_USER and SMTP_PASS in the environment variables (Yegara: cPanel → Setup Node.js App → your app), then restart the app. With Gmail: smtp.gmail.com,
               port 465, the Gmail address, and an app password (Google Account → Security → 2-Step Verification → App passwords).
             </p>
           ) : null}
@@ -230,8 +235,8 @@ export default function GivingSettingsForm({
           {telegram.lastError ? <p className="a-hint">Last Telegram error: {telegram.lastError}</p> : null}
           {!telegram.configured ? (
             <p className="a-hint" style={{ marginTop: 10 }}>
-              Create a bot with @BotFather in Telegram (/newbot), then add its token as TELEGRAM_BOT_TOKEN in Vercel → Settings → Environment
-              Variables and redeploy.
+              Create a bot with @BotFather in Telegram (/newbot), then add its token as TELEGRAM_BOT_TOKEN in the environment variables
+              (Yegara: cPanel → Setup Node.js App → your app) and restart the app.
             </p>
           ) : (
             <button
@@ -248,6 +253,66 @@ export default function GivingSettingsForm({
               }
             >
               <Icon name="send" /> {telegram.connected ? "Reconnect the bot" : "Connect the bot"}
+            </button>
+          )}
+        </section>
+
+        <section className="panel">
+          <div className="panel__head">
+            <h2>Sub-admin Telegram bot</h2>
+          </div>
+          <p className="a-hint" style={{ marginBottom: 10 }}>
+            For sub-admins without an Android phone (iPhone): a second bot where they sign in with their phone number and password and register
+            donors, like in the Sub-admin app. Donors never see it.
+          </p>
+          <Notice msg={subMsg} />
+          <ul className="q-log" style={{ marginTop: 0 }}>
+            <li>
+              <span>Bot token (TELEGRAM_SUBADMIN_BOT_TOKEN)</span>
+              <span className={`pill ${subBot.configured ? "pill--ok" : "pill--new"}`}>{subBot.configured ? "Set" : "Missing"}</span>
+            </li>
+            <li>
+              <span>Bot (send this link to sub-admins)</span>
+              <span className="pill">
+                {subBot.bot ? (
+                  <a href={`https://t.me/${subBot.bot}`} target="_blank" rel="noopener">
+                    t.me/{subBot.bot}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </li>
+            <li>
+              <span>Connected to this website</span>
+              <span className={`pill ${subBot.connected ? "pill--ok" : "pill--new"}`}>{subBot.connected ? "Yes" : "No"}</span>
+            </li>
+            <li>
+              <span>Sub-admins signed in</span>
+              <span className="pill">{subBot.signedIn}</span>
+            </li>
+          </ul>
+          {subBot.lastError ? <p className="a-hint">Last Telegram error: {subBot.lastError}</p> : null}
+          {!subBot.configured ? (
+            <p className="a-hint" style={{ marginTop: 10 }}>
+              Create a second bot with @BotFather in Telegram (/newbot, for example “Omo Beeza Sub-admins”), then add its token as
+              TELEGRAM_SUBADMIN_BOT_TOKEN in the environment variables (Yegara: cPanel → Setup Node.js App → your app) and restart the app.
+            </p>
+          ) : (
+            <button
+              type="button"
+              className="a-btn"
+              style={{ marginTop: 10 }}
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  const res = await connectSubBot();
+                  setSubMsg(res.ok ? { ok: true, text: "Connected. Sub-admins can now press Start on the bot." } : { ok: false, text: res.error ?? "Not connected." });
+                  router.refresh();
+                })
+              }
+            >
+              <Icon name="send" /> {subBot.connected ? "Reconnect the sub-admin bot" : "Connect the sub-admin bot"}
             </button>
           )}
         </section>
@@ -303,7 +368,7 @@ export default function GivingSettingsForm({
           ) : (
             <p className="a-hint">
               Not set up. On a computer, run <code>npm run telegram-login</code> in the project folder and add the printed TELEGRAM_API_ID,
-              TELEGRAM_API_HASH and TELEGRAM_SESSION in Vercel.
+              TELEGRAM_API_HASH and TELEGRAM_SESSION to the environment variables.
             </p>
           )}
         </section>

@@ -7,6 +7,7 @@ import { query, queryOne } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { refresh } from "@/lib/data/cache";
 import { chunkText, cleanText, docKind, extractText, titleFromFile } from "@/lib/knowledge-text";
+import { diskPath, FILES_PREFIX } from "@/lib/uploads";
 
 type Result = { ok: boolean; error?: string; passages?: number };
 
@@ -46,6 +47,11 @@ async function store(title: string, text: string, fileUrl: string | null): Promi
 }
 
 async function readUploaded(url: string): Promise<Uint8Array> {
+  if (url.startsWith(FILES_PREFIX)) {
+    const file = diskPath(url);
+    if (!file) throw new Error("Invalid file path");
+    return new Uint8Array(await readFile(file));
+  }
   if (url.startsWith("/uploads/")) {
     const root = path.join(process.cwd(), "public");
     const file = path.normalize(path.join(root, url));

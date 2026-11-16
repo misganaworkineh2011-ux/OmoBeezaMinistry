@@ -23,7 +23,7 @@ android {
         versionCode = 12
         versionName = "1.5.0"
         // The ministry website the app talks to (can be changed on the sign-in screen).
-        buildConfigField("String", "DEFAULT_SITE", "\"https://omo-beeza-ministry-seven.vercel.app\"")
+        buildConfigField("String", "DEFAULT_SITE", "\"https://www.omobeezaministry.org\"")
     }
 
     // Two apps from the same code:

@@ -2,7 +2,7 @@
 
 import { upload, uploadPresigned } from "@vercel/blob/client";
 
-export type UploadMode = "blob" | "presigned" | "local" | "none";
+export type UploadMode = "disk" | "blob" | "presigned" | "local" | "none";
 
 export interface Uploaded {
   url: string;
@@ -10,7 +10,7 @@ export interface Uploaded {
   h?: number;
 }
 
-/** Upload one file (Vercel Blob in production, public/uploads locally). Returns its URL. */
+/** Upload one file (the server's uploads folder, Vercel Blob, or public/uploads locally). Returns its URL. */
 export async function uploadFile(
   file: File | Blob,
   name: string,
@@ -18,8 +18,10 @@ export async function uploadFile(
   mode: UploadMode,
   onProgress?: (percent: number) => void,
 ): Promise<string> {
-  if (mode === "none") throw new Error("Uploads are not configured (connect Vercel Blob).");
+  if (mode === "none") throw new Error("Uploads are not configured (set UPLOADS_DIR on the server).");
   const safe = name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+
+  if (mode === "disk") return diskUpload(file, safe, folder, onProgress);
 
   if (mode === "blob" || mode === "presigned") {
     const send = mode === "blob" ? upload : uploadPresigned;
@@ -51,6 +53,55 @@ export async function uploadFile(
     xhr.onerror = () => reject(new Error("Network error during upload"));
     xhr.send(form);
   });
+}
+
+async function api<T>(init: RequestInit & { query?: string }): Promise<T> {
+  const res = await fetch(`/api/admin/upload${init.query ?? ""}`, init);
+  const body = (await res.json().catch(() => ({}))) as T & { error?: string };
+  if (!res.ok) throw Object.assign(new Error(body.error ?? `Upload failed (${res.status})`), { status: res.status, body });
+  return body;
+}
+
+/** Sends the file to the server's uploads folder in pieces, retrying a piece a few times if the connection drops. */
+async function diskUpload(file: File | Blob, name: string, folder: string, onProgress?: (percent: number) => void): Promise<string> {
+  const type = file.type || (name.endsWith(".md") ? "text/markdown" : name.endsWith(".txt") ? "text/plain" : "");
+  const { id, chunk } = await api<{ id: string; chunk: number }>({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "start", name, folder, type, size: file.size }),
+  });
+  let offset = 0;
+  while (offset < file.size) {
+    const piece = file.slice(offset, offset + chunk);
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const { received } = await api<{ received: number }>({
+          method: "PUT",
+          query: `?id=${id}&offset=${offset}`,
+          headers: { "Content-Type": "application/octet-stream" },
+          body: piece,
+        });
+        offset = received;
+        break;
+      } catch (err) {
+        const e = err as Error & { status?: number; body?: { received?: number } };
+        // The server already has more than we thought: continue from there.
+        if (e.status === 409 && typeof e.body?.received === "number") {
+          offset = e.body.received;
+          break;
+        }
+        if (attempt >= 4 || (e.status && e.status < 500 && e.status !== 408)) throw err;
+        await new Promise((r) => setTimeout(r, 1500 * attempt));
+      }
+    }
+    onProgress?.(Math.round((offset / file.size) * 100));
+  }
+  const { url } = await api<{ url: string }>({
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "finish", id }),
+  });
+  return url;
 }
 
 export function imageSize(file: File | Blob): Promise<{ w: number; h: number }> {

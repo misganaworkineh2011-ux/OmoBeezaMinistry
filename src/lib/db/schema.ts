@@ -255,6 +255,21 @@ export const SCHEMA: string[] = [
     created_at timestamptz not null default now()
   )`,
   `alter table donors add column if not exists registered_by int references registrars(id) on delete set null`,
+  // Sub-admins signed in to the sub-admin Telegram bot (one row per chat), and
+  // where each of them is in a bot conversation (signing in, registering a donor).
+  `create table if not exists registrar_telegram (
+    chat_id text primary key,
+    registrar_id int not null references registrars(id) on delete cascade,
+    username text not null default '',
+    lang text not null default 'en',
+    linked_at timestamptz not null default now()
+  )`,
+  `create table if not exists registrar_bot_sessions (
+    chat_id text primary key,
+    step text not null,
+    data jsonb not null default '{}',
+    updated_at timestamptz not null default now()
+  )`,
   `create index if not exists donors_registered_by on donors (registered_by)`,
   `create index if not exists donor_payments_donor on donor_payments (donor_id, paid_on desc)`,
   `create index if not exists sms_log_created on sms_log (created_at desc)`,

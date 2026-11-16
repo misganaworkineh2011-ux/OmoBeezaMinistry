@@ -12,7 +12,7 @@ export interface SiteSettings {
 
 /** Fixed identity (not editable): used for metadata, sitemap and links. */
 export const SITE_NAME = "Omo Beeza Ministry";
-export const SITE_URL = "https://omobeezaministry.com";
+export const SITE_URL = "https://www.omobeezaministry.org";
 export const LOGO_SRC = "/img/omo-beeza-logo-02.png";
 
 export const DEFAULT_SITE: SiteSettings = {

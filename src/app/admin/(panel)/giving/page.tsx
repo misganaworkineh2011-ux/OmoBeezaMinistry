@@ -6,7 +6,7 @@ import { displayPhone, ethiopiaWeekday } from "@/lib/giving";
 import { emailConfig } from "@/lib/email";
 import { publicOrigin } from "@/lib/origin";
 import GivingSettingsForm from "@/components/admin/GivingSettingsForm";
-import { inviteCounts, telegramStatus } from "@/app/admin/actions/donors";
+import { inviteCounts, subBotStatus, telegramStatus } from "@/app/admin/actions/donors";
 import { accountConfigured } from "@/lib/telegram-user";
 
 export const metadata = { title: "Giving & reminders" };
@@ -30,7 +30,7 @@ interface LogRow {
 
 export default async function GivingPage() {
   await requireUser();
-  const [giving, due, log, totals, telegram, invites] = await Promise.all([
+  const [giving, due, log, totals, telegram, invites, subBot] = await Promise.all([
     readGivingNow(),
     queryOne<{ n: number }>(
       `select count(*)::int as n from donors where status = 'active' and reminder_day = $1
@@ -47,6 +47,7 @@ export default async function GivingPage() {
     ),
     telegramStatus(),
     inviteCounts(),
+    subBotStatus(),
   ]);
 
   return (
@@ -60,6 +61,7 @@ export default async function GivingPage() {
 
       <GivingSettingsForm initial={giving} origin={publicOrigin()} email={emailConfig()} dueToday={due?.n ?? 0} telegram={telegram}
         invites={invites}
+        subBot={subBot}
         accountConfigured={accountConfigured()}
       />
 

@@ -21,6 +21,7 @@ import {
 import { donorMessage, emailDonor, giveButton, runReminders, type DonorForSms, type ReminderRun } from "@/lib/reminders";
 import { botUsername, sendTelegram, telegramConfigured, tg, webhookSecret } from "@/lib/telegram";
 import { accountConfigured, accountInfo } from "@/lib/telegram-user";
+import { SUBADMIN_WEBHOOK_PATH, subBot, subBotConfigured, subBotSecret, subBotUsername } from "@/lib/telegram-subadmin";
 import { closeEmail, emailConfigured, sendEmail } from "@/lib/email";
 
 type Result = { ok: boolean; error?: string; id?: number };
@@ -239,7 +240,7 @@ export async function telegramStatus(): Promise<TelegramStatus> {
 /** Points the bot at this website, so it can answer donors and link their chats. */
 export async function connectTelegramBot(): Promise<Result> {
   await requireUser();
-  if (!telegramConfigured()) return { ok: false, error: "Add TELEGRAM_BOT_TOKEN in Vercel first, then redeploy." };
+  if (!telegramConfigured()) return { ok: false, error: "Add TELEGRAM_BOT_TOKEN to the environment variables first, then restart the app." };
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   if (!host || /^(localhost|127\.|10\.|192\.168\.)/.test(host)) {
@@ -258,6 +259,61 @@ export async function connectTelegramBot(): Promise<Result> {
       { command: "status", description: "Your weekly gift" },
       { command: "stop", description: "Stop reminders here" },
     ],
+  });
+  return { ok: true };
+}
+
+export interface SubBotStatus {
+  configured: boolean;
+  bot: string;
+  connected: boolean;
+  lastError: string;
+  /** Sub-admins signed in to the bot. */
+  signedIn: number;
+}
+
+export async function subBotStatus(): Promise<SubBotStatus> {
+  await requireUser();
+  const signedIn = (await queryOne<{ n: number }>("select count(distinct registrar_id)::int as n from registrar_telegram"))?.n ?? 0;
+  if (!subBotConfigured()) return { configured: false, bot: "", connected: false, lastError: "", signedIn };
+  const [bot, info] = await Promise.all([subBotUsername(), subBot<{ url: string; last_error_message?: string }>("getWebhookInfo")]);
+  return {
+    configured: true,
+    bot,
+    connected: (info.result?.url ?? "").endsWith(SUBADMIN_WEBHOOK_PATH),
+    lastError: info.result?.last_error_message ?? (info.ok ? "" : (info.description ?? "")),
+    signedIn,
+  };
+}
+
+/** Points the sub-admin bot at this website. */
+export async function connectSubBot(): Promise<Result> {
+  await requireUser();
+  if (!subBotConfigured()) return { ok: false, error: "Add TELEGRAM_SUBADMIN_BOT_TOKEN to the environment variables first, then restart the app." };
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  if (!host || /^(localhost|127\.|10\.|192\.168\.)/.test(host)) {
+    return { ok: false, error: "Connect the bot from the live website (Telegram can't reach this computer)." };
+  }
+  const res = await subBot("setWebhook", {
+    url: `https://${host}${SUBADMIN_WEBHOOK_PATH}`,
+    secret_token: subBotSecret(),
+    allowed_updates: ["message", "callback_query"],
+    drop_pending_updates: true,
+  });
+  if (!res.ok) return { ok: false, error: `Telegram: ${res.description ?? "failed"}` };
+  await subBot("setMyCommands", {
+    commands: [
+      { command: "register", description: "Register a donor" },
+      { command: "progress", description: "Your progress" },
+      { command: "donors", description: "The donors you registered" },
+      { command: "cancel", description: "Stop the current step" },
+      { command: "language", description: "English / አማርኛ" },
+      { command: "logout", description: "Sign out" },
+    ],
+  });
+  await subBot("setMyDescription", {
+    description: "For Omo Beeza Ministry sub-admins: register weekly donors. Sign in with the phone number and password the admin gave you.",
   });
   return { ok: true };
 }
@@ -297,7 +353,7 @@ export async function inviteToTelegram(): Promise<Result & { sent?: number; fail
   await requireUser();
   const bot = await botUsername();
   if (!bot) return { ok: false, error: "Set up the Telegram bot first (TELEGRAM_BOT_TOKEN)." };
-  if (!emailConfigured()) return { ok: false, error: "Set up email first (SMTP settings in Vercel)." };
+  if (!emailConfigured()) return { ok: false, error: "Set up email first (SMTP settings in the environment variables)." };
   const donors = await query<{ id: number; name: string; nickname: string; email: string; locale: string; token: string }>(
     `select id, name, nickname, email, locale, token from donors where ${INVITE_WHERE} order by id limit 200`,
   );

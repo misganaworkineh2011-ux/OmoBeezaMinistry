@@ -8,6 +8,8 @@ import BarChart from "@/components/admin/BarChart";
 import ImportButton from "@/components/admin/ImportButton";
 import MediaMover from "@/components/admin/MediaMover";
 import { mediaStatus } from "@/app/admin/actions/media";
+import { blobFilesLeft } from "@/app/admin/actions/blob-to-disk";
+import BlobPuller from "@/components/admin/BlobPuller";
 
 export const metadata = { title: "Overview" };
 // The media move (a server action on this page) runs in ~35 s batches.
@@ -41,6 +43,7 @@ export default async function Overview() {
   const needsImport = !(await queryOne("select 1 from settings where key = 'knowledge_managed'")) || posts === 0;
   const mode = uploadMode();
   const toMove = !needsImport && (mode === "blob" || mode === "presigned") ? await mediaStatus() : 0;
+  const toPull = mode === "disk" ? await blobFilesLeft().catch(() => 0) : 0;
 
   const cards = [
     { href: "/admin/inbox", icon: "mail", value: unread, label: "Unread messages" },
@@ -74,6 +77,21 @@ export default async function Overview() {
         </section>
       ) : null}
 
+      {toPull > 0 ? (
+        <section className="panel" style={{ marginBottom: 18 }}>
+          <div className="panel__head">
+            <div>
+              <h2>Copy files from Vercel to this server</h2>
+              <p>
+                {toPull} photos, videos or documents are still stored in Vercel Blob. Copy them onto this server so the
+                website no longer needs Vercel. Large videos take a little while; keep this page open until it finishes.
+              </p>
+            </div>
+          </div>
+          <BlobPuller remaining={toPull} />
+        </section>
+      ) : null}
+
       {toMove > 0 ? (
         <section className="panel" style={{ marginBottom: 18 }}>
           <div className="panel__head">
@@ -94,8 +112,8 @@ export default async function Overview() {
           <Icon name="info" />
           <span>
             {mode === "none"
-              ? "Uploads are disabled: connect a Vercel Blob store to this project (it adds BLOB_STORE_ID or BLOB_READ_WRITE_TOKEN) and redeploy."
-              : "Local development: uploads are saved in public/uploads on this computer. On Vercel, connect Blob storage."}
+              ? "Uploads are disabled: set UPLOADS_DIR (a folder on the server for uploaded files) in the environment variables and restart."
+              : "Local development: uploads are saved in public/uploads on this computer."}
           </span>
         </p>
       ) : null}

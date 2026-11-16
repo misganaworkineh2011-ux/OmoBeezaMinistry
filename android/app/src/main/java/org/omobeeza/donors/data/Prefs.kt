@@ -10,12 +10,13 @@ class Prefs(context: Context) {
     init {
         // Earlier versions defaulted to addresses that aren't the ministry's live
         // site; forget those once so the current default is used.
-        if (sp.getInt("siteVersion", 1) < 3) {
+        // The website moved from Vercel (….vercel.app) to www.omobeezaministry.org on Yegara.
+        if (sp.getInt("siteVersion", 1) < 4) {
             val saved = sp.getString("site", null).orEmpty()
-            if (saved.contains("omobeezaministry.com") || saved.trimEnd('/').endsWith("://omo-beeza-ministry.vercel.app")) {
+            if (saved.contains("omobeezaministry.com") || saved.contains(".vercel.app")) {
                 sp.edit().remove("site").apply()
             }
-            sp.edit().putInt("siteVersion", 3).apply()
+            sp.edit().putInt("siteVersion", 4).apply()
         }
     }
 
