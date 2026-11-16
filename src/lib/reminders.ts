@@ -137,6 +137,7 @@ export function emailDonor(
     kind,
     donorId: donor.id,
     button: giveButton(giving, donor.locale, donor.amount),
+    unsubscribe: donor.token,
   });
 }
 

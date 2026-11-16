@@ -1,5 +1,6 @@
 import "server-only";
 import { query } from "@/lib/db";
+import { publicOrigin } from "@/lib/origin";
 
 // Email through any SMTP server. Configure in Vercel:
 //   SMTP_HOST   e.g. smtp.gmail.com            — required
@@ -7,6 +8,7 @@ import { query } from "@/lib/db";
 //   SMTP_USER   the mailbox to sign in as       — required
 //   SMTP_PASS   its password (for Gmail: an app password) — required
 //   EMAIL_FROM  e.g. "Omo Beeza Ministry <omobeeza@gmail.com>" — optional, defaults to SMTP_USER
+//   EMAIL_REPLY_TO  where donors' replies go — optional
 // Every attempt is written to sms_log (channel 'email') so the dashboard shows it.
 
 export type EmailKind = "reminder" | "welcome" | "test" | "manual";
@@ -68,6 +70,8 @@ export async function sendEmail(opts: {
   kind: EmailKind;
   donorId?: number | null;
   button?: { text: string; url: string };
+  /** The donor's token: adds the one-click "Unsubscribe" header mail apps (and Gmail's spam filter) look for. */
+  unsubscribe?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const log = (status: "sent" | "failed", providerId: string, error: string) =>
     query(
@@ -86,6 +90,15 @@ export async function sendEmail(opts: {
       subject: opts.subject,
       text: opts.button && !opts.text.includes(opts.button.url) ? `${opts.text}\n\n${opts.button.text}: ${opts.button.url}` : opts.text,
       html: toHtml(opts.text, opts.button),
+      ...(process.env.EMAIL_REPLY_TO ? { replyTo: process.env.EMAIL_REPLY_TO } : {}),
+      ...(opts.unsubscribe
+        ? {
+            headers: {
+              "List-Unsubscribe": `<${publicOrigin()}/api/unsubscribe/${opts.unsubscribe}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+          }
+        : {}),
     });
     await log("sent", info.messageId ?? "", "");
     return { ok: true };
