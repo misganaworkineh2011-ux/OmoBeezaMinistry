@@ -278,4 +278,16 @@ export const SCHEMA: string[] = [
   `create index if not exists sms_log_created on sms_log (created_at desc)`,
   `create index if not exists submissions_created on submissions (created_at desc)`,
   `create index if not exists chat_logs_created on chat_logs (created_at desc)`,
+  // The Android apps (Dashboard → Apps): the latest uploaded APK of each, kept
+  // in the database (base64) so it works on any host and survives updates.
+  `create table if not exists app_files (
+    app text primary key,
+    version text not null,
+    file_name text not null,
+    size int not null,
+    sha256 text not null,
+    data text not null,
+    uploaded_by text not null default '',
+    uploaded_at timestamptz not null default now()
+  )`,
 ];
