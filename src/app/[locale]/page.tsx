@@ -175,15 +175,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </div>
 
-      {/* THE STORY, ILLUSTRATED — a scene that plays as visitors scroll */}
-      <StoryScroll
-        chapters={chapters}
-        label={tMotion("story.label")}
-        scrollHint={tMotion("story.scroll")}
-        donate={tMotion("story.donate")}
-        more={tMotion("story.more")}
-      />
-
       {/* ABOUT */}
       <section className="section">
         <div className="container split">
@@ -513,6 +504,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       ) : null}
 
       <CtaBand />
+
+      {/* THE STORY, ILLUSTRATED — the closing scene, played by scrolling */}
+      <StoryScroll
+        chapters={chapters}
+        highlights={{
+          2: stats[2] ? [{ value: stats[2].value, label: stats[2].label }] : [],
+          3: stats.slice(0, 2).map((s) => ({ value: s.value, label: s.label })),
+        }}
+        label={tMotion("story.label")}
+        scrollHint={tMotion("story.scroll")}
+        donate={tMotion("story.donate")}
+        more={tMotion("story.more")}
+      />
     </>
   );
 }

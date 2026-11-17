@@ -22,7 +22,7 @@ export const SECTION_GROUPS: { title: string; sections: Section[] }[] = [
       { ns: "donations", title: "Donate page", descr: "Donation page text, gift impact amounts, bank wording." },
       { ns: "thanks", title: "Thank-you page", descr: "The page donors see after giving: headline, letter, impact steps and verse." },
       { ns: "giving", title: "Monthly & weekly giving", descr: "Monthly / weekly birr giving form (Ye-Buna), success message and the stop-reminders page." },
-      { ns: "motion", title: "Animated stories", descr: "The animated scenes: the home-page story, where a gift goes (Donate), the South Omo map (About) and the whole-child orbit (Programs)." },
+      { ns: "motion", title: "Animated stories", descr: "The animated scenes: the story at the end of the home page, where a gift goes (Donate) and the South Omo map (About)." },
       { ns: "careers", title: "Careers page", descr: "Why serve, open positions, application form labels." },
       { ns: "contact", title: "Contact page", descr: "Contact page text and form subjects." },
       { ns: "faq", title: "FAQ page", descr: "Questions and answers, grouped by topic." },

@@ -1,19 +1,32 @@
 /* ==========================================================================
    Motion graphics — the illustrated, animated story sections:
-   .story    Home: the pinned scroll story (src/components/motion/StoryScroll.tsx)
+   .story    Home (bottom): the pinned scroll story (src/components/motion/StoryScroll.tsx)
    .journey  Donations: where a gift goes (GiftJourney.tsx)
    .lightmap About: a light in South Omo (LightMap.tsx)
-   .orbit    Programs: growing in every way (WholeChild.tsx)
    Everything is CSS transitions / keyframes on SVG and HTML; reduced motion
    turns the movement off (end of file).
    ========================================================================== */
 
 /* ------------------------------------------------------------------ Story (home) */
+/* Scroll-scrubbed values come from StoryScroll.tsx as custom properties:
+   --p (0…1 through the story), --cp (0…1 through the chapter), --cs/--cx/--cy
+   (camera), --sunx/--suny, --moony, and the time of day --night/--dawn/--day/--dusk. */
 .story {
   --p: 0;
+  --cp: 0;
+  --cs: 1;
+  --cx: 0;
+  --cy: 0;
+  --sunx: 1180;
+  --suny: 860;
+  --moony: 175;
+  --night: 1;
+  --dawn: 0;
+  --day: 0;
+  --dusk: 0;
   position: relative;
-  height: calc(var(--chapters, 5) * 92svh);
-  background: #071526;
+  height: calc(var(--chapters, 5) * 110svh);
+  background: #030a14;
 }
 
 .story__stage {
@@ -32,235 +45,225 @@
   display: block;
 }
 
-/* Sky cross-fades */
-.story-sky {
-  opacity: 0;
-  transition: opacity 1.6s var(--ease);
+/* Sky and time of day */
+.sky--dawn {
+  opacity: var(--dawn);
 }
-.story[data-chapter="0"] .story-sky--night,
-.story[data-chapter="1"] .story-sky--dawn,
-.story[data-chapter="2"] .story-sky--day,
-.story[data-chapter="3"] .story-sky--day,
-.story[data-chapter="4"] .story-sky--dusk {
-  opacity: 1;
+.sky--day {
+  opacity: var(--day);
 }
-.story-sky--night {
-  opacity: 1;
+.sky--dusk {
+  opacity: var(--dusk);
 }
-
-.story-stars {
-  transition: opacity 1.4s var(--ease);
+.nightsky {
+  opacity: calc(var(--night) + var(--dawn) * 0.3 + var(--dusk) * 0.25);
 }
-.story-stars circle {
-  animation: story-twinkle 3.2s ease-in-out infinite;
+.star {
+  animation: story-twinkle 3.4s ease-in-out infinite;
 }
-.story:not([data-chapter="0"]) .story-stars {
-  opacity: 0;
-}
-.story[data-chapter="1"] .story-stars {
-  opacity: 0.25;
-}
-
 @keyframes story-twinkle {
   0%,
   100% {
-    opacity: 0.9;
+    opacity: 0.95;
   }
   50% {
-    opacity: 0.25;
+    opacity: 0.2;
   }
 }
-
-/* Sun */
-.story-sun {
-  transform: translateY(560px);
-  transition: transform 2.2s var(--ease);
-}
-.story[data-chapter="1"] .story-sun {
-  transform: translateY(210px);
-}
-.story[data-chapter="2"] .story-sun,
-.story[data-chapter="3"] .story-sun {
-  transform: translateY(0);
-}
-.story[data-chapter="4"] .story-sun {
-  transform: translateY(150px);
-}
-.story-sun__rays {
+.shooting {
   transform-box: view-box;
-  transform-origin: 1170px 300px;
-  animation: story-spin 40s linear infinite;
+  opacity: 0;
+  animation: story-shoot 9s ease-in infinite 2s;
 }
-
+@keyframes story-shoot {
+  0% {
+    transform: translate(1350px, 40px);
+    opacity: 0;
+  }
+  2% {
+    opacity: 1;
+  }
+  9% {
+    transform: translate(820px, 215px);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(820px, 215px);
+    opacity: 0;
+  }
+}
+.moon {
+  transform: translateY(calc(var(--moony) * 1px));
+  opacity: calc(1 - var(--day) - var(--dusk));
+}
+.sun {
+  transform: translate(calc(var(--sunx) * 1px), calc(var(--suny) * 1px));
+}
+.sun__rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: calc(var(--day) * 0.9 + var(--dusk) * 0.5 + var(--dawn) * 0.4);
+  animation: story-spin 70s linear infinite;
+}
 @keyframes story-spin {
   to {
     transform: rotate(360deg);
   }
 }
-
-/* Clouds and birds appear by day */
-.story-clouds,
-.story-birds {
-  opacity: 0;
-  transition: opacity 1.4s var(--ease);
+.clouds {
+  opacity: calc(var(--day) * 0.85 + var(--dawn) * 0.35 + var(--dusk) * 0.4);
 }
-.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .story-clouds {
-  opacity: 1;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story-birds {
-  opacity: 0.8;
-}
-.story-cloud {
+.cloud {
+  transform-box: view-box;
   animation: story-drift linear infinite;
 }
 @keyframes story-drift {
   from {
-    transform: translateX(-500px);
+    transform: translateX(-600px);
   }
   to {
-    transform: translateX(1800px);
-  }
-}
-.story-bird {
-  transform-box: view-box;
-  animation: story-fly 22s linear infinite;
-}
-.story-bird:nth-child(2) {
-  animation-duration: 26s;
-}
-.story-bird:nth-child(3) {
-  animation-duration: 30s;
-}
-@keyframes story-fly {
-  from {
-    transform: translate(-80px, 260px) scale(1);
-  }
-  50% {
-    transform: translate(800px, 180px) scale(0.9);
-  }
-  to {
-    transform: translate(1700px, 230px) scale(0.8);
+    transform: translateX(1900px);
   }
 }
 
-/* Landscape colours per chapter; layers drift with the scroll */
-.story-far,
-.story-mid,
-.story-ground {
-  transition: fill 1.6s var(--ease);
-}
-.story-far {
-  fill: #0f2a47;
-}
-.story-mid {
-  fill: #0c2238;
-}
-.story-ground {
-  fill: #081a2e;
-}
-.story-tree,
-.story-hut {
-  color: #04101f;
-  transition: color 1.6s var(--ease);
-}
-.story-hut {
-  color: #0a1c30;
-}
-.story[data-chapter="1"] .story-far {
-  fill: #4b4f7a;
-}
-.story[data-chapter="1"] .story-mid {
-  fill: #7a5a5e;
-}
-.story[data-chapter="1"] .story-ground {
-  fill: #8a5a3c;
-}
-.story[data-chapter="1"] .story-tree {
-  color: #3a2a2a;
-}
-.story[data-chapter="1"] .story-hut {
-  color: #5e4034;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story-far {
-  fill: #9db8d6;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story-mid {
-  fill: #c9a46b;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story-ground {
-  fill: #d8b27a;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story-tree {
-  color: #4a5a2c;
-}
-.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .story-hut {
-  color: #8a6243;
-}
-.story[data-chapter="4"] .story-far {
-  fill: #6d6f9a;
-}
-.story[data-chapter="4"] .story-mid {
-  fill: #a5764a;
-}
-.story[data-chapter="4"] .story-ground {
-  fill: #b98853;
-}
-.story[data-chapter="4"] .story-tree {
-  color: #3a3a26;
-}
-
-.story-layer {
+/* Camera (pan and zoom between chapters) and parallax */
+.cam {
   transform-box: view-box;
+  transform-origin: 800px 700px;
+  transform: translate(calc(var(--cx) * 1px), calc(var(--cy) * 1px)) scale(var(--cs));
   will-change: transform;
 }
-.story-layer--far {
-  transform: translateX(calc(var(--p) * -30px));
+.lyr {
+  transform-box: view-box;
 }
-.story-layer--mid {
+.lyr--far {
+  transform: translateX(calc(var(--p) * -26px));
+}
+.lyr--mid {
+  transform: translateX(calc(var(--p) * -54px));
+}
+.lyr--river {
   transform: translateX(calc(var(--p) * -70px));
 }
-.story-layer--near {
-  transform: translateX(calc(var(--p) * -130px));
+.lyr--near {
+  transform: translateX(calc(var(--p) * -96px));
+}
+.lyr--front {
+  transform: translateX(calc(var(--p) * -170px));
+}
+.haze {
+  transform-box: view-box;
+  opacity: calc(var(--dawn) * 0.9 + var(--day) * 0.35 + var(--dusk) * 0.45);
+  animation: story-haze 18s ease-in-out infinite alternate;
+}
+@keyframes story-haze {
+  to {
+    transform: translateX(-60px);
+  }
+}
+.smoke circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: story-smoke 4.8s ease-out infinite;
+}
+@keyframes story-smoke {
+  0% {
+    transform: translate(0, 20px) scale(0.4);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(18px, -50px) scale(1.6);
+    opacity: 0;
+  }
 }
 
-/* The river draws itself */
-.story-river {
+/* The river draws itself as the light comes, then shimmers */
+.river {
   stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  opacity: 0.9;
-  transition: stroke-dashoffset 2.6s var(--ease);
+  stroke-dashoffset: clamp(0, calc(1.7 - var(--p) * 5), 1);
 }
-.story:not([data-chapter="0"]) .story-river {
-  stroke-dashoffset: 0;
+.river__shine {
+  stroke-dasharray: 8 46;
+  opacity: clamp(0, calc((var(--p) * 5 - 1.4) * 0.6), 0.55);
+  animation: story-shine 3s linear infinite;
+}
+@keyframes story-shine {
+  to {
+    stroke-dashoffset: -108;
+  }
 }
 
-/* The light (Beza) */
-.story-light {
+/* Light on the land: blended over everything below the hills */
+.tint {
+  mix-blend-mode: multiply;
+}
+.tint--night {
+  opacity: calc(var(--night) * 0.86);
+}
+.tint--dawn {
+  opacity: calc(var(--dawn) * 0.62);
+}
+.tint--dusk {
+  opacity: calc(var(--dusk) * 0.58);
+}
+
+.grass {
+  transform-box: view-box;
+  animation: story-sway 3.2s ease-in-out infinite alternate;
+}
+.tree__crown {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: story-sway-soft 6s ease-in-out infinite alternate;
+}
+@keyframes story-sway {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+@keyframes story-sway-soft {
+  from {
+    transform: rotate(-1.2deg);
+  }
+  to {
+    transform: rotate(1.2deg);
+  }
+}
+
+/* The light (Beza): rises in chapter 2, settles into the home in chapter 3 */
+.orb {
   transform-box: view-box;
   transform-origin: 800px 420px;
   opacity: 0;
-  transform: scale(0.2);
+  transform: scale(0.15);
   transition:
     opacity 1.4s var(--ease),
-    transform 1.8s var(--ease);
+    transform 2s var(--ease);
 }
-.story[data-chapter="1"] .story-light {
+.story[data-chapter="1"] .orb {
   opacity: 1;
   transform: scale(1);
 }
-.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .story-light {
+.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .orb {
   opacity: 0;
-  transform: translateY(230px) scale(0.25);
+  transform: translateY(300px) scale(0.12);
 }
-.story-light__rays {
+.orb__rays {
   transform-box: view-box;
   transform-origin: 800px 420px;
-  animation: story-spin 24s linear infinite;
+  animation: story-spin 30s linear infinite;
 }
-.story[data-chapter="1"] .story-light circle:last-of-type {
-  animation: story-pulse 2.6s ease-in-out infinite;
+.orb__core {
   transform-box: fill-box;
   transform-origin: center;
+  animation: story-pulse 2.4s ease-in-out infinite;
 }
 @keyframes story-pulse {
   0%,
@@ -268,31 +271,48 @@
     transform: scale(1);
   }
   50% {
-    transform: scale(1.25);
+    transform: scale(1.35);
   }
 }
 
-/* The home and the kindergarten rise from the ground */
-.story-home,
-.story-school {
+/* The home and the kindergarten rise; the door opens */
+.home,
+.school {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   transform: scaleY(0);
   opacity: 0;
   transition:
-    transform 1.3s var(--ease),
-    opacity 0.8s var(--ease);
+    transform 1.4s cubic-bezier(0.34, 1.3, 0.64, 1),
+    opacity 0.7s var(--ease);
 }
-.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .story-home {
+.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .home {
   transform: scaleY(1);
   opacity: 1;
+  transition-delay: 0.3s;
 }
-.story:is([data-chapter="3"], [data-chapter="4"]) .story-school {
+.story:is([data-chapter="3"], [data-chapter="4"]) .school {
   transform: scaleY(1);
   opacity: 1;
-  transition-delay: 0.25s;
+  transition-delay: 0.4s;
 }
-.story-window {
+.door {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  transition: transform 1.2s var(--ease) 1.6s;
+}
+.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .door {
+  transform: scaleX(0.22);
+}
+.glows {
+  opacity: 0;
+  transition: opacity 1.4s var(--ease);
+}
+.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .glows {
+  opacity: calc(0.35 + var(--dusk) * 0.65);
+  transition-delay: 1.2s;
+}
+.glows__door {
   animation: story-glow 3.6s ease-in-out infinite;
 }
 @keyframes story-glow {
@@ -301,68 +321,98 @@
     opacity: 1;
   }
   50% {
-    opacity: 0.72;
+    opacity: 0.65;
   }
 }
-.story-pennant {
+.flag {
   transform-box: fill-box;
   transform-origin: 0% 50%;
-  animation: story-wave 1.8s ease-in-out infinite;
+  animation: story-flag 1.6s ease-in-out infinite;
 }
-@keyframes story-wave {
+@keyframes story-flag {
   0%,
   100% {
-    transform: scaleX(1);
+    transform: scaleX(1) skewY(0deg);
   }
   50% {
-    transform: scaleX(0.72);
+    transform: scaleX(0.78) skewY(6deg);
   }
 }
 
-/* Corn grows */
-.story-stalk {
+/* The farm grows */
+.stalk {
   transform-box: view-box;
   transform: scaleY(0);
-  transition: transform 1.2s var(--ease);
+  transition: transform 1.3s cubic-bezier(0.34, 1.4, 0.64, 1);
 }
-.story:is([data-chapter="3"], [data-chapter="4"]) .story-stalk {
+.story:is([data-chapter="3"], [data-chapter="4"]) .stalk {
   transform: scaleY(1);
 }
+.stalk__sway {
+  transform-box: view-box;
+  animation: story-sway-soft 2.6s ease-in-out infinite alternate;
+}
 
-/* Children: scattered at night, gathered at the home, joined by more */
-.story-child {
+/* Children: scattered at night, walking to the home, joined by more */
+.child {
   --spread: 1;
   transform-box: view-box;
-  transform: translate(calc(var(--fx, 0px) * var(--spread)), var(--fy, 0));
-  opacity: 0.6;
+  transform: translate(calc(var(--fx, 0px) * var(--spread)), var(--fy, 0px));
+  opacity: 0.85;
   transition:
-    transform 2.2s var(--ease),
+    transform 2.6s cubic-bezier(0.45, 0, 0.2, 1),
     opacity 1.2s var(--ease);
 }
-.story[data-chapter="1"] .story-child {
-  opacity: 0.9;
-}
-.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .story-child {
+.story:is([data-chapter="2"], [data-chapter="3"], [data-chapter="4"]) .child {
   transform: translate(0, 0);
   opacity: 1;
 }
-.story-child--more {
-  transform: translateY(30px);
+.child--more {
+  transform: translateY(26px);
   opacity: 0 !important;
 }
-.story:is([data-chapter="3"], [data-chapter="4"]) .story-child--more {
+.story:is([data-chapter="3"], [data-chapter="4"]) .child--more {
   transform: translateY(0);
   opacity: 1 !important;
 }
-.story-child__bob {
+.kid__leg,
+.kid__arm {
   transform-box: fill-box;
-  animation: story-bob 1.6s ease-in-out infinite;
+  transform-origin: 50% 0%;
 }
-.story-child:nth-child(3n) .story-child__bob {
-  animation-delay: -0.5s;
+.story[data-chapter="2"] .first .kid__leg--l {
+  animation: story-step 0.34s ease-in-out 8 alternate;
 }
-.story-child:nth-child(3n + 1) .story-child__bob {
-  animation-delay: -1s;
+.story[data-chapter="2"] .first .kid__leg--r {
+  animation: story-step 0.34s ease-in-out 8 alternate-reverse;
+}
+@keyframes story-step {
+  from {
+    transform: rotate(-20deg);
+  }
+  to {
+    transform: rotate(20deg);
+  }
+}
+.story:is([data-chapter="3"], [data-chapter="4"]) .kid__arm--wave {
+  animation: story-wave 0.9s ease-in-out infinite alternate;
+}
+@keyframes story-wave {
+  from {
+    transform: rotate(-150deg);
+  }
+  to {
+    transform: rotate(-110deg);
+  }
+}
+.story:is([data-chapter="3"], [data-chapter="4"]) .kid {
+  animation: story-bob 1.8s ease-in-out infinite;
+}
+.child:nth-child(3n) .kid {
+  animation-delay: -0.6s;
+}
+.child:nth-child(3n + 1) .kid {
+  animation-delay: -1.2s;
 }
 @keyframes story-bob {
   0%,
@@ -374,129 +424,188 @@
   }
 }
 
-/* Your part: a moving trail and rising hearts */
-.story-trail {
-  stroke-dasharray: 2 18;
+/* Your part: the trail, a heart drawn over the home, rising hearts, fireflies */
+.trail {
+  stroke-dasharray: 2 20;
   opacity: 0;
-  transition: opacity 1s var(--ease);
-  animation: story-march 1.6s linear infinite;
+  transition: opacity 1.2s var(--ease);
+  animation: story-march 1.4s linear infinite;
 }
-.story[data-chapter="4"] .story-trail {
+.trail--glow {
+  stroke-dasharray: none;
+  animation: none;
+}
+.story[data-chapter="4"] .trail {
   opacity: 0.95;
+}
+.story[data-chapter="4"] .trail--glow {
+  opacity: 0.2;
 }
 @keyframes story-march {
   to {
-    stroke-dashoffset: -40;
+    stroke-dashoffset: -44;
   }
 }
-.story-hearts {
+.bigheart {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0;
+  filter: drop-shadow(0 0 10px rgba(255, 213, 138, 0.9));
+  transition:
+    stroke-dashoffset 2.6s var(--ease),
+    opacity 0.6s var(--ease);
+}
+.story[data-chapter="4"] .bigheart {
+  stroke-dashoffset: 0;
+  opacity: 1;
+  transition-delay: 0.6s;
+}
+.hearts {
   opacity: 0;
   transition: opacity 1s var(--ease);
 }
-.story[data-chapter="4"] .story-hearts {
+.story[data-chapter="4"] .hearts {
   opacity: 1;
 }
-.story-heart {
+.heart {
   transform-box: fill-box;
   transform-origin: center;
-  animation: story-rise 4.2s ease-out infinite;
+  animation: story-rise 4.4s ease-out infinite;
 }
 @keyframes story-rise {
   0% {
-    transform: translate(var(--hx, 0), 120px) scale(0.4);
+    transform: translate(var(--hx, 0), 140px) scale(0.35);
     opacity: 0;
   }
   20% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(calc(var(--hx, 0) * 0.25), -230px) scale(1);
+    opacity: 0;
+  }
+}
+.flies {
+  opacity: 0;
+  transition: opacity 1.6s var(--ease);
+}
+.story[data-chapter="4"] .flies {
+  opacity: 1;
+}
+.fly {
+  transform-box: fill-box;
+  filter: drop-shadow(0 0 4px #ffd77a);
+  animation: story-fly ease-in-out infinite alternate;
+}
+@keyframes story-fly {
+  0% {
+    transform: translate(0, 0);
+    opacity: 0.2;
+  }
+  50% {
     opacity: 1;
   }
   100% {
-    transform: translate(calc(var(--hx, 0) * 0.3), -200px) scale(1);
-    opacity: 0;
+    transform: translate(var(--dx), var(--dy));
+    opacity: 0.3;
+  }
+}
+
+/* Vignette, grain and the reading shade */
+.story__fx {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(3, 10, 20, 0.62) 0%, rgba(3, 10, 20, 0.25) 36%, transparent 58%),
+    radial-gradient(ellipse at 55% 55%, transparent 55%, rgba(3, 10, 20, 0.5) 100%);
+}
+.story__fx::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  opacity: 0.07;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  animation: story-grain 1s steps(4) infinite;
+}
+@keyframes story-grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-6%, 4%);
+  }
+  50% {
+    transform: translate(5%, -6%);
+  }
+  75% {
+    transform: translate(-3%, 7%);
+  }
+  100% {
+    transform: translate(0, 0);
   }
 }
 
 /* Captions */
-.story__shade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(7, 21, 38, 0.55) 0%, rgba(7, 21, 38, 0.25) 38%, transparent 62%);
-  pointer-events: none;
-  transition: opacity 1.2s var(--ease);
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story__shade {
-  opacity: 0.35;
-}
-
 .story__ui {
   position: relative;
   height: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding-top: var(--header-h);
+  padding-bottom: 90px;
 }
-
 .story__captions {
   display: grid;
-  width: min(470px, 100%);
+  width: min(500px, 100%);
 }
-
 .story__caption {
   grid-area: 1 / 1;
   align-self: center;
-  padding: clamp(22px, 3vw, 34px);
-  border-radius: var(--radius-lg);
-  background: rgba(7, 21, 38, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(14px) saturate(140%);
-  -webkit-backdrop-filter: blur(14px) saturate(140%);
-  color: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.6);
+  padding: clamp(24px, 3vw, 38px);
+  border-radius: 26px;
+  background: linear-gradient(160deg, rgba(10, 26, 46, 0.66), rgba(4, 12, 24, 0.58));
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  color: rgba(255, 255, 255, 0.82);
+  box-shadow:
+    0 40px 80px -40px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
   opacity: 0;
   visibility: hidden;
-  transform: translateY(28px);
+  transform: translateY(26px) scale(0.98);
   transition:
-    opacity 0.7s var(--ease),
-    transform 0.9s var(--ease),
-    visibility 0s linear 0.9s,
-    background 1.2s var(--ease),
-    color 1.2s var(--ease);
+    opacity 0.6s var(--ease),
+    transform 0.8s var(--ease),
+    visibility 0s linear 0.8s;
 }
 .story__caption.is-active {
   opacity: 1;
   visibility: visible;
   transform: none;
   transition:
-    opacity 0.9s var(--ease) 0.15s,
-    transform 1s var(--ease) 0.15s,
-    visibility 0s,
-    background 1.2s var(--ease),
-    color 1.2s var(--ease);
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) .story__caption {
-  background: rgba(255, 255, 255, 0.82);
-  border-color: rgba(255, 255, 255, 0.7);
-  color: var(--body);
-}
-.story__caption p {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.7;
-}
-.story__caption .btn-row {
-  margin-top: 22px;
+    opacity 0.8s var(--ease) 0.1s,
+    transform 1s var(--ease) 0.1s,
+    visibility 0s;
 }
 .story__count {
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   font-family: var(--font-ui);
-  font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  color: var(--gold-300);
-  margin-bottom: 14px;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 16px;
 }
-.story__count span {
-  opacity: 0.55;
+.story__count b {
+  font-family: var(--font-display);
+  font-size: 2.1rem;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--gold-300);
 }
 .story__eyebrow {
   display: block;
@@ -504,80 +613,149 @@
   font-size: 1.6rem;
   line-height: 1.1;
   color: var(--gold-300);
-  margin-bottom: 6px;
-}
-.story:is([data-chapter="2"], [data-chapter="3"]) :is(.story__count, .story__eyebrow) {
-  color: var(--gold-600);
+  margin-bottom: 8px;
 }
 .story__title {
   font-family: var(--font-display);
-  font-size: clamp(1.7rem, 3.2vw, 2.5rem);
-  line-height: 1.12;
+  font-size: clamp(1.8rem, 3.3vw, 2.7rem);
+  line-height: 1.1;
   color: #fff;
-  margin: 0 0 14px;
-  transition: color 1.2s var(--ease);
+  margin: 0 0 16px;
 }
-.story:is([data-chapter="2"], [data-chapter="3"]) .story__title {
-  color: var(--ink);
+.story__word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: 0.08em;
+  margin-right: 0.26em;
+}
+.story__word > span {
+  display: inline-block;
+  transform: translateY(110%);
+  transition: transform 0.9s var(--ease);
+}
+.story__caption.is-active .story__word > span {
+  transform: none;
+  transition-delay: calc(var(--w) * 70ms + 0.2s);
+}
+.story__text {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.8s var(--ease),
+    transform 0.8s var(--ease);
+}
+.story__caption.is-active .story__text {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0.55s;
+}
+.story__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.story__stats strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--gold-300);
+}
+.story__stats span {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.7);
+}
+.story__actions {
+  margin-top: 24px;
 }
 
-/* Chapter dots */
-.story__dots {
+/* Chapter timeline */
+.story__timeline {
+  position: absolute;
+  left: max(var(--gutter), calc((100% - var(--container)) / 2));
+  bottom: 26px;
+  width: min(780px, calc(100% - 2 * var(--gutter) - 200px));
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
-.story__dots button {
-  width: 22px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  padding: 0;
+.story__timeline button {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0 0;
   border: 0;
   background: none;
   cursor: pointer;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.55);
+  font: 600 0.74rem/1.3 var(--font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.4s var(--ease);
 }
-.story__dots span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
-  box-shadow: 0 0 0 1px rgba(7, 21, 38, 0.2);
-  transition:
-    transform 0.4s var(--ease),
-    background 0.4s var(--ease);
+.story__timeline button.is-active,
+.story__timeline button:hover {
+  color: #fff;
 }
-.story__dots button.is-active span {
-  background: var(--gold-300);
-  transform: scale(1.6);
-}
-.story__dots button:focus-visible {
+.story__timeline button:focus-visible {
   outline: 2px solid var(--gold-300);
-  outline-offset: 2px;
-  border-radius: 50%;
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.story__tl-bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+  margin-bottom: 9px;
+}
+.story__tl-bar span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
+}
+.story__timeline button.is-done .story__tl-bar span {
+  width: 100%;
+}
+.story__timeline button.is-active .story__tl-bar span {
+  width: calc(var(--cp) * 100%);
+}
+.story__tl-label {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* Scroll hint and progress bar */
+/* Scroll hint */
 .story__hint {
   position: absolute;
-  left: 50%;
-  bottom: 28px;
-  transform: translateX(-50%);
+  right: max(var(--gutter), calc((100% - var(--container)) / 2));
+  bottom: 96px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  font-weight: 700;
+  font: 700 0.7rem var(--font-ui);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.8);
-  transition: opacity 0.6s var(--ease);
+  color: rgba(255, 255, 255, 0.75);
+  opacity: calc(1 - var(--cp) * 3);
   pointer-events: none;
 }
 .story:not([data-chapter="0"]) .story__hint {
-  opacity: 0;
+  display: none;
 }
 .story__mouse {
   width: 22px;
@@ -599,69 +777,70 @@
   animation: story-scroll 1.6s ease-in-out infinite;
 }
 @keyframes story-scroll {
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-  100% {
+  to {
     transform: translateY(12px);
     opacity: 0;
   }
 }
-.story__bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.12);
-}
-.story__bar span {
-  display: block;
-  height: 100%;
-  width: 100%;
-  transform-origin: 0 50%;
-  transform: scaleX(var(--p));
-  background: linear-gradient(90deg, var(--gold-500), var(--gold-300));
-}
 
 @media (max-width: 760px) {
   .story {
-    height: calc(var(--chapters, 5) * 100svh);
+    height: calc(var(--chapters, 5) * 105svh);
   }
-  /* Narrow screens show the middle of the scene: keep the children and the sun in view. */
-  .story-child {
+  /* Narrow screens show the middle of the scene: keep the children in view. */
+  .child {
     --spread: 0.42;
   }
-  .story-sun {
-    translate: -240px 0;
-  }
-  .story__shade {
-    background: linear-gradient(180deg, rgba(7, 21, 38, 0.55) 0%, rgba(7, 21, 38, 0.15) 45%, transparent 60%);
+  .story__fx {
+    background:
+      linear-gradient(180deg, rgba(3, 10, 20, 0.6) 0%, rgba(3, 10, 20, 0.15) 50%, transparent 62%),
+      radial-gradient(ellipse at 50% 60%, transparent 55%, rgba(3, 10, 20, 0.45) 100%);
   }
   .story__ui {
     align-items: flex-start;
-    padding-top: calc(var(--header-h) + 12px);
-  }
-  .story__captions {
-    width: 100%;
+    padding-top: calc(var(--header-h) + 10px);
+    padding-bottom: 0;
   }
   .story__caption {
     align-self: start;
     padding: 20px;
+    border-radius: 20px;
   }
-  .story__caption p {
-    font-size: 0.98rem;
+  .story__count {
+    margin-bottom: 8px;
+  }
+  .story__count b {
+    font-size: 1.5rem;
+  }
+  .story__eyebrow {
+    font-size: 1.3rem;
+  }
+  .story__text {
+    font-size: 0.96rem;
     line-height: 1.6;
   }
-  .story__dots {
-    position: absolute;
-    right: 10px;
-    bottom: 70px;
-    gap: 8px;
+  .story__stats {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+  .story__stats strong {
+    font-size: 1.8rem;
+  }
+  .story__actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+  .story__timeline {
+    left: var(--gutter);
+    width: calc(100% - 2 * var(--gutter) - 70px);
+    bottom: 22px;
+    gap: 6px;
+  }
+  .story__tl-label {
+    display: none;
   }
   .story__hint {
-    bottom: 18px;
+    display: none;
   }
 }
 
@@ -1093,174 +1272,22 @@
   }
 }
 
-/* ------------------------------------------------------------------ Orbit (programs) */
-.orbit {
-  container-type: inline-size;
-  position: relative;
-  width: min(560px, 100%);
-  aspect-ratio: 1;
-  margin: clamp(10px, 3vw, 30px) auto clamp(36px, 5vw, 56px);
-}
-.orbit__rings,
-.orbit__rings::before,
-.orbit__rings::after {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px dashed rgba(30, 74, 124, 0.25);
-}
-.orbit__rings {
-  inset: 12%;
-  animation: story-spin 60s linear infinite;
-}
-.orbit__rings::before {
-  content: "";
-  inset: -14%;
-  border-style: solid;
-  border-color: rgba(217, 154, 43, 0.22);
-}
-.orbit__rings::after {
-  content: "";
-  inset: 22%;
-  border-color: rgba(30, 74, 124, 0.18);
-}
-.orbit__glow {
-  position: absolute;
-  inset: 30%;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(240, 201, 119, 0.55), rgba(240, 201, 119, 0) 70%);
-  animation: orbit-breathe 4s ease-in-out infinite;
-}
-@keyframes orbit-breathe {
-  0%,
-  100% {
-    transform: scale(0.92);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-}
-.orbit__center {
-  position: absolute;
-  inset: 32%;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  text-align: center;
-  background: linear-gradient(145deg, var(--blue-700), var(--navy-900));
-  color: #fff;
-  box-shadow: 0 24px 50px -18px rgba(11, 31, 54, 0.6);
-  padding: 8%;
-}
-.orbit__center svg {
-  width: clamp(34px, 9cqw, 54px);
-  height: auto;
-  color: var(--gold-300);
-}
-.orbit__center strong {
-  display: block;
-  font-family: var(--font-display);
-  font-size: clamp(0.85rem, 4cqw, 1.25rem);
-  line-height: 1.15;
-  margin-top: 4px;
-}
-.orbit__center small {
-  display: block;
-  font-size: clamp(0.62rem, 2.4cqw, 0.75rem);
-  color: var(--gold-300);
-  margin-top: 4px;
-}
-.orbit__spin {
-  position: absolute;
-  inset: 0;
-  animation: story-spin 36s linear infinite;
-}
-.orbit:hover .orbit__spin,
-.orbit:hover .orbit__planet,
-.orbit:focus-within .orbit__spin,
-.orbit:focus-within .orbit__planet {
-  animation-play-state: paused;
-}
-.orbit__planet {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 0;
-  height: 0;
-  transform: rotate(var(--a)) translateY(-41cqw);
-}
-.orbit__planet > div {
-  position: absolute;
-  translate: -50% -50%;
-  transform: rotate(calc(var(--a) * -1));
-  /* Keep the planet upright while the ring turns. */
-  animation: orbit-counter 36s linear infinite;
-}
-@keyframes orbit-counter {
-  from {
-    rotate: 0deg;
-  }
-  to {
-    rotate: -360deg;
-  }
-}
-.orbit__planet button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  font: 700 0.82rem var(--font-ui);
-  color: var(--ink);
-}
-.orbit__planet .icon-badge {
-  width: clamp(54px, 10vw, 70px);
-  height: clamp(54px, 10vw, 70px);
-  transition:
-    transform 0.4s var(--ease),
-    background 0.4s var(--ease),
-    color 0.4s var(--ease);
-  box-shadow: 0 14px 30px -14px rgba(11, 31, 54, 0.45);
-}
-.orbit__planet button:hover .icon-badge,
-.orbit__planet button.is-active .icon-badge {
-  transform: scale(1.12);
-  background: var(--gold-500);
-  color: #fff;
-}
-.orbit__planet span.orbit__name {
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: var(--shadow-sm);
-}
-.orbit__info {
-  text-align: center;
-  max-width: 520px;
-  margin: 0 auto;
-  min-height: 3.4em;
-}
-.orbit__info strong {
-  color: var(--ink);
-}
-
 /* ------------------------------------------------------------------ Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .story *,
   .story__caption,
   .journey *,
-  .lightmap *,
-  .orbit * {
+  .lightmap * {
     animation: none !important;
     transition-duration: 0.01ms !important;
     transition-delay: 0s !important;
   }
-  .story-layer {
+  .story .cam,
+  .story .lyr {
     transform: none !important;
+  }
+  .story__fx::after {
+    display: none;
   }
   .lightmap__dark {
     --lightmap-r: 60%;
