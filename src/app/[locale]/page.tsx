@@ -24,6 +24,8 @@ import PostCard from "@/components/PostCard";
 import { Accordion, AccordionItem } from "@/components/Accordion";
 import Parallax from "@/components/Parallax";
 import { DoodleArrow, Marquee, SpinBadge, Wave } from "@/components/Decor";
+import StoryScroll, { type StoryChapter } from "@/components/motion/StoryScroll";
+import { motionFill } from "@/lib/motion";
 
 interface Stat {
   value: number;
@@ -73,6 +75,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const tVid = await getTranslations("videos");
 
   const stats = t.raw("stats") as Stat[];
+  const tMotion = await getTranslations("motion");
+  const fill = await motionFill();
+  const chapters = (tMotion.raw("story.chapters") as StoryChapter[]).map((c) => ({ ...c, text: fill(c.text) }));
   const aboutList = t.raw("about.list") as string[];
   const challenges = t.raw("need.challenges") as IconItem[];
   const programs = tProg.raw("items") as Program[];
@@ -169,6 +174,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           </Reveal>
         </div>
       </div>
+
+      {/* THE STORY, ILLUSTRATED — a scene that plays as visitors scroll */}
+      <StoryScroll
+        chapters={chapters}
+        label={tMotion("story.label")}
+        scrollHint={tMotion("story.scroll")}
+        donate={tMotion("story.donate")}
+        more={tMotion("story.more")}
+      />
 
       {/* ABOUT */}
       <section className="section">

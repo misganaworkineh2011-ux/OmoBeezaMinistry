@@ -10,6 +10,7 @@ import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
 import SectionHead from "@/components/SectionHead";
 import CtaBand from "@/components/CtaBand";
+import WholeChild from "@/components/motion/WholeChild";
 
 interface ProgramDetail {
   id: string;
@@ -40,6 +41,7 @@ export default async function ProgramsPage({ params }: { params: Promise<{ local
   const t = await getTranslations("programs");
   const tNav = await getTranslations("nav");
   const tc = await getTranslations("common");
+  const tMotion = await getTranslations("motion");
 
   const items = t.raw("items") as ProgramDetail[];
   const pillars = t.raw("pillars.items") as Pillar[];
@@ -105,6 +107,7 @@ export default async function ProgramsPage({ params }: { params: Promise<{ local
             lead={t("pillars.lead")}
             align="center"
           />
+          <WholeChild pillars={pillars} center={tMotion("orbit.center")} verse={tMotion("orbit.verse")} />
           <div className="grid grid-4">
             {pillars.map((p, i) => (
               <Reveal key={p.title} delay={i * 80}>

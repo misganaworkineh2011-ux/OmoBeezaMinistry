@@ -1291,5 +1291,109 @@
     },
     "home": "Back to the home page",
     "giveAgain": "Give again"
+  },
+  "motion": {
+    "story": {
+      "label": "The story of Omo Beeza, told in pictures",
+      "scroll": "Scroll",
+      "donate": "Give today",
+      "more": "Read our story",
+      "chapters": [
+        {
+          "eyebrow": "South Omo, Ethiopia",
+          "title": "Some children are called a curse",
+          "text": "In parts of South Omo, a traditional belief known as Mingi has labelled some children as cursed, leaving them abandoned or at risk."
+        },
+        {
+          "eyebrow": "“Beza” means light",
+          "title": "A light rises over the valley",
+          "text": "“Omo” refers to the local people, and “Beza” means “light” in the Tsemay language — our prayer that the gospel brings light to those living in darkness."
+        },
+        {
+          "eyebrow": "September 28, 2022",
+          "title": "Sixteen children found a home",
+          "text": "In Luqa, Tsemay, the Beeza Children's Center opened its doors to sixteen children from scattered pastoralist settlements."
+        },
+        {
+          "eyebrow": "Today",
+          "title": "A home, a school and a family",
+          "text": "{sheltered} children are sheltered in Luka and Bodi and {kindergarten} learn at Beeza Kindergarten — fed, taught and known by name, while the farm grows corn."
+        },
+        {
+          "eyebrow": "Your part",
+          "title": "Every gift writes the next chapter",
+          "text": "Give monthly or weekly, pray, or share their story. Every child is a gift — none is a curse."
+        }
+      ]
+    },
+    "journey": {
+      "eyebrow": "Where your gift goes",
+      "title": "From your hand to a <em>child's life</em>",
+      "lead": "Follow one gift: every birr you give becomes a safe home, school and a family that knows each child by name.",
+      "stops": [
+        {
+          "title": "You give",
+          "text": "Monthly or weekly, in birr, on our secure payment page.",
+          "icon": "heart"
+        },
+        {
+          "title": "A safe home",
+          "text": "Shelter, nutritious daily meals and loving care.",
+          "icon": "home"
+        },
+        {
+          "title": "School",
+          "text": "Beeza Kindergarten, tutoring and a love of learning.",
+          "icon": "graduation"
+        },
+        {
+          "title": "Faith & family",
+          "text": "Prayer, worship and belonging, every day.",
+          "icon": "cross"
+        },
+        {
+          "title": "A changed generation",
+          "text": "Young people equipped to serve their communities.",
+          "icon": "sprout"
+        }
+      ],
+      "foot": "Thank you for being part of their story",
+      "cta": "Give now"
+    },
+    "map": {
+      "eyebrow": "Where we serve",
+      "title": "A light in <em>South Omo</em>",
+      "lead": "From our home in Luqa, the gospel and a loving family reach children of the pastoralist communities of South Omo.",
+      "facts": [
+        {
+          "icon": "pin",
+          "title": "Luqa, Tsemay",
+          "text": "Our children's center, 63 km from Jinka, among the Tsemay and Banna peoples."
+        },
+        {
+          "icon": "home",
+          "title": "Luka & Bodi",
+          "text": "{sheltered} children sheltered and cared for."
+        },
+        {
+          "icon": "graduation",
+          "title": "Beeza Kindergarten",
+          "text": "{kindergarten} children learning."
+        }
+      ],
+      "labels": {
+        "luqa": "Luqa",
+        "jinka": "Jinka",
+        "bodi": "Bodi",
+        "river": "Omo River",
+        "distance": "63 km",
+        "note": "Map not to scale"
+      },
+      "mapLabel": "Map of South Omo showing Jinka, Luqa and Bodi"
+    },
+    "orbit": {
+      "center": "Every child",
+      "verse": "Luke 2:52"
+    }
   }
 }

@@ -15,6 +15,7 @@ import SmoothScroll from "@/components/SmoothScroll";
 import BackToTop from "@/components/BackToTop";
 import ChatLauncher from "@/components/chat/ChatLauncher";
 import "../globals.css";
+import "../motion.css";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;

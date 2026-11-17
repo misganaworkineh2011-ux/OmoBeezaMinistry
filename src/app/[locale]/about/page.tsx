@@ -13,6 +13,8 @@ import SectionHead from "@/components/SectionHead";
 import Scripture from "@/components/Scripture";
 import CtaBand from "@/components/CtaBand";
 import LogoStory from "@/components/LogoStory";
+import LightMap, { type MapFact } from "@/components/motion/LightMap";
+import { motionFill } from "@/lib/motion";
 import { getVideoSets } from "@/lib/data/videos";
 
 interface ValueItem {
@@ -41,6 +43,8 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
   const t = await getTranslations("about");
   const tNav = await getTranslations("nav");
   const tVid = await getTranslations("videos");
+  const tMotion = await getTranslations("motion");
+  const fill = await motionFill();
   const { logoFilm } = await getVideoSets(locale);
 
   const missionList = t.raw("mission.list") as string[];
@@ -89,6 +93,22 @@ export default async function AboutPage({ params }: { params: Promise<{ locale: 
           </Reveal>
         </div>
       </section>
+
+      {/* A LIGHT IN SOUTH OMO — animated map */}
+      <LightMap
+        head={
+          <>
+            <span className="eyebrow eyebrow--light">{tMotion("map.eyebrow")}</span>
+            <h2 className="title-lg" style={{ color: "#fff" }}>
+              {tMotion.rich("map.title", richEm)}
+            </h2>
+            <p className="lead mt-sm">{tMotion("map.lead")}</p>
+          </>
+        }
+        facts={(tMotion.raw("map.facts") as MapFact[]).map((f) => ({ ...f, text: fill(f.text) }))}
+        labels={tMotion.raw("map.labels") as { luqa: string; jinka: string; bodi: string; river: string; distance: string; note: string }}
+        mapLabel={tMotion("map.mapLabel")}
+      />
 
       {/* OUR MARK */}
       {logoFilm ? (

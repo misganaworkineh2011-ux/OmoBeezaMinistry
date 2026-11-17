@@ -13,6 +13,8 @@ import { getGiving } from "@/lib/data/giving";
 import { TIERS } from "@/lib/donations";
 import CopyButton from "@/components/CopyButton";
 import { Accordion, AccordionItem } from "@/components/Accordion";
+import SectionHead from "@/components/SectionHead";
+import GiftJourney, { type JourneyStop } from "@/components/motion/GiftJourney";
 
 interface TrustItem {
   title: string;
@@ -37,6 +39,7 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
   const t = await getTranslations("donations");
   const tNav = await getTranslations("nav");
   const tFaq = await getTranslations("faq");
+  const tMotion = await getTranslations("motion");
 
   const trust = t.raw("trust") as TrustItem[];
   const givingFaq = (tFaq.raw("groups") as FaqGroup[]).find((g) => g.id === "giving")?.items ?? [];
@@ -154,6 +157,26 @@ export default async function DonationsPage({ params }: { params: Promise<{ loca
               />
             </div>
           </aside>
+        </div>
+      </section>
+
+      {/* WHERE A GIFT GOES — animated */}
+      <section className="section section--navy journey">
+        <div className="container">
+          <SectionHead
+            eyebrow={tMotion("journey.eyebrow")}
+            title={tMotion.rich("journey.title", richEm)}
+            lead={tMotion("journey.lead")}
+            align="center"
+            light
+          />
+          <GiftJourney stops={tMotion.raw("journey.stops") as JourneyStop[]} />
+          <div className="journey__foot">
+            <p>{tMotion("journey.foot")}</p>
+            <a href="#give" className="btn btn--gold btn--lg">
+              <Icon name="heart" /> {tMotion("journey.cta")}
+            </a>
+          </div>
         </div>
       </section>
     </>
