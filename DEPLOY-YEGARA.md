@@ -59,7 +59,7 @@ eye icon to see a value), or from the `.env.local` file.
 | `CRON_SECRET` | same as on Vercel, or any long random text (used again in step 8) |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `EMAIL_FROM` | same as on Vercel (email) |
 | `TELEGRAM_BOT_TOKEN` | same as on Vercel, if set |
-| `TELEGRAM_SUBADMIN_BOT_TOKEN` | the sub-admin bot's token, if you made one (see step 9) |
+| `TELEGRAM_SUBADMIN_BOT_TOKEN` | the team bot's token, if you made one (see "Team Telegram bot") |
 | `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_SESSION` | same as on Vercel, if set |
 
 Don't add `BLOB_READ_WRITE_TOKEN`, `BLOB_STORE_ID` or anything starting with `VERCEL`: on Yegara,
@@ -118,25 +118,32 @@ It's safe if it runs twice: nobody gets two reminders on the same day.
 1. Dashboard → **Giving & reminders**:
    - **Reconnect the bot**, so Telegram sends messages to the new address.
    - **Send a test email**. If it fails, see "Email" below.
-   - **Connect the sub-admin bot**, if `TELEGRAM_SUBADMIN_BOT_TOKEN` is set (see "Sub-admins on iPhone" below).
+   - **Connect the team bot**, if `TELEGRAM_SUBADMIN_BOT_TOKEN` is set (see "Team Telegram bot" below).
 2. On Ye-Buna, if you set a "thank you" or return link, change it to
    `https://www.omobeezaministry.org/thank-you`.
-3. Phones: install **Omo Beeza Admin** (`android/release/OmoBeezaAdmin-v1.5.0.apk`) on the ministry
-   phone and give sub-admins **Omo Beeza Sub-admin** (`android/release/OmoBeezaSubAdmin-v1.5.0.apk`).
-   Both already use `https://www.omobeezaministry.org`. If the phone was signed in to the old app,
-   sign in again.
+3. Phones: Dashboard → **Android app** → upload `android/release/OmoBeeza-v1.7.0.apk` once. Then, on
+   each Android phone, open the dashboard in Chrome → **Android app** → **Download** and install it (or
+   download it on the computer and send the file). It is one app for everyone: admins sign in with
+   their email, sub-admins with their phone number. It already uses `https://www.omobeezaministry.org`.
+   Sub-admins who had the old "Omo Beeza Sub-admin" app can uninstall it after signing in to this one.
 
-## Sub-admins on iPhone (Telegram bot)
+## Team Telegram bot (admins and sub-admins, e.g. on iPhone)
 
-The Sub-admin app is Android only. Sub-admins with an iPhone register donors in a second Telegram bot
-instead, with the same phone number and password.
+The app is Android only. On an iPhone (or anywhere), the team uses a second Telegram bot:
 
-1. In Telegram, open **@BotFather** → `/newbot` → a name such as `Omo Beeza Sub-admins` and a username
+- **Sub-admins** tap **Start** → **Share my phone number** → type their password, then register donors.
+- **Admins** tap **Start** → **Sign in as admin** → type their dashboard email and password. They get
+  the overview, register and find donors, record payments, pause / stop / remind a donor, send
+  today's reminders, and manage sub-admins (add, extend targets, pause). An admin's sign-in lasts 30
+  days; changing the dashboard password signs them out.
+
+Setting it up:
+
+1. In Telegram, open **@BotFather** → `/newbot` → a name such as `Omo Beeza Team` and a username
    ending in `bot`. Copy the token it gives you.
 2. Add it as `TELEGRAM_SUBADMIN_BOT_TOKEN` in the environment variables (step 4) and restart the app.
-3. Dashboard → **Giving & reminders** → **Sub-admin Telegram bot** → **Connect the sub-admin bot**.
-4. Add the sub-admin in the Admin app as usual, and send them the bot's link (shown in that panel)
-   with their password. In the bot they tap **Start** → **Share my phone number** → type the password.
+3. Dashboard → **Giving & reminders** → **Team Telegram bot** → **Connect the team bot**.
+4. Send the bot's link (shown in that panel) to the admins and sub-admins.
 
 Pausing a sub-admin, changing their password or removing them signs them out of the bot too.
 

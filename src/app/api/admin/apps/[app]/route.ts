@@ -2,8 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { hasDb, queryOne } from "@/lib/db";
 import { isAppKey } from "@/lib/apps";
 
-// GET /api/admin/apps/admin | /api/admin/apps/subadmin — downloads the current
-// APK of that app. Signed-in admins only (open the dashboard on the phone and
+// GET /api/admin/apps/admin — downloads the current APK of the app. Signed-in admins only (open the dashboard on the phone and
 // tap Download to install or update the app there).
 
 export const runtime = "nodejs";

@@ -140,7 +140,7 @@ function AppPanel({ app }: { app: AppCard }) {
 export default function AppsManager({ apps }: { apps: AppCard[] }) {
   return (
     <>
-      <div className="two-col">
+      <div style={{ maxWidth: 760 }}>
         {apps.map((a) => (
           <AppPanel key={a.key} app={a} />
         ))}
@@ -150,16 +150,16 @@ export default function AppsManager({ apps }: { apps: AppCard[] }) {
           <h2>Installing or updating on a phone</h2>
         </div>
         <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.7 }}>
-          <li>On the Android phone, open this dashboard in the browser (Chrome), sign in, go to Android apps and tap Download.</li>
+          <li>On the Android phone, open this dashboard in the browser (Chrome), sign in, go to Android app and tap Download.</li>
           <li>Open the downloaded file. The first time, Android asks to allow installing apps from Chrome: allow it, then go back.</li>
           <li>
-            Tap <b>Install</b> (or <b>Update</b>). An update keeps the app’s data and sign-in. Or download it here on the computer and send the
+            Tap <b>Install</b> (or <b>Update</b>). An update keeps the app’s data and sign-in. Admins sign in with their email, sub-admins with their phone number. Or download it here on the computer and send the
             file to the phone, for example on Telegram.
           </li>
         </ol>
         <p className="a-hint" style={{ marginTop: 10 }}>
           A new version must be signed with the same key as the installed one, otherwise Android refuses to update it (“App not installed”). The
-          versions built for you are all signed with the ministry’s key. iPhone sub-admins use the sub-admin Telegram bot instead.
+          versions built for you are all signed with the ministry’s key. Sub-admins who had the old “Omo Beeza Sub-admin” app install this one, sign in, and can then uninstall the old one. People with an iPhone use the team Telegram bot instead.
         </p>
       </section>
     </>

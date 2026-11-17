@@ -2,6 +2,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Admins only: "Send SMS reminders" sends reminders as normal SMS from this phone's SIM.
+         Asked for only when an admin uses it; a sub-admin is never asked. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Only to list the SIM cards so the ministry SIM can be chosen on dual-SIM phones. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
     <application
         android:allowBackup="false"
@@ -21,5 +27,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <!-- Android's "SMS sent" reports for "Send SMS reminders". -->
+        <receiver android:name=".data.SmsSentReceiver" android:exported="false" />
     </application>
 </manifest>

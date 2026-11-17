@@ -26,7 +26,7 @@ export interface RegisterInput {
   locale?: unknown;
   notes?: unknown;
   telegram?: unknown;
-  source: "website" | "app" | "telegram" | "registrar";
+  source: "website" | "app" | "telegram" | "registrar" | "admin";
   /** The sub-admin registering the donor (counts toward their target). */
   registeredBy?: number;
   /** Refuse a phone/email that is already registered instead of updating it (sub-admins). */

@@ -1,83 +1,75 @@
 import { hasDb, query, queryOne } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { readGivingNow } from "@/lib/data/giving";
-import { MONTH_DAYS, dayName, displayPhone, isEmail, normalizePhone, periodWords, scheduleDay, type Frequency, type GivingSettings } from "@/lib/giving";
+import { MONTH_DAYS, dayName, displayPhone, isEmail, normalizePhone, periodWords, scheduleDay, type GivingSettings } from "@/lib/giving";
 import { registerDonor } from "@/lib/donors";
 import { limited } from "@/lib/ratelimit";
 import { extendTarget, MAX_SELF_EXTEND } from "@/lib/registrars";
 import { donorMessage, giveLink } from "@/lib/reminders";
 import { subBot, subBotSecret } from "@/lib/telegram-subadmin";
+import { ADMIN_HELP, adminAnswer, adminButton, adminCommandFor, adminKeyboard, adminTargetButton, showOverview, showRemind, showSubs, startFind } from "./admin";
+import {
+  birr,
+  chunk,
+  endSession,
+  first,
+  getSession,
+  inline,
+  noKeyboard,
+  reply,
+  setSession,
+  type Actor,
+  type Data,
+  type Lang,
+  type Step,
+  type TgCallback,
+  type TgMessage,
+  type TgUser,
+} from "./core";
 
-// POST /api/telegram/subadmin — the sub-admin Telegram bot, for sub-admins
-// without an Android phone (iPhone users). The same as the Sub-admin app:
-//   • sign in once: share their phone number, then type their password;
-//   • register donors step by step: name → phone → monthly or weekly →
-//     amount → day (of the month or week) → language → email (optional) → confirm. It counts toward their target, and
-//     a number that is already registered is refused;
-//   • after each registration, a message to forward to the donor (thank-you
-//     and payment link);
-//   • see their progress and the donors they registered; sign out.
-// Pausing a sub-admin, changing their password or removing them (Admin app)
-// signs them out of the bot too.
+// POST /api/telegram/subadmin — the team Telegram bot (TELEGRAM_SUBADMIN_BOT_TOKEN),
+// for the ministry's admins and sub-admins, e.g. on an iPhone:
+//   • sub-admins sign in once by sharing their phone number and typing their
+//     password, then register donors step by step (name → phone → monthly or
+//     weekly → amount → day → language → email → confirm), see their progress
+//     and donors, and raise their own target once it is reached;
+//   • admins sign in with their dashboard email and password and get the admin
+//     tools (admin.ts): overview, register and find donors, record payments,
+//     pause / stop / remind a donor, send today's reminders, manage sub-admins.
+// After each registration the bot gives a message to forward to the donor.
+// Pausing a sub-admin, changing a password or removing someone signs them out
+// here too; an admin's sign-in lasts 30 days.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
-interface TgUser {
-  id: number;
-  username?: string;
-  first_name?: string;
-  language_code?: string;
-}
-interface TgMessage {
-  message_id: number;
-  chat: { id: number; type: string };
-  from?: TgUser;
-  text?: string;
-  contact?: { phone_number: string; first_name?: string; last_name?: string; user_id?: number };
-}
-interface TgCallback {
-  id: string;
-  from: TgUser;
-  data?: string;
-  message?: { message_id: number; chat: { id: number; type: string } };
-}
-interface Me {
-  id: number;
-  name: string;
-  target: number;
-  status: string;
-  lang: Lang;
-}
-type Lang = "en" | "am";
-type Step = "password" | "name" | "phone" | "freq" | "amount" | "amount_custom" | "day" | "mday" | "lang" | "email" | "confirm" | "extend";
-interface Data {
-  /** Signing in: the sub-admin whose password we're waiting for. */
-  rid?: number;
-  ui?: Lang;
-  name?: string;
-  phone?: string;
-  frequency?: Frequency;
-  amount?: number;
-  day?: number;
-  monthDay?: number;
-  locale?: Lang;
-  email?: string;
-}
+const ADMIN_DAYS = 30;
 
-const ok = () => new Response("ok");
-const birr = (n: number) => n.toLocaleString("en-US");
-const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+/** The command menu in an admin's chat (everyone else sees the sub-admin commands). */
+const ADMIN_COMMANDS = [
+  { command: "overview", description: "Numbers at a glance" },
+  { command: "register", description: "Register a donor" },
+  { command: "find", description: "Find a donor" },
+  { command: "subadmins", description: "Sub-admins and targets" },
+  { command: "remind", description: "Send today's reminders" },
+  { command: "cancel", description: "Stop the current step" },
+  { command: "logout", description: "Sign out" },
+];
 
 const T = {
   en: {
     welcome:
-      "Welcome to the Omo Beeza sub-admin bot! 👋\n\nHere you register monthly and weekly donors for Omo Beeza Ministry. To sign in, tap “Share my phone number” below (the number the admin registered you with).",
+      "Welcome to the Omo Beeza team bot! 👋\n\nSub-admins: tap “Share my phone number” below (the number the admin registered you with).\nAdmins: tap “Sign in as admin”.",
     share: "📱 Share my phone number",
+    adminSignIn: "🔐 Sign in as admin",
     notOwn: "Please share your own number with the button below.",
     notSubAdmin: "This number isn't registered as a sub-admin. Please ask the ministry's admin to add you, then send /start again.",
     paused: "Your sub-admin account is paused. Please contact the ministry's admin.",
-    askPassword: "Thank you! Now type your password (the same one as for the Sub-admin app). I'll delete your message right after reading it.",
+    askPassword: "Thank you! Now type your password (the same one as for the app). I'll delete your message right after reading it.",
+    askAdminEmail: "Admin sign-in 🔐\n\nType the email you use for the website dashboard.",
+    askAdminPassword: "Now type your dashboard password. I'll delete your message right after reading it.",
+    badLogin: "That email and password don't match. Please try again, or send /cancel.",
     badPassword: "That password isn't right. Please try again, or send /cancel.",
     tooMany: "Too many attempts. Please wait 15 minutes and try again.",
     signedIn: (name: string) => `You're signed in, ${name}! 🎉`,
@@ -139,12 +131,16 @@ const T = {
   },
   am: {
     welcome:
-      "ወደ ኦሞ ቤዛ ንዑስ አስተዳዳሪ ቦት እንኳን ደህና መጡ! 👋\n\nእዚህ ለኦሞ ቤዛ ሚኒስትሪ ወርሃዊና ሳምንታዊ ለጋሾችን ይመዘግባሉ። ለመግባት ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ (አስተዳዳሪው የመዘገበዎት ቁጥር)።",
+      "ወደ ኦሞ ቤዛ የቡድን ቦት እንኳን ደህና መጡ! 👋\n\nንዑስ አስተዳዳሪዎች፦ ከታች ያለውን “ስልክ ቁጥሬን አጋራ” ይጫኑ (አስተዳዳሪው የመዘገበዎት ቁጥር)።\nአስተዳዳሪዎች፦ “Sign in as admin” ይጫኑ።",
     share: "📱 ስልክ ቁጥሬን አጋራ",
+    adminSignIn: "🔐 Sign in as admin",
     notOwn: "እባክዎ ከታች ባለው ቁልፍ የራስዎን ቁጥር ያጋሩ።",
     notSubAdmin: "ይህ ቁጥር እንደ ንዑስ አስተዳዳሪ አልተመዘገበም። እባክዎ የሚኒስትሪውን አስተዳዳሪ እንዲጨምርዎ ይጠይቁ፤ ከዚያ /start እንደገና ይላኩ።",
     paused: "የንዑስ አስተዳዳሪ መለያዎ ለጊዜው ቆሟል። እባክዎ የሚኒስትሪውን አስተዳዳሪ ያግኙ።",
-    askPassword: "እናመሰግናለን! አሁን የይለፍ ቃልዎን ይጻፉ (ለንዑስ አስተዳዳሪ መተግበሪያው የሚጠቀሙት)። መልእክትዎን ካነበብኩ በኋላ ወዲያውኑ እሰርዘዋለሁ።",
+    askPassword: "እናመሰግናለን! አሁን የይለፍ ቃልዎን ይጻፉ (ለመተግበሪያው የሚጠቀሙት)። መልእክትዎን ካነበብኩ በኋላ ወዲያውኑ እሰርዘዋለሁ።",
+    askAdminEmail: "Admin sign-in 🔐\n\nType the email you use for the website dashboard.",
+    askAdminPassword: "Now type your dashboard password. I'll delete your message right after reading it.",
+    badLogin: "That email and password don't match. Please try again, or send /cancel.",
     badPassword: "የይለፍ ቃሉ ትክክል አይደለም። እባክዎ እንደገና ይሞክሩ ወይም /cancel ይላኩ።",
     tooMany: "ብዙ ሙከራዎች ተደርገዋል። እባክዎ 15 ደቂቃ ቆይተው እንደገና ይሞክሩ።",
     signedIn: (name: string) => `ገብተዋል፣ ${name}! 🎉`,
@@ -206,102 +202,121 @@ const T = {
   },
 };
 
-// ---- Telegram helpers ------------------------------------------------------
+const ok = () => new Response("ok");
 
-async function reply(chatId: number, text: string, extra: Record<string, unknown> = {}): Promise<void> {
-  await subBot("sendMessage", { chat_id: chatId, text, disable_web_page_preview: true, ...extra });
-}
-
-const inline = (rows: { text: string; data?: string; url?: string }[][]) => ({
-  reply_markup: {
-    inline_keyboard: rows.map((r) => r.map((b) => (b.url ? { text: b.text, url: b.url } : { text: b.text, callback_data: b.data }))),
-  },
-});
-const chunk = <T,>(list: T[], size: number) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, i * size + size));
-
-const menuKeyboard = (lang: Lang) => ({
+const subKeyboard = (lang: Lang) => ({
   reply_markup: {
     keyboard: [[{ text: T[lang].menu.register }], [{ text: T[lang].menu.progress }, { text: T[lang].menu.donors }]],
     resize_keyboard: true,
     is_persistent: true,
   },
 });
-const shareKeyboard = (lang: Lang) => ({
-  reply_markup: { keyboard: [[{ text: T[lang].share, request_contact: true }]], resize_keyboard: true, one_time_keyboard: true },
+const signInKeyboard = (lang: Lang) => ({
+  reply_markup: {
+    keyboard: [[{ text: T[lang].share, request_contact: true }], [{ text: T[lang].adminSignIn }]],
+    resize_keyboard: true,
+    one_time_keyboard: true,
+  },
 });
-const noKeyboard = { reply_markup: { remove_keyboard: true } };
 
-// ---- State -----------------------------------------------------------------
+// ---- Who is signed in --------------------------------------------------------
 
-async function signedIn(chatId: number): Promise<Me | null> {
-  return queryOne<Me>(
-    `select r.id, r.name, r.target, r.status, t.lang from registrar_telegram t join registrars r on r.id = t.registrar_id
-     where t.chat_id = $1`,
+/** The admin or sub-admin signed in to this chat. A paused sub-admin is signed out here. */
+async function whoIs(chatId: number): Promise<{ actor: Actor | null; paused: boolean }> {
+  const admin = await queryOne<{ id: number; name: string; lang: Lang; linked_at: string }>(
+    `select u.id, u.name, t.lang, t.linked_at from admin_telegram t join users u on u.id = t.user_id where t.chat_id = $1`,
     [String(chatId)],
   );
-}
-
-async function getSession(chatId: number): Promise<{ step: Step; data: Data } | null> {
-  const row = await queryOne<{ step: Step; data: Data; updated_at: string }>(
-    "select step, data, updated_at from registrar_bot_sessions where chat_id = $1",
+  if (admin) {
+    if (Date.now() - new Date(admin.linked_at).getTime() < ADMIN_DAYS * 86_400_000) {
+      return { actor: { role: "admin", id: admin.id, name: admin.name, lang: admin.lang === "am" ? "am" : "en" }, paused: false };
+    }
+    await query("delete from admin_telegram where chat_id = $1", [String(chatId)]);
+  }
+  const sub = await queryOne<{ id: number; name: string; target: number; status: string; lang: Lang }>(
+    `select r.id, r.name, r.target, r.status, t.lang from registrar_telegram t join registrars r on r.id = t.registrar_id where t.chat_id = $1`,
     [String(chatId)],
   );
-  if (!row || Date.now() - new Date(row.updated_at).getTime() > 86_400_000) return null;
-  return { step: row.step, data: row.data ?? {} };
+  if (!sub) return { actor: null, paused: false };
+  if (sub.status !== "active") {
+    await query("delete from registrar_telegram where chat_id = $1", [String(chatId)]);
+    return { actor: null, paused: true };
+  }
+  return { actor: { role: "sub", id: sub.id, name: sub.name, target: sub.target, lang: sub.lang === "am" ? "am" : "en" }, paused: false };
 }
 
-async function setSession(chatId: number, step: Step, data: Data): Promise<void> {
-  await query(
-    `insert into registrar_bot_sessions (chat_id, step, data, updated_at) values ($1, $2, $3, now())
-     on conflict (chat_id) do update set step = excluded.step, data = excluded.data, updated_at = now()`,
-    [String(chatId), step, JSON.stringify(data)],
+/** Signs this chat in as one person (and out of anyone else). */
+async function signIn(chatId: number, role: "sub" | "admin", id: number, from: TgUser, lang: Lang): Promise<void> {
+  await query("delete from admin_telegram where chat_id = $1", [String(chatId)]);
+  await query("delete from registrar_telegram where chat_id = $1", [String(chatId)]);
+  if (role === "admin") {
+    await query("insert into admin_telegram (chat_id, user_id, username, lang) values ($1, $2, $3, $4)", [
+      String(chatId),
+      id,
+      from.username?.toLowerCase() ?? "",
+      lang,
+    ]);
+    await query("update users set last_login = now() where id = $1", [id]);
+    await subBot("setMyCommands", { commands: ADMIN_COMMANDS, scope: { type: "chat", chat_id: chatId } });
+  } else {
+    await subBot("deleteMyCommands", { scope: { type: "chat", chat_id: chatId } });
+    await query("insert into registrar_telegram (chat_id, registrar_id, username, lang) values ($1, $2, $3, $4)", [
+      String(chatId),
+      id,
+      from.username?.toLowerCase() ?? "",
+      lang,
+    ]);
+    await query("update registrars set last_login = now() where id = $1", [id]);
+  }
+}
+
+// ---- Home screens ------------------------------------------------------------
+
+async function subHome(chatId: number, actor: Extract<Actor, { role: "sub" }>, before = ""): Promise<void> {
+  const r = await queryOne<{ target: number; registered: number; today: number }>(
+    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id) as registered,
+            (select count(*)::int from donors d where d.registered_by = r.id and d.created_at > now() - interval '24 hours') as today
+     from registrars r where r.id = $1`,
+    [actor.id],
   );
-}
-
-async function endSession(chatId: number): Promise<void> {
-  await query("delete from registrar_bot_sessions where chat_id = $1", [String(chatId)]);
-}
-
-// ---- Screens ---------------------------------------------------------------
-
-async function counts(me: Me): Promise<{ registered: number; today: number }> {
-  const c = await queryOne<{ registered: number; today: number }>(
-    `select count(*)::int as registered, count(*) filter (where created_at > now() - interval '24 hours')::int as today
-     from donors where registered_by = $1`,
-    [me.id],
-  );
-  return { registered: c?.registered ?? 0, today: c?.today ?? 0 };
-}
-
-/** Progress, and once the target is reached, an offer to register more. */
-async function showMenu(chatId: number, me: Me, before = ""): Promise<void> {
-  const target = (await queryOne<{ target: number }>("select target from registrars where id = $1", [me.id]))?.target ?? me.target;
-  const c = await counts(me);
-  const t = T[me.lang];
-  await reply(chatId, `${before ? `${before}\n\n` : ""}${t.progress(c.registered, target, c.today)}`, menuKeyboard(me.lang));
-  if (target > 0 && c.registered >= target) {
+  const target = r?.target ?? actor.target;
+  const registered = r?.registered ?? 0;
+  const t = T[actor.lang];
+  await reply(chatId, `${before ? `${before}\n\n` : ""}${t.progress(registered, target, r?.today ?? 0)}`, subKeyboard(actor.lang));
+  if (target > 0 && registered >= target) {
     await reply(chatId, t.extendOffer, inline([[{ text: "+5", data: "ext:5" }, { text: "+10", data: "ext:10" }, { text: t.extendOther, data: "ext:other" }]]));
   }
 }
 
-async function showDonors(chatId: number, me: Me): Promise<void> {
-  const rows = await query<{ name: string; phone: string; amount: number; reminder_day: number; frequency: string; month_day: number; status: string }>(
-    "select name, phone, amount, reminder_day, frequency, month_day, status from donors where registered_by = $1 order by created_at desc limit 30",
-    [me.id],
-  );
-  const total = (await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1", [me.id]))?.n ?? 0;
-  const t = T[me.lang];
-  if (!total) return reply(chatId, t.noDonors, menuKeyboard(me.lang));
-  const lines = rows.map(
-    (d, i) =>
-      `${i + 1}. ${d.name} · ${displayPhone(d.phone)}\n    ${birr(d.amount)} ${me.lang === "am" ? "ብር" : "birr"} · ${periodWords(d.frequency, me.lang).every} · ${scheduleDay(d.frequency, d.reminder_day, d.month_day, me.lang)}${
-        d.status === "active" ? "" : ` · ${d.status}`
-      }`,
-  );
-  await reply(chatId, `${t.donorsTitle(rows.length, total)}\n\n${lines.join("\n")}`, menuKeyboard(me.lang));
+/** The signed-in person's main screen: progress (sub-admin) or the overview (admin). */
+async function home(chatId: number, actor: Actor, before = ""): Promise<void> {
+  if (actor.role === "admin") return showOverview(chatId, before);
+  return subHome(chatId, actor, before);
 }
 
-/** Ask the question for `step` of registering a donor (and remember it). */
+async function showDonors(chatId: number, actor: Extract<Actor, { role: "sub" }>): Promise<void> {
+  const rows = await query<{ name: string; phone: string; amount: number; reminder_day: number; frequency: string; month_day: number; status: string }>(
+    "select name, phone, amount, reminder_day, frequency, month_day, status from donors where registered_by = $1 order by created_at desc limit 30",
+    [actor.id],
+  );
+  const total = (await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1", [actor.id]))?.n ?? 0;
+  const t = T[actor.lang];
+  if (!total) return reply(chatId, t.noDonors, subKeyboard(actor.lang));
+  const lines = rows.map(
+    (d, i) =>
+      `${i + 1}. ${d.name} · ${displayPhone(d.phone)}\n    ${birr(d.amount)} ${actor.lang === "am" ? "ብር" : "birr"} · ${periodWords(d.frequency, actor.lang).every} · ${scheduleDay(
+        d.frequency,
+        d.reminder_day,
+        d.month_day,
+        actor.lang,
+      )}${d.status === "active" ? "" : ` · ${d.status}`}`,
+  );
+  await reply(chatId, `${t.donorsTitle(rows.length, total)}\n\n${lines.join("\n")}`, subKeyboard(actor.lang));
+}
+
+// ---- Registering a donor (sub-admins and admins) ---------------------------------
+
+/** Ask the question for `step` (and remember that we're waiting for it). */
 async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: GivingSettings): Promise<void> {
   const t = T[lang];
   await setSession(chatId, step, data);
@@ -309,6 +324,10 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
   switch (step) {
     case "password":
       return reply(chatId, t.askPassword, noKeyboard);
+    case "a_email":
+      return reply(chatId, t.askAdminEmail, noKeyboard);
+    case "a_password":
+      return reply(chatId, t.askAdminPassword);
     case "name":
       return reply(chatId, t.askName, noKeyboard);
     case "phone":
@@ -319,19 +338,12 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
       return reply(
         chatId,
         t.askAmount(giving.minAmount, periodWords(data.frequency ?? "weekly", lang).every),
-        inline([
-          ...chunk(giving.amounts.map((a) => ({ text: `${birr(a)}`, data: `amt:${a}` })), 4),
-          [{ text: t.other, data: "amt:other" }, ...cancelRow],
-        ]),
+        inline([...chunk(giving.amounts.map((a) => ({ text: `${birr(a)}`, data: `amt:${a}` })), 4), [{ text: t.other, data: "amt:other" }, ...cancelRow]]),
       );
     case "amount_custom":
       return reply(chatId, t.typeAmount(giving.minAmount));
     case "day":
-      return reply(
-        chatId,
-        t.askDay,
-        inline([...chunk([0, 1, 2, 3, 4, 5, 6].map((d) => ({ text: dayName(d, lang), data: `day:${d}` })), 4), cancelRow]),
-      );
+      return reply(chatId, t.askDay, inline([...chunk([0, 1, 2, 3, 4, 5, 6].map((d) => ({ text: dayName(d, lang), data: `day:${d}` })), 4), cancelRow]));
     case "mday":
       return reply(chatId, t.askMonthDay, inline([...chunk(MONTH_DAYS.map((d) => ({ text: String(d), data: `mday:${d}` })), 7), cancelRow]));
     case "extend":
@@ -349,11 +361,13 @@ async function ask(chatId: number, step: Step, data: Data, lang: Lang, giving: G
         inline([[{ text: t.yes, data: "ok" }], [{ text: t.restart, data: "restart" }, ...cancelRow]]),
       );
     }
+    default:
+      return;
   }
 }
 
-async function finish(chatId: number, me: Me, data: Data): Promise<void> {
-  const t = T[me.lang];
+async function finish(chatId: number, actor: Actor, data: Data): Promise<void> {
+  const t = T[actor.lang];
   await endSession(chatId);
   const res = await registerDonor({
     name: data.name,
@@ -363,21 +377,21 @@ async function finish(chatId: number, me: Me, data: Data): Promise<void> {
     frequency: data.frequency ?? "weekly",
     day: data.day,
     monthDay: data.monthDay,
-    locale: data.locale ?? me.lang,
-    source: "registrar",
+    locale: data.locale ?? actor.lang,
+    source: actor.role === "sub" ? "registrar" : "admin",
     requires: "phone",
-    registeredBy: me.id,
+    registeredBy: actor.role === "sub" ? actor.id : undefined,
     noUpdate: true,
   });
   if (!res.ok) {
     const msg = res.error === "already_registered" || res.error === "save_failed" ? t.failed[res.error] : t.failed.other;
-    return showMenu(chatId, me, `⚠️ ${msg}`);
+    return home(chatId, actor, `⚠️ ${msg}`);
   }
   const donor = res.donor;
-  await showMenu(chatId, me, t.saved(donor.name));
+  await home(chatId, actor, t.saved(donor.name));
 
-  // A message for the sub-admin to forward to the donor: the thank-you (with
-  // the payment link) and the donor bot for reminders on Telegram.
+  // A message to forward to the donor: the thank-you (with the payment link)
+  // and the donor bot for reminders on Telegram.
   const giving = await readGivingNow();
   const am = donor.locale === "am";
   const thanks = giving.welcomeEnabled ? donorMessage("welcome", donor, giving) : giveLink(giving, donor.locale, donor.amount);
@@ -386,7 +400,51 @@ async function finish(chatId: number, me: Me, data: Data): Promise<void> {
   await reply(chatId, forward, inline([[{ text: t.sendTg, url: `https://t.me/share/url?url=${encodeURIComponent(res.link)}&text=${encodeURIComponent(forward)}` }]]));
 }
 
-// ---- Webhook ---------------------------------------------------------------
+/** A typed answer while registering a donor (both roles). Returns false when it isn't one. */
+async function donorAnswer(chatId: number, actor: Actor, step: Step, data: Data, text: string, msg: TgMessage, giving: GivingSettings): Promise<boolean> {
+  const lang = actor.lang;
+  const t = T[lang];
+  switch (step) {
+    case "name": {
+      const name = text.replace(/\s+/g, " ").trim();
+      if (name.length < 2 || name.length > 80 || /[<>{}]/.test(name)) await reply(chatId, t.badName);
+      else await ask(chatId, "phone", { ...data, name }, lang, giving);
+      return true;
+    }
+    case "phone": {
+      const phone = normalizePhone(msg.contact?.phone_number ?? text);
+      if (!phone) await reply(chatId, t.badPhone);
+      else if (await queryOne("select 1 from donors where phone = $1", [phone])) await reply(chatId, t.taken);
+      else await ask(chatId, "freq", { ...data, phone }, lang, giving);
+      return true;
+    }
+    case "amount_custom": {
+      const amount = Math.round(Number(text.replace(/[^\d.]/g, "")));
+      if (!(amount >= giving.minAmount && amount <= 1_000_000)) await reply(chatId, t.badAmount(giving.minAmount));
+      else await ask(chatId, data.frequency === "monthly" ? "mday" : "day", { ...data, amount }, lang, giving);
+      return true;
+    }
+    case "email": {
+      const email = text.toLowerCase();
+      if (!isEmail(email) || email.length > 200) await reply(chatId, t.badEmail);
+      else await ask(chatId, "confirm", { ...data, email }, lang, giving);
+      return true;
+    }
+    case "freq":
+    case "amount":
+    case "day":
+    case "mday":
+    case "lang":
+    case "confirm":
+      // A button question: ask it again.
+      await ask(chatId, step, data, lang, giving);
+      return true;
+    default:
+      return false;
+  }
+}
+
+// ---- Webhook -------------------------------------------------------------------
 
 export async function POST(request: Request): Promise<Response> {
   if (!process.env.TELEGRAM_SUBADMIN_BOT_TOKEN || request.headers.get("x-telegram-bot-api-secret-token") !== subBotSecret()) {
@@ -407,27 +465,17 @@ export async function POST(request: Request): Promise<Response> {
     if (update.callback_query) await onButton(update.callback_query);
     else if (update.message && update.message.chat.type === "private" && update.message.from) await onMessage(update.message);
   } catch (err) {
-    console.error("sub-admin bot:", err);
+    console.error("team bot:", err);
   }
   return ok();
-}
-
-/** The signed-in sub-admin for this chat; a paused one is signed out here. */
-async function whoIs(chatId: number): Promise<{ me: Me | null; paused: boolean }> {
-  const me = await signedIn(chatId);
-  if (me && me.status !== "active") {
-    await query("delete from registrar_telegram where chat_id = $1", [String(chatId)]);
-    return { me: null, paused: true };
-  }
-  return { me, paused: false };
 }
 
 async function onMessage(msg: TgMessage): Promise<void> {
   const from = msg.from as TgUser;
   const chatId = msg.chat.id;
-  const { me, paused } = await whoIs(chatId);
+  const { actor, paused } = await whoIs(chatId);
   const session = await getSession(chatId);
-  const lang: Lang = me?.lang ?? session?.data.ui ?? (from.language_code === "am" ? "am" : "en");
+  const lang: Lang = actor?.lang ?? session?.data.ui ?? (from.language_code === "am" ? "am" : "en");
   const t = T[lang];
   const giving = await readGivingNow();
   const text = (msg.text ?? "").trim();
@@ -444,25 +492,51 @@ async function onMessage(msg: TgMessage): Promise<void> {
         ? "/progress"
         : text === T.en.menu.donors || text === T.am.menu.donors
           ? "/donors"
-          : "";
+          : text === T.en.adminSignIn
+            ? "/admin"
+            : adminCommandFor(text);
 
-  // ---- Not signed in: phone number, then password.
-  if (!me) {
+  // ---- Not signed in.
+  if (!actor) {
+    // Sub-admin: their phone number, then their password.
     if (msg.contact) {
-      if (msg.contact.user_id !== from.id) return reply(chatId, t.notOwn, shareKeyboard(lang));
+      if (msg.contact.user_id !== from.id) return reply(chatId, t.notOwn, signInKeyboard(lang));
       const phone = normalizePhone(msg.contact.phone_number);
       const r = phone ? await queryOne<{ id: number; status: string }>("select id, status from registrars where phone = $1", [phone]) : null;
-      if (!r) return reply(chatId, t.notSubAdmin, noKeyboard);
+      if (!r) return reply(chatId, t.notSubAdmin, signInKeyboard(lang));
       if (r.status !== "active") return reply(chatId, t.paused, noKeyboard);
       return ask(chatId, "password", { rid: r.id, ui: lang }, lang, giving);
     }
     if (command === "/language") return chooseLanguage(chatId, lang);
+    if (command === "/admin") return ask(chatId, "a_email", { ui: lang }, lang, giving);
+
+    // Admin: email, then password.
+    if (session?.step === "a_email" && text && !command) {
+      const email = text.toLowerCase().trim();
+      const user = isEmail(email) ? await queryOne<{ id: number }>("select id from users where lower(email) = $1", [email]) : null;
+      // Same question either way, so emails can't be discovered.
+      return ask(chatId, "a_password", { uid: user?.id ?? 0, ui: lang }, lang, giving);
+    }
+    if (session?.step === "a_password" && text && !command) {
+      await subBot("deleteMessage", { chat_id: chatId, message_id: msg.message_id });
+      if (limited(`teambot:${chatId}`, 6, 15 * 60_000) || limited(`teambot-u:${session.data.uid}`, 8, 15 * 60_000)) return reply(chatId, t.tooMany);
+      const user = session.data.uid
+        ? await queryOne<{ id: number; name: string; password_hash: string }>("select id, name, password_hash from users where id = $1", [session.data.uid])
+        : null;
+      if (!user || !(await verifyPassword(text, user.password_hash))) {
+        await setSession(chatId, "a_email", { ui: lang });
+        return reply(chatId, `${t.badLogin}\n\n${t.askAdminEmail}`);
+      }
+      await endSession(chatId);
+      await signIn(chatId, "admin", user.id, from, lang);
+      return showOverview(chatId, `${t.signedIn(first(user.name))}\n\n${ADMIN_HELP}`);
+    }
+
+    // Sub-admin password.
     if (session?.step === "password" && session.data.rid && text && !command) {
       // Don't leave the password in the chat.
       await subBot("deleteMessage", { chat_id: chatId, message_id: msg.message_id });
-      if (limited(`regbot:${chatId}`, 6, 15 * 60_000) || limited(`regbot-r:${session.data.rid}`, 8, 15 * 60_000)) {
-        return reply(chatId, t.tooMany);
-      }
+      if (limited(`regbot:${chatId}`, 6, 15 * 60_000) || limited(`regbot-r:${session.data.rid}`, 8, 15 * 60_000)) return reply(chatId, t.tooMany);
       const r = await queryOne<{ id: number; name: string; status: string; password_hash: string }>(
         "select id, name, status, password_hash from registrars where id = $1",
         [session.data.rid],
@@ -473,18 +547,13 @@ async function onMessage(msg: TgMessage): Promise<void> {
       }
       if (!(await verifyPassword(text, r.password_hash))) return reply(chatId, t.badPassword);
       await endSession(chatId);
-      await query(
-        `insert into registrar_telegram (chat_id, registrar_id, username, lang) values ($1, $2, $3, $4)
-         on conflict (chat_id) do update set registrar_id = excluded.registrar_id, username = excluded.username, lang = excluded.lang, linked_at = now()`,
-        [String(chatId), r.id, from.username?.toLowerCase() ?? "", lang],
-      );
-      await query("update registrars set last_login = now() where id = $1", [r.id]);
-      const now = await signedIn(chatId);
-      if (now) await showMenu(chatId, now, `${t.signedIn(first(r.name))}\n\n${t.help}`);
+      await signIn(chatId, "sub", r.id, from, lang);
+      const now = await whoIs(chatId);
+      if (now.actor) await home(chatId, now.actor, `${t.signedIn(first(r.name))}\n\n${t.help}`);
       return;
     }
     if (command === "/cancel") await endSession(chatId);
-    return reply(chatId, command === "/start" || command === "/cancel" || !text ? t.welcome : `${t.notSignedIn}\n\n${t.welcome}`, shareKeyboard(lang));
+    return reply(chatId, command === "/start" || command === "/cancel" || !text ? t.welcome : `${t.notSignedIn}\n\n${t.welcome}`, signInKeyboard(lang));
   }
 
   // ---- Signed in.
@@ -492,70 +561,64 @@ async function onMessage(msg: TgMessage): Promise<void> {
     switch (command) {
       case "/register":
         return ask(chatId, "name", {}, lang, giving);
-      case "/extend":
-        return ask(chatId, "extend", {}, lang, giving);
-      case "/progress":
       case "/start":
+      case "/progress":
+      case "/overview":
         await endSession(chatId);
-        return showMenu(chatId, me);
-      case "/donors":
-        await endSession(chatId);
-        return showDonors(chatId, me);
+        return home(chatId, actor);
       case "/cancel":
         await endSession(chatId);
-        return showMenu(chatId, me, t.cancelled);
+        return home(chatId, actor, t.cancelled);
       case "/language":
         return chooseLanguage(chatId, lang);
       case "/logout":
         await endSession(chatId);
-        await query("delete from registrar_telegram where chat_id = $1", [String(chatId)]);
+        await query(actor.role === "admin" ? "delete from admin_telegram where chat_id = $1" : "delete from registrar_telegram where chat_id = $1", [String(chatId)]);
+        if (actor.role === "admin") await subBot("deleteMyCommands", { scope: { type: "chat", chat_id: chatId } });
         return reply(chatId, t.signedOut, noKeyboard);
+    }
+    if (actor.role === "sub") {
+      switch (command) {
+        case "/extend":
+          return ask(chatId, "extend", {}, lang, giving);
+        case "/donors":
+          await endSession(chatId);
+          return showDonors(chatId, actor);
+        default:
+          return reply(chatId, t.help, subKeyboard(lang));
+      }
+    }
+    switch (command) {
+      case "/find":
+        return startFind(chatId);
+      case "/subadmins":
+        await endSession(chatId);
+        return showSubs(chatId);
+      case "/remind":
+        await endSession(chatId);
+        return showRemind(chatId);
       default:
-        return reply(chatId, t.help, menuKeyboard(lang));
+        return reply(chatId, ADMIN_HELP, adminKeyboard);
     }
   }
 
-  // Answers to the questions of registering a donor.
-  const data = session?.data ?? {};
-  if (!session) return reply(chatId, t.help, menuKeyboard(lang));
-  switch (session.step) {
-    case "name": {
-      const name = text.replace(/\s+/g, " ").trim();
-      if (name.length < 2 || name.length > 80 || /[<>{}]/.test(name)) return reply(chatId, t.badName);
-      return ask(chatId, "phone", { ...data, name }, lang, giving);
-    }
-    case "phone": {
-      const phone = normalizePhone(msg.contact?.phone_number ?? text);
-      if (!phone) return reply(chatId, t.badPhone);
-      if (await queryOne("select 1 from donors where phone = $1", [phone])) return reply(chatId, t.taken);
-      return ask(chatId, "freq", { ...data, phone }, lang, giving);
-    }
-    case "amount_custom": {
-      const amount = Math.round(Number(text.replace(/[^\d.]/g, "")));
-      if (!(amount >= giving.minAmount && amount <= 1_000_000)) return reply(chatId, t.badAmount(giving.minAmount));
-      return ask(chatId, data.frequency === "monthly" ? "mday" : "day", { ...data, amount }, lang, giving);
-    }
-    case "extend": {
-      const n = Math.round(Number(text.replace(/[^\d]/g, "")));
-      if (!(n >= 1 && n <= MAX_SELF_EXTEND)) return reply(chatId, t.badExtend);
-      await endSession(chatId);
-      return extend(chatId, me, n);
-    }
-    case "email": {
-      const email = text.toLowerCase();
-      if (!isEmail(email) || email.length > 200) return reply(chatId, t.badEmail);
-      return ask(chatId, "confirm", { ...data, email }, lang, giving);
-    }
-    default:
-      // A button question: ask it again.
-      return ask(chatId, session.step, data, lang, giving);
+  if (!session) return actor.role === "admin" ? reply(chatId, ADMIN_HELP, adminKeyboard) : reply(chatId, t.help, subKeyboard(lang));
+  if (await donorAnswer(chatId, actor, session.step, session.data, text, msg, giving)) return;
+  if (actor.role === "sub" && session.step === "extend") {
+    const n = Math.round(Number(text.replace(/[^\d]/g, "")));
+    if (!(n >= 1 && n <= MAX_SELF_EXTEND)) return reply(chatId, t.badExtend);
+    await endSession(chatId);
+    return extend(chatId, actor, n);
   }
+  if (actor.role === "admin" && (await adminAnswer(chatId, actor, session.step, session.data, text, msg.message_id))) return;
+  await endSession(chatId);
+  return home(chatId, actor);
 }
 
-async function extend(chatId: number, me: Me, n: number): Promise<void> {
-  const res = await extendTarget(me.id, n);
-  if (res.ok) return showMenu(chatId, { ...me, target: res.target }, T[me.lang].extended(res.target));
-  return showMenu(chatId, me, res.error === "target_not_reached" ? T[me.lang].notReached : T[me.lang].badExtend);
+async function extend(chatId: number, actor: Extract<Actor, { role: "sub" }>, n: number): Promise<void> {
+  const res = await extendTarget(actor.id, n);
+  if (res.ok) return subHome(chatId, { ...actor, target: res.target }, T[actor.lang].extended(res.target));
+  return subHome(chatId, actor, res.error === "target_not_reached" ? T[actor.lang].notReached : T[actor.lang].badExtend);
 }
 
 async function chooseLanguage(chatId: number, lang: Lang): Promise<void> {
@@ -569,33 +632,40 @@ async function onButton(cb: TgCallback): Promise<void> {
   // Remove the buttons that were just used.
   await subBot("editMessageReplyMarkup", { chat_id: chatId, message_id: cb.message.message_id, reply_markup: { inline_keyboard: [] } });
 
-  const { me, paused } = await whoIs(chatId);
+  const { actor, paused } = await whoIs(chatId);
   const session = await getSession(chatId);
-  const [key, value = ""] = (cb.data ?? "").split(":");
+  const [key, ...parts] = (cb.data ?? "").split(":");
+  const value = parts[0] ?? "";
   const giving = await readGivingNow();
 
   if (key === "ui" && (value === "en" || value === "am")) {
-    if (me) {
-      await query("update registrar_telegram set lang = $1 where chat_id = $2", [value, String(chatId)]);
-      return showMenu(chatId, { ...me, lang: value }, T[value].langSet);
+    if (actor) {
+      await query(actor.role === "admin" ? "update admin_telegram set lang = $1 where chat_id = $2" : "update registrar_telegram set lang = $1 where chat_id = $2", [
+        value,
+        String(chatId),
+      ]);
+      return home(chatId, { ...actor, lang: value }, T[value].langSet);
     }
-    if (session) await setSession(chatId, session.step, { ...session.data, ui: value });
-    else await setSession(chatId, "password", { ui: value });
-    return reply(chatId, `${T[value].langSet}\n\n${T[value].welcome}`, shareKeyboard(value));
+    await setSession(chatId, session?.step ?? "password", { ...(session?.data ?? {}), ui: value });
+    return reply(chatId, `${T[value].langSet}\n\n${T[value].welcome}`, signInKeyboard(value));
   }
 
-  const lang: Lang = me?.lang ?? session?.data.ui ?? (cb.from.language_code === "am" ? "am" : "en");
+  const lang: Lang = actor?.lang ?? session?.data.ui ?? (cb.from.language_code === "am" ? "am" : "en");
   if (paused) return reply(chatId, T[lang].paused, noKeyboard);
-  if (!me) return reply(chatId, T[lang].notSignedIn, shareKeyboard(lang));
+  if (!actor) return reply(chatId, T[lang].notSignedIn, signInKeyboard(lang));
   if (key === "cancel") {
     await endSession(chatId);
-    return showMenu(chatId, me, T[lang].cancelled);
+    return home(chatId, actor, T[lang].cancelled);
   }
-  if (key === "ext") {
+  if (actor.role === "sub" && key === "ext") {
     if (value === "other") return ask(chatId, "extend", {}, lang, giving);
-    return extend(chatId, me, Number(value));
+    return extend(chatId, actor, Number(value));
   }
-  if (!session) return showMenu(chatId, me);
+  if (actor.role === "admin") {
+    if (key === "subt" && session?.step === "a_sub_target") return adminTargetButton(chatId, actor, session.data, Number(value));
+    if (await adminButton(chatId, actor, key, parts)) return;
+  }
+  if (!session) return home(chatId, actor);
   const data = session.data;
 
   if (key === "freq" && session.step === "freq" && (value === "monthly" || value === "weekly")) {
@@ -619,7 +689,7 @@ async function onButton(cb: TgCallback): Promise<void> {
   }
   if (key === "email" && value === "skip" && session.step === "email") return ask(chatId, "confirm", { ...data, email: "" }, lang, giving);
   if (key === "restart") return ask(chatId, "name", {}, lang, giving);
-  if (key === "ok" && session.step === "confirm") return finish(chatId, me, data);
+  if (key === "ok" && session.step === "confirm") return finish(chatId, actor, data);
   // A stale button: ask the current question again.
   return ask(chatId, session.step, data, lang, giving);
 }

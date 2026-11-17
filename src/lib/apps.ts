@@ -1,28 +1,24 @@
 import "server-only";
 import { query } from "@/lib/db";
 
-// The two Android apps, kept in the dashboard (Dashboard → Android apps):
-// admins upload a new APK when there is a new version and download the
-// current one at any time, e.g. straight onto a phone to install or update it.
+// The Android app, kept in the dashboard (Dashboard → Android app): admins
+// upload a new APK when there is a new version and download the current one at
+// any time, e.g. straight onto a phone to install or update it.
 
+// One app for everyone since v1.7.0: signing in with an email opens the admin
+// side, with a phone number the sub-admin side. (Stored under the key "admin".)
 export const APPS = {
   admin: {
-    name: "Omo Beeza Admin",
-    file: "OmoBeezaAdmin",
+    name: "Omo Beeza",
+    file: "OmoBeeza",
     package: "org.omobeeza.donors",
-    descr: "For the ministry phone: register donors, send SMS reminders, manage sub-admins.",
-  },
-  subadmin: {
-    name: "Omo Beeza Sub-admin",
-    file: "OmoBeezaSubAdmin",
-    package: "org.omobeeza.subadmin",
-    descr: "For sub-admins with an Android phone: they only register donors toward their target.",
+    descr: "One app for admins and sub-admins. Admins sign in with their email (everything: donors, SMS reminders, sub-admins); sub-admins with their phone number (they only register donors toward their target).",
   },
 } as const;
 
 export type AppKey = keyof typeof APPS;
 
-export const isAppKey = (v: unknown): v is AppKey => v === "admin" || v === "subadmin";
+export const isAppKey = (v: unknown): v is AppKey => v === "admin";
 
 /** Largest APK accepted (the apps are about 2 MB). */
 export const MAX_APK_BYTES = 30 * 1024 * 1024;

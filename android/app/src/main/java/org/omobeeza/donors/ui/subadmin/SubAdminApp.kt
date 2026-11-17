@@ -80,7 +80,6 @@ import org.omobeeza.donors.ui.screens.DonorDetails
 import org.omobeeza.donors.ui.screens.RegisterScreen
 import org.omobeeza.donors.ui.screens.SavedScreen
 import org.omobeeza.donors.ui.screens.SettingsScreen
-import org.omobeeza.donors.ui.screens.SignInScreen
 import org.omobeeza.donors.ui.theme.Brand
 import org.omobeeza.donors.ui.theme.Fraunces
 
@@ -92,7 +91,9 @@ private fun depth(s: SubScreen): Int = when (s) {
 
 /** The whole Sub-admin app ("Omo Beeza Sub-admin"). */
 @Composable
-fun SubAdminApp(vm: SubAdminViewModel = viewModel()) {
+fun SubAdminApp(vm: SubAdminViewModel = viewModel(), onSignedOut: (notice: String?) -> Unit = {}) {
+    // Signed out (or paused/removed by an admin): back to the shared sign-in screen.
+    LaunchedEffect(vm.screen) { if (vm.screen == SubScreen.SignIn) onSignedOut(vm.formError) }
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) {
         vm.message?.let {
@@ -113,7 +114,7 @@ fun SubAdminApp(vm: SubAdminViewModel = viewModel()) {
         label = "screens",
     ) { screen ->
         when (screen) {
-            SubScreen.SignIn -> SignInScreen(vm.prefs.site, vm.busy, vm.formError, subAdmin = true) { site, phone, password -> vm.signIn(site, phone, password) }
+            SubScreen.SignIn -> Box(Modifier.fillMaxSize().background(Brand.NightSky))
 
             SubScreen.Home -> SubHomeScreen(
                 me = vm.me,

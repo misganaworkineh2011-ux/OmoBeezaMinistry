@@ -25,8 +25,9 @@ sealed interface SubScreen {
 }
 
 /**
- * The Sub-admin app: sign in with a phone number, register donors, and see
- * how many of the target are done. Nothing else (no SMS, no other donors).
+ * The sub-admin side of the app (signed in with a phone number): register
+ * donors and see how many of the target are done. Nothing else (no SMS, no
+ * other donors, no admin screens).
  */
 class SubAdminViewModel(app: Application) : AndroidViewModel(app) {
     val prefs = Prefs(app)
@@ -66,31 +67,6 @@ class SubAdminViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    fun signIn(site: String, phone: String, password: String) {
-        if (phone.isBlank() || password.isBlank()) {
-            formError = "Enter your phone number and password."
-            return
-        }
-        busy = true
-        formError = null
-        viewModelScope.launch {
-            try {
-                prefs.site = site.ifBlank { prefs.site }
-                val (token, p) = Api(prefs.site, null).subLogin(phone.trim(), password)
-                prefs.token = token
-                prefs.userName = p.name
-                prefs.userEmail = p.phone
-                me = p
-                go(SubScreen.Home)
-                refresh()
-            } catch (e: ApiException) {
-                formError = errorText(e.code)
-            } finally {
-                busy = false
-            }
-        }
-    }
-
     fun signOut() {
         val old = api()
         viewModelScope.launch { old.subLogout() }
@@ -128,7 +104,7 @@ class SubAdminViewModel(app: Application) : AndroidViewModel(app) {
                 go(SubScreen.Saved(donor))
                 refresh()
             } catch (e: ApiException) {
-                if (e.code == "unauthorized") handle(e) else formError = errorText(e.code, e.min ?: settings.minAmount)
+                if (e.code == "unauthorized") handle(e) else formError = errorText(e.code, e.min ?: settings.minAmount, subAdmin = true)
             } finally {
                 busy = false
             }
@@ -154,11 +130,10 @@ class SubAdminViewModel(app: Application) : AndroidViewModel(app) {
     private fun handle(e: ApiException) {
         if (e.code == "unauthorized") {
             // Signed out, paused or removed by an admin.
-            prefs.signOut()
             screen = SubScreen.SignIn
             formError = "Please sign in again. If it keeps failing, ask the ministry admin whether your account is still active."
         } else {
-            message = errorText(e.code)
+            message = errorText(e.code, subAdmin = true)
         }
     }
 }

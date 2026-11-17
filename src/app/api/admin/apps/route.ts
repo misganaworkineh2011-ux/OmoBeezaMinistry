@@ -4,9 +4,9 @@ import { hasDb, query } from "@/lib/db";
 import { json } from "@/lib/ratelimit";
 import { APPS, isAppKey, MAX_APK_BYTES } from "@/lib/apps";
 
-// POST /api/admin/apps (multipart: app = "admin" | "subadmin", version, file)
-// — an admin uploads a new version of one of the Android apps. It replaces the
-// previous upload of that app. Signed-in admins only.
+// POST /api/admin/apps (multipart: app = "admin", version, file) — an admin
+// uploads a new version of the Android app (one app for admins and sub-admins).
+// It replaces the previous upload. Signed-in admins only.
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,5 +44,7 @@ export async function POST(request: Request): Promise<Response> {
        sha256 = excluded.sha256, data = excluded.data, uploaded_by = excluded.uploaded_by, uploaded_at = now()`,
     [app, version, fileName, bytes.length, sha256, bytes.toString("base64"), user.name || user.email],
   );
+  // The separate Sub-admin app (before v1.7.0) is no longer offered.
+  await query("delete from app_files where app <> 'admin'");
   return json(200, { ok: true, app, version, fileName, size: bytes.length, sha256 });
 }

@@ -22,13 +22,13 @@ export default async function SubAdminsPage() {
         <div>
           <h1>Sub-admins</h1>
           <p>
-            People who only register donors, in the Omo Beeza Sub-admin app (Android)
+            People who only register donors, in the Omo Beeza app (Android, signing in with their phone number)
             {bot ? (
               <>
                 {" "}
                 or the{" "}
                 <a href={`https://t.me/${bot}`} target="_blank" rel="noopener">
-                  sub-admin Telegram bot
+                  team Telegram bot
                 </a>{" "}
                 (iPhone)
               </>

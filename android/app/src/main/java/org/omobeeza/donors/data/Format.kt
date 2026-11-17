@@ -46,6 +46,26 @@ fun normalizePhone(input: String): String? {
     return "+251${m.groupValues[1]}"
 }
 
+/** What was typed in the sign-in field: an admin's email or a sub-admin's phone number. */
+sealed interface SignInId {
+    /** A dashboard account: the admin side of the app. */
+    data class Email(val email: String) : SignInId
+    /** A sub-admin's phone number (+2519…/+2517…): only donor registration. */
+    data class Phone(val phone: String) : SignInId
+    data object Empty : SignInId
+    /** Neither a valid email nor an Ethiopian mobile number. */
+    data object Invalid : SignInId
+}
+
+fun signInId(input: String): SignInId {
+    val v = input.trim()
+    if (v.isEmpty()) return SignInId.Empty
+    if (v.contains('@')) {
+        return if (Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(v)) SignInId.Email(v) else SignInId.Invalid
+    }
+    return normalizePhone(v)?.let { SignInId.Phone(it) } ?: SignInId.Invalid
+}
+
 /** +251911234567 → 0911 234 567 */
 fun localPhone(e164: String): String {
     val m = Regex("^\\+251(\\d)(\\d{2})(\\d{3})(\\d{3})$").find(e164) ?: return e164
@@ -78,11 +98,11 @@ fun initials(name: String): String =
     name.trim().split(Regex("\\s+")).filter { it.isNotEmpty() }.take(2).joinToString("") { it.substring(0, it.offsetByCodePoints(0, 1)) }
         .uppercase().ifEmpty { "?" }
 
-/** Friendly text for the website's error codes. */
-fun errorText(code: String, min: Int? = null): String = when (code) {
+/** Friendly text for the website's error codes ([subAdmin]: worded for the sub-admin side). */
+fun errorText(code: String, min: Int? = null, subAdmin: Boolean = false): String = when (code) {
     "network" -> "No connection. Check the internet and try again."
     "bad_site" -> "The website address doesn't look right."
-    "invalid_credentials" -> if (org.omobeeza.donors.BuildConfig.SUB_ADMIN) "Wrong phone number or password." else "Wrong email or password."
+    "invalid_credentials" -> if (subAdmin) "Wrong phone number or password." else "Wrong email or password."
     "unauthorized" -> "Please sign in again."
     "rate_limited" -> "Too many attempts. Please wait a few minutes."
     "not_configured" -> "The website's database isn't set up yet."
@@ -96,7 +116,7 @@ fun errorText(code: String, min: Int? = null): String = when (code) {
     "already_registered" -> "This phone number is already registered as a donor."
     "paused" -> "Your account is paused. Ask the ministry admin to turn it back on."
     "weak_password" -> "The password needs at least 8 characters."
-    "invalid_target" -> if (org.omobeeza.donors.BuildConfig.SUB_ADMIN) "Choose how many more donors (1–500)." else "Enter how many donors they should register (0 or more)."
+    "invalid_target" -> if (subAdmin) "Choose how many more donors (1–500)." else "Enter how many donors they should register (0 or more)."
     "target_not_reached" -> "You can add more once you've reached your current target."
     "phone_taken" -> "There is already a sub-admin with this phone number."
     "not_found" -> "The website doesn't have the app connection yet. Deploy the latest website update, or check the website address."

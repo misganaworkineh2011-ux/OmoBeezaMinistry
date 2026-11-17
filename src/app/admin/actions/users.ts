@@ -40,5 +40,7 @@ export async function changePassword(_prev: FormState, data: FormData): Promise<
   if (problem) return { error: problem };
   if (next !== String(data.get("confirm") ?? "")) return { error: "The new passwords don’t match." };
   await query("update users set password_hash = $1 where id = $2", [await hashPassword(next), me.id]);
+  // A new password signs this admin out of the team Telegram bot.
+  await query("delete from admin_telegram where user_id = $1", [me.id]);
   return { ok: "Password changed." };
 }

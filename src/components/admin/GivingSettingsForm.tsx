@@ -277,11 +277,12 @@ export default function GivingSettingsForm({
 
         <section className="panel">
           <div className="panel__head">
-            <h2>Sub-admin Telegram bot</h2>
+            <h2>Team Telegram bot (admins &amp; sub-admins)</h2>
           </div>
           <p className="a-hint" style={{ marginBottom: 10 }}>
-            For sub-admins without an Android phone (iPhone): a second bot where they sign in with their phone number and password and register
-            donors, like in the Sub-admin app. Donors never see it.
+            A second bot for the team, handy on an iPhone. Sub-admins sign in with their phone number and password and register donors; admins
+            sign in with their dashboard email and password and get the admin tools (overview, donors, payments, reminders, sub-admins). Donors
+            never see it.
           </p>
           <Notice msg={subMsg} />
           <ul className="q-log" style={{ marginTop: 0 }}>
@@ -290,7 +291,7 @@ export default function GivingSettingsForm({
               <span className={`pill ${subBot.configured ? "pill--ok" : "pill--new"}`}>{subBot.configured ? "Set" : "Missing"}</span>
             </li>
             <li>
-              <span>Bot (send this link to sub-admins)</span>
+              <span>Bot (send this link to the team)</span>
               <span className="pill">
                 {subBot.bot ? (
                   <a href={`https://t.me/${subBot.bot}`} target="_blank" rel="noopener">
@@ -313,7 +314,7 @@ export default function GivingSettingsForm({
           {subBot.lastError ? <p className="a-hint">Last Telegram error: {subBot.lastError}</p> : null}
           {!subBot.configured ? (
             <p className="a-hint" style={{ marginTop: 10 }}>
-              Create a second bot with @BotFather in Telegram (/newbot, for example “Omo Beeza Sub-admins”), then add its token as
+              Create a second bot with @BotFather in Telegram (/newbot, for example “Omo Beeza Team”), then add its token as
               TELEGRAM_SUBADMIN_BOT_TOKEN in the environment variables (Yegara: cPanel → Setup Node.js App → your app) and restart the app.
             </p>
           ) : (
@@ -325,12 +326,12 @@ export default function GivingSettingsForm({
               onClick={() =>
                 start(async () => {
                   const res = await connectSubBot();
-                  setSubMsg(res.ok ? { ok: true, text: "Connected. Sub-admins can now press Start on the bot." } : { ok: false, text: res.error ?? "Not connected." });
+                  setSubMsg(res.ok ? { ok: true, text: "Connected. Admins and sub-admins can now press Start on the bot." } : { ok: false, text: res.error ?? "Not connected." });
                   router.refresh();
                 })
               }
             >
-              <Icon name="send" /> {subBot.connected ? "Reconnect the sub-admin bot" : "Connect the sub-admin bot"}
+              <Icon name="send" /> {subBot.connected ? "Reconnect the team bot" : "Connect the team bot"}
             </button>
           )}
         </section>

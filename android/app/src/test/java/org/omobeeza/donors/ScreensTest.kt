@@ -54,7 +54,7 @@ class ScreensTest {
         donor(5, "Hanna Girma", "+251944777888", 200, 0, true),
     )
 
-    @Test fun signIn() = paparazzi.snapshot { OmoTheme { SignInScreen("https://omobeezaministry.com", false, null) { _, _, _ -> } } }
+    @Test fun signIn() = paparazzi.snapshot { OmoTheme { SignInScreen("https://www.omobeezaministry.org", false, null) { _, _, _ -> } } }
 
     @Test fun home() = paparazzi.snapshot {
         OmoTheme {
@@ -114,7 +114,9 @@ class ScreensTest {
         }
     }
 
-    @Test fun subAdminSignIn() = paparazzi.snapshot { OmoTheme { SignInScreen("https://www.omobeezaministry.org", false, null, subAdmin = true) { _, _, _ -> } } }
+    @Test fun signInError() = paparazzi.snapshot {
+        OmoTheme { SignInScreen("https://www.omobeezaministry.org", false, "Enter your dashboard email (admins) or your phone number, like 0911 234 567 (sub-admins).") { _, _, _ -> } }
+    }
 
     @Test fun subAdminHome() = paparazzi.snapshot {
         OmoTheme {

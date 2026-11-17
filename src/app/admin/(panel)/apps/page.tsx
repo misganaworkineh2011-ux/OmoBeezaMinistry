@@ -2,7 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { APPS, appFiles, type AppKey } from "@/lib/apps";
 import AppsManager from "@/components/admin/AppsManager";
 
-export const metadata = { title: "Android apps" };
+export const metadata = { title: "Android app" };
 export const dynamic = "force-dynamic";
 
 export default async function AppsPage() {
@@ -14,8 +14,8 @@ export default async function AppsPage() {
     <>
       <div className="page-head">
         <div>
-          <h1>Android apps</h1>
-          <p>Download the apps at any time (also straight onto a phone), and upload a new version when there is one.</p>
+          <h1>Android app</h1>
+          <p>Download the app at any time (also straight onto a phone), and upload a new version when there is one.</p>
         </div>
       </div>
       <AppsManager apps={apps} />

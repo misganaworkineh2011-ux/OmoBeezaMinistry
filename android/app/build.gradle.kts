@@ -20,29 +20,17 @@ android {
         applicationId = "org.omobeeza.donors"
         minSdk = 24
         targetSdk = 34
-        versionCode = 13
-        versionName = "1.6.0"
+        versionCode = 14
+        versionName = "1.7.0"
         // The ministry website the app talks to (can be changed on the sign-in screen).
         buildConfigField("String", "DEFAULT_SITE", "\"https://www.omobeezaministry.org\"")
     }
 
-    // Two apps from the same code:
-    //   admin    → "Omo Beeza Admin": dashboard accounts; registers donors, sends the SMS reminders,
-    //              manages sub-admins and their targets. Keeps the original app ID, so it installs
-    //              over "Omo Beeza Donors".
-    //   subadmin → "Omo Beeza Sub-admin": only registers donors toward the target an admin set.
-    flavorDimensions += "role"
-    productFlavors {
-        create("admin") {
-            dimension = "role"
-            buildConfigField("boolean", "SUB_ADMIN", "false")
-        }
-        create("subadmin") {
-            dimension = "role"
-            applicationId = "org.omobeeza.subadmin"
-            buildConfigField("boolean", "SUB_ADMIN", "true")
-        }
-    }
+    // One app for everyone ("Omo Beeza"): signing in with a dashboard email opens
+    // the admin side (donors, SMS reminders, sub-admins); signing in with a
+    // sub-admin's phone number opens only donor registration and their target.
+    // Keeps the original app ID, so it installs over "Omo Beeza Admin" (and
+    // "Omo Beeza Donors" before it) without losing the sign-in.
 
     signingConfigs {
         if (keystoreProps.isNotEmpty()) {

@@ -313,6 +313,7 @@ export async function connectSubBot(): Promise<Result> {
   if (!res.ok) return { ok: false, error: `Telegram: ${res.description ?? "failed"}` };
   await subBot("setMyCommands", {
     commands: [
+      { command: "start", description: "Sign in / home" },
       { command: "register", description: "Register a donor" },
       { command: "progress", description: "Your progress" },
       { command: "donors", description: "The donors you registered" },
@@ -323,7 +324,7 @@ export async function connectSubBot(): Promise<Result> {
     ],
   });
   await subBot("setMyDescription", {
-    description: "For Omo Beeza Ministry sub-admins: register monthly and weekly donors. Sign in with the phone number and password the admin gave you.",
+    description: "The Omo Beeza Ministry team bot. Sub-admins: register donors (sign in with your phone number and password). Admins: donors, payments, reminders and sub-admins (sign in with your dashboard email and password).",
   });
   return { ok: true };
 }

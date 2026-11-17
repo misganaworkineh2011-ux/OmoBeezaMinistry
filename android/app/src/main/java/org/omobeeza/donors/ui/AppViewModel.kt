@@ -24,6 +24,7 @@ import org.omobeeza.donors.data.User
 import org.omobeeza.donors.data.errorText
 
 sealed interface Screen {
+    /** Signed out: the app goes back to the shared sign-in screen (see SessionViewModel). */
     data object SignIn : Screen
     data object Home : Screen
     data object Register : Screen
@@ -113,32 +114,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
-    fun signIn(site: String, email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            formError = "Enter your email and password."
-            return
-        }
-        busy = true
-        formError = null
-        viewModelScope.launch {
-            try {
-                prefs.site = site.ifBlank { prefs.site }
-                val (token, u) = Api(prefs.site, null).login(email.trim(), password)
-                prefs.token = token
-                prefs.userName = u.name
-                prefs.userEmail = u.email
-                user = u
-                go(Screen.Home)
-                refresh()
-            } catch (e: ApiException) {
-                formError = errorText(e.code)
-            } finally {
-                busy = false
-            }
-        }
-    }
-
     fun signOut() {
+        smsStop = true
         val old = api()
         viewModelScope.launch { old.logout() }
         prefs.signOut()
@@ -357,7 +334,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun handle(e: ApiException) {
         if (e.code == "unauthorized") {
-            prefs.signOut()
+            smsStop = true
             user = null
             screen = Screen.SignIn
             formError = errorText(e.code)

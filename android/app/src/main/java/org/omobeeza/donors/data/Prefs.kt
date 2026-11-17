@@ -28,6 +28,15 @@ class Prefs(context: Context) {
         get() = sp.getString("token", null)
         set(v) = sp.edit().putString("token", v).apply()
 
+    /**
+     * "admin" or "subadmin": which side of the app the saved sign-in opens.
+     * Installs from before v1.7.0 (the separate Admin app) have a token but no
+     * role: those are admins.
+     */
+    var role: String?
+        get() = sp.getString("role", null) ?: if (token != null) ROLE_ADMIN else null
+        set(v) = sp.edit().putString("role", v).apply()
+
     var userName: String
         get() = sp.getString("userName", "").orEmpty()
         set(v) = sp.edit().putString("userName", v).apply()
@@ -41,5 +50,10 @@ class Prefs(context: Context) {
         get() = sp.getInt("smsSim", -1)
         set(v) = sp.edit().putInt("smsSim", v).apply()
 
-    fun signOut() = sp.edit().remove("token").remove("userName").remove("userEmail").apply()
+    fun signOut() = sp.edit().remove("token").remove("role").remove("userName").remove("userEmail").apply()
+
+    companion object {
+        const val ROLE_ADMIN = "admin"
+        const val ROLE_SUB_ADMIN = "subadmin"
+    }
 }

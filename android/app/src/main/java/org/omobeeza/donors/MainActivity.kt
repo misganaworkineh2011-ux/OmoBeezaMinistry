@@ -14,15 +14,22 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import org.omobeeza.donors.data.payLink
 import org.omobeeza.donors.ui.AppViewModel
+import org.omobeeza.donors.ui.Role
 import org.omobeeza.donors.ui.Screen
+import org.omobeeza.donors.ui.SessionViewModel
 import org.omobeeza.donors.ui.screens.HomeScreen
 import org.omobeeza.donors.ui.screens.RegisterScreen
 import org.omobeeza.donors.ui.screens.SavedScreen
@@ -31,6 +38,8 @@ import org.omobeeza.donors.ui.screens.SignInScreen
 import org.omobeeza.donors.ui.screens.SmsSheet
 import org.omobeeza.donors.ui.screens.SubAdminsScreen
 import org.omobeeza.donors.ui.subadmin.SubAdminApp
+import org.omobeeza.donors.ui.subadmin.SubAdminViewModel
+import org.omobeeza.donors.ui.theme.Brand
 import org.omobeeza.donors.ui.theme.OmoTheme
 
 class MainActivity : ComponentActivity() {
@@ -40,8 +49,26 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.light(0xFFF7F3EC.toInt(), 0xFFF7F3EC.toInt()),
         )
         super.onCreate(savedInstanceState)
-        // One code base, two apps: the Sub-admin app only registers donors.
-        setContent { OmoTheme { if (BuildConfig.SUB_ADMIN) SubAdminApp() else App() } }
+        setContent { OmoTheme { Root() } }
+    }
+}
+
+/**
+ * One app for everyone: the shared sign-in screen, then the admin side (signed
+ * in with a dashboard email) or the sub-admin side (signed in with a phone
+ * number). Each sign-in gets fresh screens, so nothing from one person's
+ * session carries over to the next.
+ */
+@Composable
+fun Root(session: SessionViewModel = viewModel()) {
+    when (session.role) {
+        null -> SignInScreen(session.prefs.site, session.busy, session.formError) { site, id, password -> session.signIn(site, id, password) }
+        Role.Admin -> key(session.generation) {
+            App(viewModel(key = "admin-${session.generation}"), onSignedOut = session::signedOut)
+        }
+        Role.SubAdmin -> key(session.generation) {
+            SubAdminApp(viewModel<SubAdminViewModel>(key = "subadmin-${session.generation}"), onSignedOut = session::signedOut)
+        }
     }
 }
 
@@ -52,9 +79,12 @@ private fun depth(s: Screen): Int = when (s) {
 }
 
 @Composable
-fun App(vm: AppViewModel = viewModel()) {
+fun App(vm: AppViewModel = viewModel(), onSignedOut: (notice: String?) -> Unit = {}) {
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
+
+    // Signed out (or the website asked to sign in again): back to the shared sign-in screen.
+    LaunchedEffect(vm.screen) { if (vm.screen == Screen.SignIn) onSignedOut(vm.formError) }
 
     LaunchedEffect(vm.message) {
         vm.message?.let {
@@ -75,7 +105,7 @@ fun App(vm: AppViewModel = viewModel()) {
         label = "screens",
     ) { screen ->
         when (screen) {
-            Screen.SignIn -> SignInScreen(vm.prefs.site, vm.busy, vm.formError) { site, email, password -> vm.signIn(site, email, password) }
+            Screen.SignIn -> Box(Modifier.fillMaxSize().background(Brand.NightSky))
 
             Screen.Home -> HomeScreen(
                 user = vm.user,

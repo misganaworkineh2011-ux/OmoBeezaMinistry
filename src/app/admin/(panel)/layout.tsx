@@ -37,7 +37,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
         { href: "/admin/subadmins", label: "Sub-admins", icon: "users" },
         { href: "/admin/giving", label: "Giving & reminders", icon: "send" },
         { href: "/admin/messages", label: "Message templates", icon: "mail" },
-        { href: "/admin/apps", label: "Android apps", icon: "download" },
+        { href: "/admin/apps", label: "Android app", icon: "download" },
       ],
     },
     {
