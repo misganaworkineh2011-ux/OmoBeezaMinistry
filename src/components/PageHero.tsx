@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { localizedPath } from "@/lib/metadata";
+import { SITE_URL } from "@/lib/site";
 import { Link } from "@/i18n/navigation";
 import Icon from "@/components/Icon";
 import { Wave } from "@/components/Decor";
@@ -25,8 +27,22 @@ interface PageHeroProps {
 
 export default function PageHero({ title, lead, image, trail = [], current, next = "var(--white)", children }: PageHeroProps) {
   const t = useTranslations("common");
+  const locale = useLocale();
+  // The same trail for search engines (shown as breadcrumbs in Google results).
+  const crumbs = [{ label: t("home"), href: "/" }, ...trail, { label: current }];
+  const breadcrumbs = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.label,
+      ...(c.href ? { item: `${SITE_URL}${localizedPath(locale, c.href)}` } : {}),
+    })),
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }} />
       <section className="page-hero">
         <div className="container page-hero__grid">
           <div className="page-hero__content">

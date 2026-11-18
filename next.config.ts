@@ -19,7 +19,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/admin": ["./content/blog/**/*"],
   },
+  // Titles, descriptions and share tags go in the <head> for every visitor and
+  // crawler (not streamed later), so every search engine and app preview sees them.
+  htmlLimitedBots: /.*/,
   images: {
+    // Smaller files load faster (Core Web Vitals): AVIF where supported, else WebP.
+    formats: ["image/avif", "image/webp"],
     // Photos uploaded through the dashboard are stored in Vercel Blob.
     remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
     // IMAGES_UNOPTIMIZED=1 (build time): serve photos as they are, for a host

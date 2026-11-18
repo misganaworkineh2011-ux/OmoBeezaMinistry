@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { isLocale } from "@/i18n/routing";
 import { formatDate, getAllSlugs, getPost, listPosts } from "@/lib/blog";
 import { buildMetadata, localizedPath } from "@/lib/metadata";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import Icon from "@/components/Icon";
 import PageHero from "@/components/PageHero";
 import Reveal from "@/components/Reveal";
@@ -51,8 +52,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
   const tNav = await getTranslations("nav");
   const related = (await listPosts(locale)).filter((p) => p.slug !== slug).slice(0, 3);
 
+  const postUrl = `${SITE_URL}${localizedPath(locale, `/blog/${slug}`)}`;
+  const article = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: post.excerpt,
+    image: [post.cover.startsWith("http") ? post.cover : `${SITE_URL}${post.cover}`],
+    datePublished: post.date,
+    dateModified: post.date,
+    inLanguage: locale,
+    mainEntityOfPage: postUrl,
+    url: postUrl,
+    author: { "@type": "Organization", name: post.author || SITE_NAME, url: SITE_URL },
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(article) }} />
       <PageHero title={post.title} lead={post.excerpt} current={post.title} trail={[{ label: tNav("blog"), href: "/blog" }]}>
         <div className="page-hero__meta">
           <span>

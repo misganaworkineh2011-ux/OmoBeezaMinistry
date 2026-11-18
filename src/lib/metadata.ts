@@ -26,16 +26,34 @@ export function localizedPath(locale: string, path: string): string {
   return path === "/" ? `/${locale}` : `/${locale}${path}`;
 }
 
+/** hreflang links for every language, plus x-default (English) for everyone else. */
 function languageAlternates(path: string): Record<string, string> {
-  return Object.fromEntries(routing.locales.map((l) => [l, localizedPath(l, path)]));
+  return {
+    ...Object.fromEntries(routing.locales.map((l) => [l, localizedPath(l, path)])),
+    "x-default": localizedPath(routing.defaultLocale, path),
+  };
 }
+
+/** The share image (1200×630, public/og) for each page. */
+const PAGE_IMAGES: Partial<Record<PageKey, string>> = {
+  home: "/og/home.jpg",
+  about: "/og/about.jpg",
+  programs: "/og/programs.jpg",
+  donations: "/og/donations.jpg",
+  thanks: "/og/donations.jpg",
+  involved: "/og/donations.jpg",
+  gallery: "/og/gallery.jpg",
+  videos: "/og/gallery.jpg",
+  stories: "/og/stories.jpg",
+  blog: "/og/stories.jpg",
+};
 
 /** Builds title/description/OG/alternates for a page from the `meta` messages. */
 export async function pageMetadata(locale: string, key: PageKey, path: string): Promise<Metadata> {
   const t = await getTranslations({ locale, namespace: "meta" });
   const title = t(`${key}.title`);
   const description = t(`${key}.description`);
-  return buildMetadata({ locale, title, description, path, absoluteTitle: key === "home" });
+  return buildMetadata({ locale, title, description, path, image: PAGE_IMAGES[key], absoluteTitle: key === "home" });
 }
 
 export function buildMetadata({
@@ -43,7 +61,7 @@ export function buildMetadata({
   title,
   description,
   path,
-  image = "/img/photos/group.jpg",
+  image = "/og/home.jpg",
   absoluteTitle = false,
   type = "website",
 }: {
@@ -56,6 +74,8 @@ export function buildMetadata({
   type?: "website" | "article";
 }): Metadata {
   const url = localizedPath(locale, path);
+  // Share images made for it are 1200×630; other photos (blog covers) are sent as they are.
+  const og = image.startsWith("/og/") ? { url: image, width: 1200, height: 630, alt: title } : { url: image, alt: title };
   return {
     title: absoluteTitle ? { absolute: title } : title,
     description,
@@ -66,8 +86,9 @@ export function buildMetadata({
       url,
       siteName: SITE_NAME,
       locale: locale === "am" ? "am_ET" : "en_US",
+      alternateLocale: locale === "am" ? ["en_US"] : ["am_ET"],
       type,
-      images: [{ url: image }],
+      images: [og],
     },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };

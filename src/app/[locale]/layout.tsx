@@ -25,11 +25,28 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     title: { default: t("home.title"), template: `%s · ${t("siteName")}` },
     description: t("home.description"),
     applicationName: SITE_NAME,
+    category: "nonprofit",
+    creator: SITE_NAME,
+    publisher: SITE_NAME,
+    formatDetection: { telephone: false, email: false, address: false },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 },
+    },
+    // Google Search Console / Bing Webmaster: paste the code they give into these settings.
+    verification: {
+      ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+      ...(process.env.BING_SITE_VERIFICATION ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } } : {}),
+    },
   };
 }
 
 export const viewport: Viewport = {
   themeColor: "#0b1f36",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export function generateStaticParams() {
@@ -56,17 +73,43 @@ export default async function LocaleLayout({
   const t = await getTranslations("common");
   const fontVars = `${caveat.variable} ${fraunces.variable} ${montserrat.variable} ${sourceSans.variable} ${notoEthiopic.variable}`;
 
+  const tMeta = await getTranslations("meta");
   const organization = {
     "@context": "https://schema.org",
-    "@type": "NGO",
-    name: SITE_NAME,
-    url: SITE_URL,
-    logo: `${SITE_URL}/img/omo-beeza-logo-02.png`,
-    email: site.email,
-    telephone: site.phones[0],
-    foundingDate: "2022-09-28",
-    address: { "@type": "PostalAddress", addressLocality: "Jinka", addressCountry: "ET" },
-    sameAs: Object.values(site.social),
+    "@graph": [
+      {
+        "@type": "NGO",
+        "@id": `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        alternateName: ["Omo Beeza", "Omo-beeza Ministry", "ኦሞ ቤዛ ሚኒስትሪ"],
+        url: SITE_URL,
+        logo: { "@type": "ImageObject", url: `${SITE_URL}/img/omo-beeza-logo-02.png` },
+        image: `${SITE_URL}/og/home.jpg`,
+        description: tMeta("home.description"),
+        email: site.email,
+        telephone: site.phones[0],
+        foundingDate: "2022-09-28",
+        address: {
+          "@type": "PostalAddress",
+          addressLocality: "Luqa, Tsemay",
+          addressRegion: "South Omo, South Ethiopia",
+          addressCountry: "ET",
+        },
+        areaServed: { "@type": "Place", name: "South Omo, Ethiopia" },
+        knowsLanguage: ["en", "am"],
+        contactPoint: site.phones.map((p) => ({ "@type": "ContactPoint", telephone: p, contactType: "customer support", areaServed: "ET", availableLanguage: ["English", "Amharic"] })),
+        sameAs: Object.values(site.social).filter(Boolean),
+        potentialAction: { "@type": "DonateAction", target: `${SITE_URL}/donations`, recipient: { "@id": `${SITE_URL}/#organization` } },
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: SITE_NAME,
+        inLanguage: ["en", "am"],
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+    ],
   };
 
   return (

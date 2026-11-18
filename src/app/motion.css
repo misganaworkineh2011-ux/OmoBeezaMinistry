@@ -839,6 +839,9 @@
   .story__tl-label {
     display: none;
   }
+  .story__timeline button {
+    padding: 14px 0 12px;
+  }
   .story__hint {
     display: none;
   }
@@ -1262,7 +1265,7 @@
   position: absolute;
   right: 14px;
   bottom: 10px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.45);
 }
 

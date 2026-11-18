@@ -3495,7 +3495,7 @@ legend {
 
 .tier-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
   gap: 14px;
 }
 
@@ -3617,8 +3617,10 @@ legend {
 }
 
 .map {
-  aspect-ratio: 21 / 8;
-  min-height: 320px;
+  /* A height, not an aspect ratio: with a minimum height, a ratio made the map
+     wider than phone screens. */
+  width: 100%;
+  height: clamp(320px, 38vw, 520px);
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--sand);
@@ -7720,4 +7722,71 @@ button.text-link {
   color: var(--blue-700);
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+/* ---------------------------------------------------------- Mobile refinements */
+/* Small labels never below 12px (legibility on phones). */
+.album__tag,
+.contact-card__label,
+.polaroid__hint,
+.amount small {
+  font-size: max(0.75rem, 12px);
+}
+
+/* Taps: the prayer-deck progress ticks and pause get a finger-sized hit area
+   without changing how they look. */
+.deck__tick::after {
+  content: "";
+  position: absolute;
+  inset: -15px -3px;
+}
+.deck__pause {
+  width: 40px;
+  height: 40px;
+}
+
+/* Phone numbers stay on one line. */
+.person a,
+.contact-card a[href^="tel:"] {
+  white-space: nowrap;
+}
+
+/* FAQ topics: one scrollable row on narrow screens. */
+@media (max-width: 960px) {
+  .faq-nav {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .faq-nav a {
+    white-space: nowrap;
+  }
+  /* Grid items may shrink below their content (the scrolling topic row is wide). */
+  .faq-layout > * {
+    min-width: 0;
+  }
+}
+
+/* Thank-you ticket: never wider than the screen; stacks on small phones. */
+.thanks-ticket__main {
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .thanks-ticket {
+    grid-template-columns: 1fr;
+  }
+  .thanks-ticket__stub {
+    grid-auto-flow: column;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 2px dashed rgba(19, 33, 50, 0.18);
+    border-radius: 22px 22px 0 0;
+  }
+  .thanks-ticket__stub svg {
+    width: 22px;
+    height: 22px;
+  }
+  .thanks-ticket__give {
+    white-space: normal;
+    text-align: center;
+  }
 }
