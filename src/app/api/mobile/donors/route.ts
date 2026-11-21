@@ -63,7 +63,7 @@ export async function GET(request: Request): Promise<Response> {
     // ?registrar=ID: only the donors that sub-admin registered.
     const registrar = Number(url.searchParams.get("registrar")) || null;
     const donors = await query<AppDonor>(
-      `${SELECT} where ${where}
+      `${SELECT} where ${where} and d.deleted_at is null
          and ($1 = '' or d.name ilike '%' || $1 || '%' or ($2 <> '' and d.phone like '%' || $2 || '%'))
          and ($3::int is null or d.registered_by = $3)
        order by d.created_at desc limit 300`,

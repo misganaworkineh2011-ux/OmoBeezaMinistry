@@ -1,6 +1,7 @@
 import { hasDb } from "@/lib/db";
 import { json } from "@/lib/ratelimit";
 import { runReminders } from "@/lib/reminders";
+import { purgeRecycleBin } from "@/lib/donors";
 
 // GET /api/cron/reminders — runs daily (see vercel.json) and texts the weekly
 // donors whose reminder day is today. Vercel Cron sends
@@ -15,6 +16,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return json(401, { error: "unauthorized" });
   if (!hasDb()) return json(503, { error: "not_configured" });
   const run = await runReminders();
-  console.log("reminders:", JSON.stringify(run));
-  return json(200, { ok: true, ...run });
+  const purged = await purgeRecycleBin().catch(() => 0);
+  console.log("reminders:", JSON.stringify(run), "recycle bin purged:", purged);
+  return json(200, { ok: true, ...run, purged });
 }

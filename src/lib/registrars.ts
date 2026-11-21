@@ -30,8 +30,8 @@ export interface RegistrarRow extends Registrar {
 }
 
 export const REGISTRAR_SELECT = `select r.id, r.name, r.phone, r.target, r.status, r.created_at, r.last_login,
-  (select count(*)::int from donors d where d.registered_by = r.id) as registered,
-  (select max(d.created_at) from donors d where d.registered_by = r.id) as last_registered
+  (select count(*)::int from donors d where d.registered_by = r.id and d.deleted_at is null) as registered,
+  (select max(d.created_at) from donors d where d.registered_by = r.id and d.deleted_at is null) as last_registered
   from registrars r`;
 
 /** Sub-admin passwords: at least 8 characters. Returns an error code, or null. */
@@ -123,7 +123,7 @@ export async function extendTarget(
   const n = Math.round(Number(add));
   if (!Number.isFinite(n) || n < 1 || n > MAX_SELF_EXTEND) return { ok: false, error: "invalid_target" };
   const row = await queryOne<{ target: number; registered: number }>(
-    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id) as registered
+    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id and d.deleted_at is null) as registered
      from registrars r where r.id = $1 and r.status = 'active'`,
     [registrarId],
   );

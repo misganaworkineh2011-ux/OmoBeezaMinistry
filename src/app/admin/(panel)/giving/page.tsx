@@ -33,7 +33,7 @@ export default async function GivingPage() {
   const [giving, due, log, totals, telegram, invites, subBot] = await Promise.all([
     readGivingNow(),
     queryOne<{ n: number }>(
-      `select count(*)::int as n from donors where status = 'active'
+      `select count(*)::int as n from donors where status = 'active' and deleted_at is null
        and ((frequency = 'monthly' and month_day = $2) or (frequency <> 'monthly' and reminder_day = $1))
        and (last_reminded_at is null or last_reminded_at < now() - interval '20 hours')`,
       [ethiopiaToday().weekday, ethiopiaToday().monthDay],

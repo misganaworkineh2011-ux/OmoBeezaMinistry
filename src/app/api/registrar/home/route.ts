@@ -17,13 +17,13 @@ export async function GET(request: Request): Promise<Response> {
       readGivingNow(),
       queryOne<{ registered: number; today: number }>(
         `select count(*)::int as registered, count(*) filter (where created_at > now() - interval '24 hours')::int as today
-         from donors where registered_by = $1`,
+         from donors where registered_by = $1 and deleted_at is null`,
         [r.id],
       ),
       query(
         `select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, status, source, '' as notes, created_at,
                 null as last_reminded_at, null as last_paid, 0 as total
-         from donors where registered_by = $1 order by created_at desc limit 500`,
+         from donors where registered_by = $1 and deleted_at is null order by created_at desc limit 500`,
         [r.id],
       ),
     ]);

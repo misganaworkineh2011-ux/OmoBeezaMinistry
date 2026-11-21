@@ -1,6 +1,6 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { queryOne } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
 import { asFrequency, isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
 import { donorMessage, emailDonor, giveLink, type DonorForSms } from "@/lib/reminders";
@@ -83,14 +83,16 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
   try {
     // The same person again: by phone number, or by email when there is no phone.
     const existing = phone
-      ? await queryOne<{ id: number; status: string }>("select id, status from donors where phone = $1", [phone])
-      : await queryOne<{ id: number; status: string }>(
-          "select id, status from donors where lower(email) = $1 order by (phone = '') desc, id limit 1",
+      ? await queryOne<{ id: number; status: string; deleted_at: string | null }>("select id, status, deleted_at from donors where phone = $1", [phone])
+      : await queryOne<{ id: number; status: string; deleted_at: string | null }>(
+          "select id, status, deleted_at from donors where lower(email) = $1 order by (deleted_at is null) desc, (phone = '') desc, id limit 1",
           [email],
         );
-    if (existing && input.noUpdate) return { ok: false, error: "already_registered" };
-    wasActive = existing?.status === "active";
-    created = !existing;
+    // A donor in the recycle bin who registers again comes back (with their history).
+    const fromBin = Boolean(existing?.deleted_at);
+    if (existing && input.noUpdate && !fromBin) return { ok: false, error: "already_registered" };
+    wasActive = existing?.status === "active" && !fromBin;
+    created = !existing || fromBin;
     donor = existing
       ? await queryOne(
           `update donors set name = $1,
@@ -101,9 +103,10 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
              notes = case when $8 <> '' then $8 else notes end,
              telegram_username = case when $9 <> '' then $9 else telegram_username end,
              frequency = $11, month_day = $12,
-             status = 'active', stopped_at = null
+             status = 'active', stopped_at = null, deleted_at = null,
+             registered_by = coalesce($13, registered_by)
            where id = $10 returning ${RETURNING}`,
-          [name, nickname, phone, email, amount, day, locale, notes, telegram, existing.id, frequency, monthDay],
+          [name, nickname, phone, email, amount, day, locale, notes, telegram, existing.id, frequency, monthDay, fromBin ? (input.registeredBy ?? null) : null],
         )
       : await queryOne(
           `insert into donors (name, nickname, phone, email, amount, reminder_day, locale, token, notes, source, telegram_username, registered_by, frequency, month_day)
@@ -128,4 +131,16 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
     telegramLink: await connectLink(donor.token),
     welcomeSms: welcome && donor.phone && !donor.email ? donorMessage("welcome", donor, giving) : "",
   };
+}
+
+/** Days a donor stays in the recycle bin before being deleted for good. */
+export const BIN_DAYS = 30;
+
+/** Permanently deletes donors that have been in the recycle bin for more than BIN_DAYS days. */
+export async function purgeRecycleBin(): Promise<number> {
+  const rows = await query<{ id: number }>(
+    `delete from donors where deleted_at is not null and deleted_at < now() - make_interval(days => $1) returning id`,
+    [BIN_DAYS],
+  );
+  return rows.length;
 }

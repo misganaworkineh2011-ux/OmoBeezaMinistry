@@ -275,6 +275,10 @@ export const SCHEMA: string[] = [
     lang text not null default 'en',
     linked_at timestamptz not null default now()
   )`,
+  // Recycle bin: donors moved to the bin keep their history until restored or
+  // deleted for good (automatically after 30 days).
+  `alter table donors add column if not exists deleted_at timestamptz`,
+  `create index if not exists donors_deleted on donors (deleted_at)`,
   `create table if not exists registrar_bot_sessions (
     chat_id text primary key,
     step text not null,

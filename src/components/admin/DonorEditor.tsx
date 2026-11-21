@@ -2,7 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteDonor, deletePayment, emailDonorNow, recordPayment, saveDonor, type DonorInput } from "@/app/admin/actions/donors";
+import {
+  deleteDonorsForever,
+  deletePayment,
+  moveDonorsToBin,
+  restoreDonors,
+  emailDonorNow,
+  recordPayment,
+  saveDonor,
+  type DonorInput,
+} from "@/app/admin/actions/donors";
 import Icon from "@/components/Icon";
 import { DAYS_EN, DONOR_STATUSES, MONTH_DAYS, ordinal } from "@/lib/giving";
 
@@ -26,7 +35,12 @@ export interface SmsRow {
 }
 
 const today = () => new Date(Date.now() + 3 * 3_600_000).toISOString().slice(0, 10);
-const date = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+const date = (d: string) =>
+  new Date(d).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
 export default function DonorEditor({
   donor,
@@ -35,6 +49,7 @@ export default function DonorEditor({
   reminderPreview,
   emailReady,
   telegram,
+  deletedAt = null,
 }: {
   donor: DonorInput;
   payments: PaymentRow[];
@@ -44,12 +59,19 @@ export default function DonorEditor({
   emailReady: boolean;
   /** Whether the donor connected the Telegram bot, and their one-tap connect link. */
   telegram: { linked: boolean; link: string } | null;
+  /** Set when the donor is in the recycle bin. */
+  deletedAt?: string | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState(donor);
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [pay, setPay] = useState({ amount: String(donor.amount), date: today(), reference: "", note: "" });
+  const [pay, setPay] = useState({
+    amount: String(donor.amount),
+    date: today(),
+    reference: "",
+    note: "",
+  });
   const [payMsg, setPayMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [custom, setCustom] = useState("");
   const [subject, setSubject] = useState("");
@@ -171,21 +193,62 @@ export default function DonorEditor({
             <button type="button" className="a-btn a-btn--gold" onClick={save} disabled={pending}>
               <Icon name="check" /> {pending ? "Saving…" : donor.id ? "Save changes" : "Add donor"}
             </button>
-            {donor.id ? (
+            {donor.id && deletedAt ? (
+              <span style={{ marginLeft: "auto", display: "inline-flex", gap: 8 }}>
+                <button
+                  type="button"
+                  className="a-btn a-btn--ghost a-btn--sm"
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      const res = await restoreDonors([donor.id as number]);
+                      if (!res.ok || !res.count)
+                        return setMsg({
+                          ok: false,
+                          text: res.error ?? "Not restored.",
+                        });
+                      setMsg({
+                        ok: true,
+                        text: "Restored. Reminders start again.",
+                      });
+                      router.refresh();
+                    })
+                  }
+                >
+                  Restore
+                </button>
+                <button
+                  type="button"
+                  className="a-btn a-btn--danger a-btn--sm"
+                  disabled={pending}
+                  onClick={() =>
+                    confirm(`Delete ${donor.name} for good, with their payment history? This can't be undone.`) &&
+                    start(async () => {
+                      await deleteDonorsForever([donor.id as number]);
+                      router.push("/admin/donors?view=bin");
+                    })
+                  }
+                >
+                  Delete forever
+                </button>
+              </span>
+            ) : donor.id ? (
               <button
                 type="button"
                 className="a-btn a-btn--danger a-btn--sm"
                 style={{ marginLeft: "auto" }}
                 disabled={pending}
                 onClick={() =>
-                  confirm(`Delete ${donor.name} and their payment history? To keep the history, set the status to Stopped instead.`) &&
+                  confirm(
+                    `Move ${donor.name} to the recycle bin? They stop getting reminders. You can restore them from Donors → Recycle bin within 30 days.`,
+                  ) &&
                   start(async () => {
-                    await deleteDonor(donor.id as number);
+                    await moveDonorsToBin([donor.id as number]);
                     router.push("/admin/donors");
                   })
                 }
               >
-                Delete donor
+                <Icon name="trash" /> Move to recycle bin
               </button>
             ) : null}
           </div>
@@ -212,7 +275,12 @@ export default function DonorEditor({
               </div>
               <div className="a-field">
                 <label htmlFor="pay-ref">Reference (optional)</label>
-                <input id="pay-ref" value={pay.reference} onChange={(e) => setPay({ ...pay, reference: e.target.value })} placeholder="Ye-Buna / transaction ID" />
+                <input
+                  id="pay-ref"
+                  value={pay.reference}
+                  onChange={(e) => setPay({ ...pay, reference: e.target.value })}
+                  placeholder="Ye-Buna / transaction ID"
+                />
               </div>
               <div className="a-field">
                 <label htmlFor="pay-note">Note (optional)</label>
@@ -229,7 +297,12 @@ export default function DonorEditor({
                     const res = await recordPayment(donor.id as number, Number(pay.amount), pay.date, pay.reference, pay.note);
                     setPayMsg(res.ok ? { ok: true, text: "Payment recorded." } : { ok: false, text: res.error ?? "Not saved." });
                     if (res.ok) {
-                      setPay({ amount: String(form.amount), date: today(), reference: "", note: "" });
+                      setPay({
+                        amount: String(form.amount),
+                        date: today(),
+                        reference: "",
+                        note: "",
+                      });
                       router.refresh();
                     }
                   })
@@ -342,7 +415,13 @@ export default function DonorEditor({
                   <li key={m.id} style={{ display: "block" }}>
                     <span className={`pill ${m.status === "sent" ? "pill--ok" : "pill--new"}`}>{m.status}</span>{" "}
                     <small>
-                      {m.channel === "email" ? "Email" : m.channel === "telegram" ? "Telegram" : "SMS"} · {m.kind} · {new Date(m.created_at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {m.channel === "email" ? "Email" : m.channel === "telegram" ? "Telegram" : "SMS"} · {m.kind} ·{" "}
+                      {new Date(m.created_at).toLocaleString("en-GB", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </small>
                     <p dir="auto" style={{ margin: "6px 0 0", whiteSpace: "pre-line" }}>
                       {m.message}

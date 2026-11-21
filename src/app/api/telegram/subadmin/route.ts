@@ -274,8 +274,8 @@ async function signIn(chatId: number, role: "sub" | "admin", id: number, from: T
 
 async function subHome(chatId: number, actor: Extract<Actor, { role: "sub" }>, before = ""): Promise<void> {
   const r = await queryOne<{ target: number; registered: number; today: number }>(
-    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id) as registered,
-            (select count(*)::int from donors d where d.registered_by = r.id and d.created_at > now() - interval '24 hours') as today
+    `select r.target, (select count(*)::int from donors d where d.registered_by = r.id and d.deleted_at is null) as registered,
+            (select count(*)::int from donors d where d.registered_by = r.id and d.deleted_at is null and d.created_at > now() - interval '24 hours') as today
      from registrars r where r.id = $1`,
     [actor.id],
   );
@@ -296,10 +296,10 @@ async function home(chatId: number, actor: Actor, before = ""): Promise<void> {
 
 async function showDonors(chatId: number, actor: Extract<Actor, { role: "sub" }>): Promise<void> {
   const rows = await query<{ name: string; phone: string; amount: number; reminder_day: number; frequency: string; month_day: number; status: string }>(
-    "select name, phone, amount, reminder_day, frequency, month_day, status from donors where registered_by = $1 order by created_at desc limit 30",
+    "select name, phone, amount, reminder_day, frequency, month_day, status from donors where registered_by = $1 and deleted_at is null order by created_at desc limit 30",
     [actor.id],
   );
-  const total = (await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1", [actor.id]))?.n ?? 0;
+  const total = (await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1 and deleted_at is null", [actor.id]))?.n ?? 0;
   const t = T[actor.lang];
   if (!total) return reply(chatId, t.noDonors, subKeyboard(actor.lang));
   const lines = rows.map(
@@ -414,7 +414,7 @@ async function donorAnswer(chatId: number, actor: Actor, step: Step, data: Data,
     case "phone": {
       const phone = normalizePhone(msg.contact?.phone_number ?? text);
       if (!phone) await reply(chatId, t.badPhone);
-      else if (await queryOne("select 1 from donors where phone = $1", [phone])) await reply(chatId, t.taken);
+      else if (await queryOne("select 1 from donors where phone = $1 and deleted_at is null", [phone])) await reply(chatId, t.taken);
       else await ask(chatId, "freq", { ...data, phone }, lang, giving);
       return true;
     }

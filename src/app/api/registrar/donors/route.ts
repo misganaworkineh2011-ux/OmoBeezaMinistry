@@ -46,7 +46,7 @@ export async function POST(request: Request): Promise<Response> {
        from donors where id = $1`,
       [res.donor.id],
     );
-    const count = await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1", [r.id]);
+    const count = await queryOne<{ n: number }>("select count(*)::int as n from donors where registered_by = $1 and deleted_at is null", [r.id]);
     return json(200, { donor, created: true, registered: count?.n ?? 0, target: r.target, link: res.link });
   });
 }

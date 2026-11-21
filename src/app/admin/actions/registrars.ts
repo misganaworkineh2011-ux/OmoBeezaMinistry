@@ -73,7 +73,7 @@ export async function extendRegistrarTarget(id: number, add: number): Promise<Re
   const n = Math.round(Number(add));
   if (!(n >= 1 && n <= 100_000)) return { ok: false, error: "Enter how many more donors (1 or more)." };
   const row = await queryOne(
-    `update registrars set target = least(100000, greatest(target, (select count(*)::int from donors where registered_by = $1)) + $2)
+    `update registrars set target = least(100000, greatest(target, (select count(*)::int from donors where registered_by = $1 and deleted_at is null)) + $2)
      where id = $1 returning id`,
     [id, n],
   );

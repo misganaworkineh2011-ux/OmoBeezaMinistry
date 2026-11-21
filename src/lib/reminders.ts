@@ -211,7 +211,7 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
             exists (select 1 from donor_payments p where p.donor_id = d.id
               and p.paid_on > current_date - (case when d.frequency = 'monthly' then 25 else 6 end)) as paid_recently
      from donors d
-     where d.status = 'active'
+     where d.status = 'active' and d.deleted_at is null
        and ((d.frequency = 'monthly' and d.month_day = $3) or (d.frequency <> 'monthly' and d.reminder_day = $1))
        and (d.last_reminded_at is null or d.last_reminded_at < now() - interval '20 hours')
      order by d.id limit $2`,

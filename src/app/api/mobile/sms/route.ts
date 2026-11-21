@@ -21,7 +21,7 @@ export async function GET(request: Request): Promise<Response> {
     const rows = await query<DonorForSms & { last_reminded_at: string | null }>(
       `select d.id, d.name, d.nickname, d.phone, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.last_reminded_at
        from donors d
-       where d.status = 'active' and d.phone <> ''
+       where d.status = 'active' and d.deleted_at is null and d.phone <> ''
          and (d.last_reminded_at is null or d.last_reminded_at < now() - (case when d.frequency = 'monthly' then interval '25 days' else interval '7 days' end))
          and not ($1 and exists (select 1 from donor_payments p where p.donor_id = d.id
                   and p.paid_on > current_date - (case when d.frequency = 'monthly' then 25 else 7 end)))

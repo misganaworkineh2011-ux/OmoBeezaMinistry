@@ -288,7 +288,7 @@ export async function POST(request: Request): Promise<Response> {
 }
 
 async function context(chatId: number, from: TgUser) {
-  const linked = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where telegram_chat_id = $1 order by id desc limit 1`, [String(chatId)]);
+  const linked = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where telegram_chat_id = $1 and deleted_at is null order by id desc limit 1`, [String(chatId)]);
   const session = await getSession(chatId);
   const lang: Lang = (session?.data.locale ?? linked?.locale ?? (from.language_code === "am" ? "am" : "en")) === "am" ? "am" : "en";
   return { linked, session, lang, giving: await readGivingNow() };
@@ -310,7 +310,7 @@ async function onMessage(msg: TgMessage): Promise<void> {
       return;
     }
     const phone = normalizePhone(msg.contact.phone_number);
-    const donor = phone ? await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where phone = $1`, [phone]) : null;
+    const donor = phone ? await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where phone = $1 and deleted_at is null`, [phone]) : null;
     if (donor) await link(donor, chatId, from);
     else if (phone) await ask(chatId, "name", { phone }, lang, giving, from);
     else await reply(chatId, t.notOwn);
@@ -323,13 +323,13 @@ async function onMessage(msg: TgMessage): Promise<void> {
       case "/start": {
         // 1) Personal link from the app / thank-you page.
         if (/^[A-Za-z0-9_-]{8,40}$/.test(arg)) {
-          const donor = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where token = $1`, [arg]);
+          const donor = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where token = $1 and deleted_at is null`, [arg]);
           if (donor) return link(donor, chatId, from);
         }
         // 2) The @username saved with their registration.
         const username = from.username?.toLowerCase();
         if (username) {
-          const donor = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where telegram_username = $1 order by id desc limit 1`, [username]);
+          const donor = await queryOne<LinkDonor>(`select ${DONOR_COLS} from donors where telegram_username = $1 and deleted_at is null order by id desc limit 1`, [username]);
           if (donor) return link(donor, chatId, from);
         }
         // 3) Already connected.

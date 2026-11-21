@@ -38,7 +38,7 @@ export async function GET(): Promise<Response> {
             (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
             (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total,
             (select count(*)::int from donor_payments p where p.donor_id = d.id) as payments
-     from donors d order by d.created_at`,
+     from donors d where d.deleted_at is null order by d.created_at`,
   );
   const header = ["Name", "Nickname", "Phone", "Email", "Amount (birr)", "Frequency", "Reminder day", "Status", "Language", "Source", "Registered", "Last payment", "Payments", "Total given (birr)", "Notes"];
   const lines = rows.map((r) =>

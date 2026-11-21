@@ -1345,3 +1345,35 @@ div.convo__teach {
   font-size: 0.92rem;
   white-space: pre-wrap;
 }
+
+/* Donors: selection toolbar and recycle bin */
+.bulk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+.bulk-bar .a-hint {
+  margin: 0 auto 0 0;
+}
+.bulk-bar__msg {
+  flex-basis: 100%;
+  font-size: 0.82rem;
+}
+.bulk-bar__msg.is-ok {
+  color: var(--a-green, #1f7a4d);
+}
+.bulk-bar__msg.is-error {
+  color: var(--a-red);
+}
+.a-table .sel {
+  width: 34px;
+  padding-right: 0;
+}
+.a-table .sel input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--a-navy);
+}

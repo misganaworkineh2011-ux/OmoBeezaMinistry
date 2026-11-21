@@ -6,6 +6,7 @@ import { readGivingNow } from "@/lib/data/giving";
 import { displayPhone } from "@/lib/giving";
 import { donorEmail, type DonorForSms } from "@/lib/reminders";
 import { emailConfigured } from "@/lib/email";
+import { BIN_DAYS } from "@/lib/donors";
 import { connectLink } from "@/lib/telegram";
 import type { DonorInput } from "@/app/admin/actions/donors";
 import DonorEditor, { type PaymentRow, type SmsRow } from "@/components/admin/DonorEditor";
@@ -13,7 +14,20 @@ import DonorEditor, { type PaymentRow, type SmsRow } from "@/components/admin/Do
 export const metadata = { title: "Donor" };
 export const dynamic = "force-dynamic";
 
-const EMPTY: DonorInput = { name: "", nickname: "", phone: "", email: "", amount: 100, reminder_day: 0, frequency: "monthly", month_day: 1, status: "active", locale: "en", notes: "", telegram_username: "" };
+const EMPTY: DonorInput = {
+  name: "",
+  nickname: "",
+  phone: "",
+  email: "",
+  amount: 100,
+  reminder_day: 0,
+  frequency: "monthly",
+  month_day: 1,
+  status: "active",
+  locale: "en",
+  notes: "",
+  telegram_username: "",
+};
 
 export default async function DonorPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser();
@@ -21,21 +35,32 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
   const isNew = id === "new";
   const giving = await readGivingNow();
 
-  let donor: (DonorInput & { token: string; source: string; created_at: string; telegram_linked: boolean }) | null = null;
+  let donor:
+    | (DonorInput & {
+        token: string;
+        source: string;
+        created_at: string;
+        telegram_linked: boolean;
+        deleted_at: string | null;
+      })
+    | null = null;
   let payments: PaymentRow[] = [];
   let sms: SmsRow[] = [];
   if (!isNew) {
     if (!/^\d+$/.test(id)) notFound();
     donor = await queryOne(
-      "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, status, locale, notes, telegram_username, telegram_chat_id is not null as telegram_linked, token, source, created_at from donors where id = $1",
+      "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, status, locale, notes, telegram_username, telegram_chat_id is not null as telegram_linked, token, source, created_at, deleted_at from donors where id = $1",
       [Number(id)],
     );
     if (!donor) notFound();
     [payments, sms] = await Promise.all([
-      query<PaymentRow>("select id, amount, paid_on::text, reference, note, created_by from donor_payments where donor_id = $1 order by paid_on desc, id desc", [
+      query<PaymentRow>(
+        "select id, amount, paid_on::text, reference, note, created_by from donor_payments where donor_id = $1 order by paid_on desc, id desc",
+        [donor.id],
+      ),
+      query<SmsRow>("select id, channel, message, kind, status, error, created_at from sms_log where donor_id = $1 order by created_at desc limit 50", [
         donor.id,
       ]),
-      query<SmsRow>("select id, channel, message, kind, status, error, created_at from sms_log where donor_id = $1 order by created_at desc limit 50", [donor.id]),
     ]);
   }
 
@@ -43,8 +68,8 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
 
   return (
     <>
-      <Link href="/admin/donors" className="crumb">
-        ← Donors
+      <Link href={donor?.deleted_at ? "/admin/donors?view=bin" : "/admin/donors"} className="crumb">
+        ← {donor?.deleted_at ? "Recycle bin" : "Donors"}
       </Link>
       <div className="page-head">
         <div>
@@ -56,6 +81,17 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
           </p>
         </div>
       </div>
+      {donor?.deleted_at ? (
+        <p className="notice notice--warn" style={{ marginBottom: 18 }}>
+          In the recycle bin since{" "}
+          {new Date(donor.deleted_at).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}
+          : no reminders are sent. Restore them below, or they are deleted for good after {BIN_DAYS} days.
+        </p>
+      ) : null}
       <DonorEditor
         key={donor?.id ?? "new"}
         donor={donor ? { ...donor, phone: donor.phone ? displayPhone(donor.phone) : "" } : EMPTY}
@@ -63,7 +99,15 @@ export default async function DonorPage({ params }: { params: Promise<{ id: stri
         sms={sms}
         reminderPreview={preview}
         emailReady={emailConfigured()}
-        telegram={donor ? { linked: donor.telegram_linked, link: await connectLink(donor.token) } : null}
+        deletedAt={donor?.deleted_at ?? null}
+        telegram={
+          donor
+            ? {
+                linked: donor.telegram_linked,
+                link: await connectLink(donor.token),
+              }
+            : null
+        }
       />
     </>
   );

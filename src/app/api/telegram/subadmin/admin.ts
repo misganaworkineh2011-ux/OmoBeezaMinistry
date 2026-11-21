@@ -79,19 +79,19 @@ export async function showOverview(chatId: number, before = ""): Promise<void> {
     subRegistered: number;
     subTarget: number;
   }>(
-    `select (select count(*)::int from donors where status = 'active') as active,
-            (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency = 'monthly') as monthly,
-            (select coalesce(sum(amount), 0)::int from donors where status = 'active' and frequency <> 'monthly') as weekly,
-            (select count(*)::int from donors where created_at > now() - interval '24 hours') as today,
-            (select count(*)::int from donors where created_at > now() - interval '7 days') as week,
-            (select count(*)::int from donors d where d.status = 'active' and exists (select 1 from donor_payments p where p.donor_id = d.id
+    `select (select count(*)::int from donors where deleted_at is null and status = 'active') as active,
+            (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency = 'monthly') as monthly,
+            (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency <> 'monthly') as weekly,
+            (select count(*)::int from donors where deleted_at is null and created_at > now() - interval '24 hours') as today,
+            (select count(*)::int from donors where deleted_at is null and created_at > now() - interval '7 days') as week,
+            (select count(*)::int from donors d where d.status = 'active' and d.deleted_at is null and exists (select 1 from donor_payments p where p.donor_id = d.id
                and p.paid_on > current_date - (case when d.frequency = 'monthly' then 31 else 7 end))) as paid,
-            (select count(*)::int from donors where status = 'active'
+            (select count(*)::int from donors where deleted_at is null and status = 'active'
                and ((frequency = 'monthly' and month_day = $2) or (frequency <> 'monthly' and reminder_day = $1))
                and (last_reminded_at is null or last_reminded_at < now() - interval '20 hours')) as due,
-            (select count(*)::int from donors where status = 'active' and telegram_chat_id is not null) as telegram,
+            (select count(*)::int from donors where deleted_at is null and status = 'active' and telegram_chat_id is not null) as telegram,
             (select count(*)::int from registrars where status = 'active') as subs,
-            (select count(*)::int from donors where registered_by in (select id from registrars where status = 'active')) as "subRegistered",
+            (select count(*)::int from donors where deleted_at is null and registered_by in (select id from registrars where status = 'active')) as "subRegistered",
             (select coalesce(sum(target), 0)::int from registrars where status = 'active') as "subTarget"`,
     [weekday, monthDay],
   );
@@ -130,7 +130,7 @@ async function findDonors(chatId: number, text: string): Promise<void> {
   const digits = q.replace(/\D/g, "").replace(/^(251|0)/, "");
   const rows = await query<{ id: number; name: string; phone: string; amount: number; frequency: string; status: string }>(
     `select id, name, phone, amount, frequency, status from donors
-     where name ilike '%' || $1 || '%' or lower(email) like '%' || lower($1) || '%' or ($2 <> '' and length($2) >= 3 and phone like '%' || $2 || '%')
+     where deleted_at is null and (name ilike '%' || $1 || '%' or lower(email) like '%' || lower($1) || '%' or ($2 <> '' and length($2) >= 3 and phone like '%' || $2 || '%'))
      order by status = 'active' desc, created_at desc limit 9`,
     [q, digits],
   );
@@ -161,7 +161,7 @@ export async function donorCard(chatId: number, id: number, before = ""): Promis
             (select max(p.paid_on)::text from donor_payments p where p.donor_id = d.id) as last_paid,
             (select coalesce(sum(p.amount), 0)::int from donor_payments p where p.donor_id = d.id) as total,
             (select r.name from registrars r where r.id = d.registered_by) as registered_by_name
-     from donors d where d.id = $1`,
+     from donors d where d.id = $1 and d.deleted_at is null`,
     [id],
   );
   if (!d) return reply(chatId, "That donor no longer exists.", adminKeyboard);
@@ -199,7 +199,7 @@ export async function donorCard(chatId: number, id: number, before = ""): Promis
 
 async function recordPayment(chatId: number, admin: Admin, id: number, amount: number): Promise<void> {
   if (!(amount > 0 && amount <= 10_000_000)) return reply(chatId, "Please type an amount in birr, like 500.");
-  const ok = await queryOne("select 1 from donors where id = $1", [id]);
+  const ok = await queryOne("select 1 from donors where id = $1 and deleted_at is null", [id]);
   if (!ok) return reply(chatId, "That donor no longer exists.", adminKeyboard);
   await query("insert into donor_payments (donor_id, amount, paid_on, reference, note, created_by) values ($1, $2, $3, '', 'Telegram bot', $4)", [
     id,
@@ -258,7 +258,7 @@ export async function showRemind(chatId: number): Promise<void> {
   const due =
     (
       await queryOne<{ n: number }>(
-        `select count(*)::int as n from donors where status = 'active'
+        `select count(*)::int as n from donors where deleted_at is null and status = 'active'
          and ((frequency = 'monthly' and month_day = $2) or (frequency <> 'monthly' and reminder_day = $1))
          and (last_reminded_at is null or last_reminded_at < now() - interval '20 hours')`,
         [weekday, monthDay],
@@ -327,7 +327,7 @@ async function extendSub(chatId: number, id: number, n: number): Promise<void> {
   if (!(n >= 1 && n <= 100_000)) return reply(chatId, "Please type a number of 1 or more.");
   await endSession(chatId);
   const row = await queryOne<{ target: number }>(
-    `update registrars set target = least(100000, greatest(target, (select count(*)::int from donors where registered_by = $1)) + $2)
+    `update registrars set target = least(100000, greatest(target, (select count(*)::int from donors where registered_by = $1 and deleted_at is null)) + $2)
      where id = $1 returning target`,
     [id, n],
   );

@@ -68,8 +68,14 @@ export async function saveDonor(input: DonorInput): Promise<Result> {
   if (telegram === null) return { ok: false, error: "That doesn't look like a Telegram username (5–32 letters, numbers or _)." };
 
   if (phone) {
-    const clash = await queryOne<{ id: number }>("select id from donors where phone = $1 and id <> $2", [phone, input.id ?? 0]);
-    if (clash) return { ok: false, error: "Another donor already has this phone number.", id: clash.id };
+    const clash = await queryOne<{ id: number; deleted_at: string | null }>("select id, deleted_at from donors where phone = $1 and id <> $2", [phone, input.id ?? 0]);
+    if (clash) {
+      return {
+        ok: false,
+        error: clash.deleted_at ? "A donor in the recycle bin has this phone number: restore them instead." : "Another donor already has this phone number.",
+        id: clash.id,
+      };
+    }
   }
 
   const values = [name, phone, email, amount, day, status, input.locale === "am" ? "am" : "en", s(input.notes, 2000), telegram, s(input.nickname, 40), frequency, monthDay];
@@ -92,10 +98,56 @@ export async function saveDonor(input: DonorInput): Promise<Result> {
   return { ok: true, id: row?.id };
 }
 
-export async function deleteDonor(id: number): Promise<void> {
+// Recycle bin: "deleting" a donor moves them to the bin (no reminders, hidden
+// everywhere, history kept). From the bin they can be restored or deleted for
+// good; the daily cron empties anything older than BIN_DAYS.
+
+const cleanIds = (ids: unknown): number[] =>
+  Array.isArray(ids) ? [...new Set(ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 1000) : [];
+
+export async function moveDonorsToBin(ids: number[]): Promise<Result & { count?: number }> {
   await requireUser();
-  await query("delete from donors where id = $1", [id]);
+  const list = cleanIds(ids);
+  if (!list.length) return { ok: false, error: "Select at least one donor." };
+  const rows = await query("update donors set deleted_at = now() where id = any($1::int[]) and deleted_at is null returning id", [list]);
   done();
+  return { ok: true, count: rows.length };
+}
+
+export async function restoreDonors(ids: number[]): Promise<Result & { count?: number }> {
+  await requireUser();
+  const list = cleanIds(ids);
+  if (!list.length) return { ok: false, error: "Select at least one donor." };
+  // A phone number may have been registered again while this donor was in the bin.
+  const rows = await query(
+    `update donors d set deleted_at = null
+     where d.id = any($1::int[]) and d.deleted_at is not null
+       and (d.phone = '' or not exists (select 1 from donors o where o.phone = d.phone and o.id <> d.id and o.deleted_at is null))
+     returning d.id`,
+    [list],
+  );
+  done();
+  const skipped = list.length - rows.length;
+  return skipped > 0 && rows.length === 0
+    ? { ok: false, error: "Not restored: another donor already has this phone number." }
+    : { ok: true, count: rows.length, error: skipped > 0 ? `${skipped} not restored: another donor already has their phone number.` : undefined };
+}
+
+/** Deletes donors (and their payments and message log) for good: only ones already in the bin. */
+export async function deleteDonorsForever(ids: number[]): Promise<Result & { count?: number }> {
+  await requireUser();
+  const list = cleanIds(ids);
+  if (!list.length) return { ok: false, error: "Select at least one donor." };
+  const rows = await query("delete from donors where id = any($1::int[]) and deleted_at is not null returning id", [list]);
+  done();
+  return { ok: true, count: rows.length };
+}
+
+export async function emptyRecycleBin(): Promise<Result & { count?: number }> {
+  await requireUser();
+  const rows = await query("delete from donors where deleted_at is not null returning id");
+  done();
+  return { ok: true, count: rows.length };
 }
 
 export async function recordPayment(donorId: number, amount: number, paidOn: string, reference: string, note: string): Promise<Result> {
@@ -124,11 +176,12 @@ export async function deletePayment(id: number): Promise<void> {
 /** Email a donor now: their reminder, or a custom message. */
 export async function emailDonorNow(donorId: number, subject: string, custom: string): Promise<Result> {
   await requireUser();
-  const donor = await queryOne<DonorForSms & { email: string }>(
-    "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, token from donors where id = $1",
+  const donor = await queryOne<DonorForSms & { email: string; deleted_at: string | null }>(
+    "select id, name, nickname, phone, email, amount, reminder_day, frequency, month_day, locale, token, deleted_at from donors where id = $1",
     [donorId],
   );
   if (!donor) return { ok: false, error: "Donor not found." };
+  if (donor.deleted_at) return { ok: false, error: "This donor is in the recycle bin. Restore them first." };
   if (!donor.email) return { ok: false, error: "This donor has no email address. Add one above, or send an SMS from the app." };
   const giving = await readGivingNow();
   const text = s(custom, 5000);
@@ -232,7 +285,7 @@ export interface TelegramStatus {
 
 export async function telegramStatus(): Promise<TelegramStatus> {
   await requireUser();
-  const linked = (await queryOne<{ n: number }>("select count(*)::int as n from donors where telegram_chat_id is not null"))?.n ?? 0;
+  const linked = (await queryOne<{ n: number }>("select count(*)::int as n from donors where telegram_chat_id is not null and deleted_at is null"))?.n ?? 0;
   if (!telegramConfigured()) return { configured: false, bot: "", connected: false, webhookUrl: "", lastError: "", linkedDonors: linked };
   const [bot, info] = await Promise.all([botUsername(), tg<{ url: string; last_error_message?: string }>("getWebhookInfo")]);
   const url = info.result?.url ?? "";
@@ -332,7 +385,7 @@ export async function connectSubBot(): Promise<Result> {
 export async function sendTelegramTest(donorId: number): Promise<Result> {
   await requireUser();
   const donor = await queryOne<DonorForSms>(
-    "select id, name, phone, amount, reminder_day, frequency, month_day, locale, token, telegram_chat_id from donors where id = $1",
+    "select id, name, phone, amount, reminder_day, frequency, month_day, locale, token, telegram_chat_id from donors where id = $1 and deleted_at is null",
     [donorId],
   );
   if (!donor?.telegram_chat_id) return { ok: false, error: "This donor hasn't connected the Telegram bot yet." };
@@ -351,7 +404,7 @@ export async function sendTelegramTest(donorId: number): Promise<Result> {
 
 // ---------------------------------------------------------------- Telegram invitations by email
 
-const INVITE_WHERE = `status = 'active' and telegram_chat_id is null and telegram_invited_at is null and email <> ''`;
+const INVITE_WHERE = `deleted_at is null and status = 'active' and telegram_chat_id is null and telegram_invited_at is null and email <> ''`;
 
 export async function inviteCounts(): Promise<{ withEmail: number }> {
   await requireUser();
