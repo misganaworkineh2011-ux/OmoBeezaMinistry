@@ -281,6 +281,13 @@ export const SCHEMA: string[] = [
   `create index if not exists donors_deleted on donors (deleted_at)`,
   // Welcome SMS waiting to be sent from the app's "Send SMS reminders" (never automatically).
   `alter table donors add column if not exists welcome_pending boolean not null default false`,
+  // Donors whose welcome SMS failed before the waiting list existed (the app
+  // used to send it at once): put it back on the list unless one went through.
+  `update donors d set welcome_pending = true
+   where not d.welcome_pending and d.status = 'active' and d.deleted_at is null and d.phone <> ''
+     and d.created_at > now() - interval '30 days'
+     and exists (select 1 from sms_log l where l.donor_id = d.id and l.kind = 'welcome' and l.status = 'failed')
+     and not exists (select 1 from sms_log l where l.donor_id = d.id and l.kind = 'welcome' and l.status = 'sent')`,
   `create table if not exists registrar_bot_sessions (
     chat_id text primary key,
     step text not null,
