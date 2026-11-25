@@ -7,10 +7,10 @@ import { lastDueSql, reminderDueSql } from "@/lib/giving";
 
 // Reminders sent as ordinary SMS from the ministry's own phone (the Android
 // app's "Send SMS reminders" button).
-//   GET  /api/mobile/sms                         active donors whose reminder day has come (their weekday for weekly
+//   GET  /api/mobile/sms                         new donors waiting for their welcome SMS, and active donors whose reminder day has come (their weekday for weekly
 //                                                donors, their day of the month for monthly ones), with their message
-//   POST /api/mobile/sms { id, ok, error?, kind? } the phone reports each send; a sent reminder counts as reminded
-//                                                (kind "welcome": the welcome SMS after registering in the app)
+//   POST /api/mobile/sms { id, ok, error?, kind? } the phone reports each send; only a sent one counts
+//                                                (a failed one stays in the list for next time)
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,26 +20,25 @@ const QUEUE_LIMIT = 500;
 export async function GET(request: Request): Promise<Response> {
   return withAppUser(request, async () => {
     const giving = await readGivingNow();
-    const rows = await query<DonorForSms & { last_reminded_at: string | null }>(
-      `select d.id, d.name, d.nickname, d.phone, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.last_reminded_at
+    const rows = await query<DonorForSms & { last_reminded_at: string | null; welcome_pending: boolean }>(
+      `select d.id, d.name, d.nickname, d.phone, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.last_reminded_at,
+              ($3 and d.welcome_pending) as welcome_pending
        from donors d
        where d.status = 'active' and d.deleted_at is null and d.phone <> ''
-         and ${reminderDueSql("d")}
-         and not ($1 and exists (select 1 from donor_payments p where p.donor_id = d.id
-                  and p.paid_on > ${lastDueSql("d")} - (case when d.frequency = 'monthly' then 25 else 6 end)))
-       order by d.last_reminded_at nulls first, d.id
+         and (($3 and d.welcome_pending)
+           or (${reminderDueSql("d")}
+               and not ($1 and exists (select 1 from donor_payments p where p.donor_id = d.id
+                        and p.paid_on > ${lastDueSql("d")} - (case when d.frequency = 'monthly' then 25 else 6 end)))))
+       order by ($3 and d.welcome_pending) desc, d.last_reminded_at nulls first, d.id
        limit $2`,
-      [giving.skipIfPaid, QUEUE_LIMIT],
+      [giving.skipIfPaid, QUEUE_LIMIT, giving.welcomeEnabled],
     );
     return json(200, {
       skipIfPaid: giving.skipIfPaid,
-      donors: rows.map((d) => ({
-        id: d.id,
-        name: d.name,
-        phone: d.phone,
-        last_reminded_at: d.last_reminded_at,
-        message: donorMessage("reminder", d, giving),
-      })),
+      donors: rows.map((d) => {
+        const kind = d.welcome_pending ? "welcome" : "reminder";
+        return { id: d.id, name: d.name, phone: d.phone, last_reminded_at: d.last_reminded_at, kind, message: donorMessage(kind, d, giving) };
+      }),
     });
   });
 }
@@ -55,17 +54,28 @@ export async function POST(request: Request): Promise<Response> {
     const id = Number(body.id);
     if (!Number.isInteger(id) || id <= 0 || typeof body.ok !== "boolean") return json(400, { error: "bad_request" });
     const giving = await readGivingNow();
-    const donor = await queryOne<DonorForSms>(
-      "select id, name, nickname, phone, amount, reminder_day, frequency, month_day, locale, token from donors where id = $1",
+    const donor = await queryOne<DonorForSms & { welcome_pending: boolean }>(
+      "select id, name, nickname, phone, amount, reminder_day, frequency, month_day, locale, token, welcome_pending from donors where id = $1",
       [id],
     );
     if (!donor) return json(404, { error: "not_found" });
-    const kind = body.kind === "welcome" ? "welcome" : "reminder";
+    // The queue decides which message a donor got: their welcome while one is
+    // waiting, otherwise their reminder (older apps always report "reminder").
+    const kind = body.kind === "welcome" || (donor.welcome_pending && giving.welcomeEnabled) ? "welcome" : "reminder";
     await query(
       "insert into sms_log (donor_id, to_phone, message, kind, status, provider_id, error, channel) values ($1, $2, $3, $4, $5, 'phone', $6, 'sms')",
       [donor.id, donor.phone, donorMessage(kind, donor, giving), kind, body.ok ? "sent" : "failed", body.ok ? "" : String(body.error ?? "").slice(0, 500)],
     );
-    if (body.ok && kind === "reminder") await query("update donors set last_reminded_at = now() where id = $1", [donor.id]);
+    // Only a message the phone confirmed as sent counts. A failed one leaves the
+    // donor waiting, so they are in the list again next time.
+    if (body.ok) {
+      await query(
+        kind === "welcome"
+          ? "update donors set welcome_pending = false, last_reminded_at = now() where id = $1"
+          : "update donors set last_reminded_at = now() where id = $1",
+        [donor.id],
+      );
+    }
     return json(200, { ok: true });
   });
 }

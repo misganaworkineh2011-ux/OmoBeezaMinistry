@@ -4,6 +4,8 @@ import { readGivingNow } from "@/lib/data/giving";
 import {
   callName,
   ethiopiaToday,
+  lastDueSql,
+  reminderDueSql,
   periodWords,
   scheduleDay,
   fillTemplate,
@@ -212,13 +214,13 @@ export async function runReminders(limit = 300): Promise<ReminderRun> {
     `select d.id, d.name, d.nickname, d.phone, d.email, d.amount, d.reminder_day, d.frequency, d.month_day, d.locale, d.token, d.telegram_chat_id,
             d.telegram_username, d.telegram_user_status, d.telegram_user_checked_at,
             exists (select 1 from donor_payments p where p.donor_id = d.id
-              and p.paid_on > current_date - (case when d.frequency = 'monthly' then 25 else 6 end)) as paid_recently
+              and p.paid_on > ${lastDueSql("d")} - (case when d.frequency = 'monthly' then 25 else 6 end)) as paid_recently
      from donors d
      where d.status = 'active' and d.deleted_at is null
-       and ((d.frequency = 'monthly' and d.month_day = $3) or (d.frequency <> 'monthly' and d.reminder_day = $1))
-       and (d.last_reminded_at is null or d.last_reminded_at < now() - interval '20 hours')
-     order by d.id limit $2`,
-    [weekday, limit, monthDay],
+       -- Their day has come and nothing reached them since (a failed send is retried the next day).
+       and ${reminderDueSql("d")}
+     order by d.id limit $1`,
+    [limit],
   );
   run.due = due.length;
 

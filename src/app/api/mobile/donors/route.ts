@@ -62,6 +62,7 @@ export async function POST(request: Request): Promise<Response> {
     if (!res.ok) return json(res.error === "save_failed" ? 500 : 400, { error: res.error, min: res.min });
     const [donor] = await withLinks(await query<AppDonor>(`${SELECT} where d.id = $1`, [res.donor.id]));
     // The app sends the welcome SMS from the ministry phone (and reports it to /api/mobile/sms).
-    return json(200, { donor, created: res.created, welcome_sms: res.welcomeSms });
+    // welcome_sms stays empty so older apps don't send it at once: it waits for "Send SMS reminders".
+    return json(200, { donor, created: res.created, welcome_sms: "", welcome_pending: res.welcomePending });
   });
 }

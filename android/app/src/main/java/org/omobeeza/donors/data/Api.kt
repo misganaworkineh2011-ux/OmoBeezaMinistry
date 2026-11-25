@@ -76,23 +76,23 @@ class Api(baseUrl: String, private val token: String?) {
     }
 
     /** A saved registration: the donor, whether it was new, and the welcome SMS to send ("" = none). */
-    data class Registered(val donor: Donor, val created: Boolean, val welcomeSms: String)
+    data class Registered(val donor: Donor, val created: Boolean, val welcomePending: Boolean)
 
     suspend fun register(d: NewDonor): Registered {
         val o = request("POST", "/api/mobile/donors", donorJson(d))
-        return Registered(Donor.from(o.getJSONObject("donor")), o.optBoolean("created", true), o.optString("welcome_sms"))
+        return Registered(Donor.from(o.getJSONObject("donor")), o.optBoolean("created", true), o.optBoolean("welcome_pending"))
     }
 
     /** Change a donor's details (admin app). */
     suspend fun updateDonor(id: Int, d: NewDonor): Donor =
         Donor.from(request("PATCH", "/api/mobile/donors/$id", donorJson(d).put("status", d.status)).getJSONObject("donor"))
 
-    /** Active donors whose reminder day has come (their weekday, or their day of the month), each with their message. */
+    /** New donors waiting for their welcome SMS, and active donors whose reminder day has come, each with their message. */
     suspend fun smsQueue(): List<QueuedSms> {
         val list = request("GET", "/api/mobile/sms").optJSONArray("donors") ?: JSONArray()
         return List(list.length()) {
             val o = list.getJSONObject(it)
-            QueuedSms(o.getInt("id"), o.optString("name"), o.optString("phone"), o.optString("message"), o.optStringOrNull("last_reminded_at"))
+            QueuedSms(o.getInt("id"), o.optString("name"), o.optString("phone"), o.optString("message"), o.optStringOrNull("last_reminded_at"), o.optString("kind", "reminder"))
         }
     }
 

@@ -279,6 +279,8 @@ export const SCHEMA: string[] = [
   // deleted for good (automatically after 30 days).
   `alter table donors add column if not exists deleted_at timestamptz`,
   `create index if not exists donors_deleted on donors (deleted_at)`,
+  // Welcome SMS waiting to be sent from the app's "Send SMS reminders" (never automatically).
+  `alter table donors add column if not exists welcome_pending boolean not null default false`,
   `create table if not exists registrar_bot_sessions (
     chat_id text primary key,
     step text not null,

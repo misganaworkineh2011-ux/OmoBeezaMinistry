@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { query, queryOne } from "@/lib/db";
 import { readGivingNow } from "@/lib/data/giving";
 import { asFrequency, isEmail, normalizePhone, normalizeTelegram } from "@/lib/giving";
-import { donorMessage, emailDonor, giveLink, type DonorForSms } from "@/lib/reminders";
+import { emailDonor, giveLink, type DonorForSms } from "@/lib/reminders";
 import { connectLink } from "@/lib/telegram";
 
 // Registering a weekly donor, shared by the website form (/api/donors, by
@@ -35,6 +35,8 @@ export interface RegisterInput {
   requires: "email" | "phone";
   /** Skip the welcome email (e.g. the bot welcomes them on Telegram instead). */
   noWelcome?: boolean;
+  /** Don't queue a welcome SMS (the sub-admin bot hands the welcome to the registrar to forward). */
+  noWelcomeSms?: boolean;
 }
 
 export type RegisterResult =
@@ -44,8 +46,8 @@ export type RegisterResult =
       created: boolean;
       link: string;
       telegramLink: string;
-      /** For donors with a phone: the welcome SMS for the app to send from the ministry phone ("" = none). */
-      welcomeSms: string;
+      /** A welcome SMS is waiting for the app's "Send SMS reminders" (phone, and no welcome email). */
+      welcomePending: boolean;
     }
   | { ok: false; error: "invalid_name" | "invalid_phone" | "invalid_email" | "invalid_amount" | "invalid_day" | "invalid_telegram" | "already_registered" | "save_failed"; min?: number };
 
@@ -122,14 +124,18 @@ export async function registerDonor(input: RegisterInput): Promise<RegisterResul
   // Welcome new (or returning) donors only, not someone updating their amount.
   // A failed email doesn't undo the registration; it shows in the message log.
   const welcome = giving.welcomeEnabled && !wasActive && !input.noWelcome;
-  if (welcome && donor.email) await emailDonor("welcome", donor, giving);
+  const mailed = welcome && donor.email ? (await emailDonor("welcome", donor, giving)).ok : false;
+  // Donors with a phone who didn't get the welcome email get a welcome SMS, but
+  // only when someone presses "Send SMS reminders" in the app (never automatically).
+  const welcomePending = Boolean(welcome && !input.noWelcomeSms && donor.phone && !mailed);
+  if (welcomePending) await query("update donors set welcome_pending = true where id = $1", [donor.id]).catch(() => undefined);
   return {
     ok: true,
     donor,
     created,
     link: giveLink(giving, donor.locale, donor.amount),
     telegramLink: await connectLink(donor.token),
-    welcomeSms: welcome && donor.phone && !donor.email ? donorMessage("welcome", donor, giving) : "",
+    welcomePending,
   };
 }
 

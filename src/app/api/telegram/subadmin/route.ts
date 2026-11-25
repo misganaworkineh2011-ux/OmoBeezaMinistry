@@ -382,6 +382,8 @@ async function finish(chatId: number, actor: Actor, data: Data): Promise<void> {
     requires: "phone",
     registeredBy: actor.role === "sub" ? actor.id : undefined,
     noUpdate: true,
+    // The registrar is handed the welcome to forward to the donor (below).
+    noWelcomeSms: true,
   });
   if (!res.ok) {
     const msg = res.error === "already_registered" || res.error === "save_failed" ? t.failed[res.error] : t.failed.other;

@@ -1,6 +1,7 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
 import { query, queryOne } from "@/lib/db";
+import { readGivingNow } from "@/lib/data/giving";
 import { DONOR_STATUSES, asFrequency, isEmail, normalizePhone, normalizeTelegram, type DonorStatus, type Frequency } from "@/lib/giving";
 
 // Adding or editing a donor's details: the dashboard's donor page and the
@@ -67,9 +68,10 @@ export async function saveDonorRecord(input: DonorInput): Promise<SaveResult> {
     return { ok: true, id: input.id };
   }
   const row = await queryOne<{ id: number }>(
-    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, nickname, frequency, month_day, token, source)
-     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'admin') returning id`,
-    [...values, randomBytes(9).toString("base64url")],
+    `insert into donors (name, phone, email, amount, reminder_day, status, locale, notes, telegram_username, nickname, frequency, month_day, token, source, welcome_pending)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'admin', $14) returning id`,
+    // Phone-only donors get the welcome SMS the next time the app sends SMS reminders.
+    [...values, randomBytes(9).toString("base64url"), Boolean(phone && !email && status === "active" && (await readGivingNow()).welcomeEnabled)],
   );
   return { ok: true, id: row?.id };
 }

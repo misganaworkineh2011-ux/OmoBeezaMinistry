@@ -158,7 +158,7 @@ fun SavedScreen(
 
             welcomeSms?.let { status ->
                 Spacer(Modifier.height(16.dp))
-                val ok = status.startsWith("Welcome SMS sent")
+                val ok = status.startsWith("Welcome SMS ready")
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (ok) Brand.GreenSoft else Brand.GoldSoft).padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,

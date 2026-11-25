@@ -87,7 +87,7 @@ fun RegisterScreen(
     onBack: () -> Unit,
     onSave: (NewDonor) -> Unit,
     /** The line under the summary (null = none). */
-    welcomeNote: String? = "A welcome SMS is sent from this phone when you save (if turned on in the dashboard).",
+    welcomeNote: String? = "Their welcome SMS goes out the next time you press Send SMS reminders (if turned on in the dashboard).",
     /** The donor being edited (null = registering a new one). */
     editing: Donor? = null,
 ) {

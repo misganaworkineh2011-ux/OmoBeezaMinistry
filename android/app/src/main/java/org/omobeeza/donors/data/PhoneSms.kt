@@ -22,8 +22,10 @@ import kotlin.coroutines.resume
 /** A SIM card in the phone (dual-SIM phones have two). */
 data class Sim(val id: Int, val label: String)
 
-/** One donor waiting for a reminder from this phone. */
-data class QueuedSms(val id: Int, val name: String, val phone: String, val message: String, val lastReminded: String?)
+/** One donor waiting for an SMS from this phone: their welcome ("welcome") or their reminder ("reminder"). */
+data class QueuedSms(val id: Int, val name: String, val phone: String, val message: String, val lastReminded: String?, val kind: String = "reminder") {
+    val welcome: Boolean get() = kind == "welcome"
+}
 
 /**
  * Sends reminders as ordinary SMS from this phone's SIM card, so donors see the

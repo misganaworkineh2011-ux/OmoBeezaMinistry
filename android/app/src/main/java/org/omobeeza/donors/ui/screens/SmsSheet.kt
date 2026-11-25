@@ -117,15 +117,21 @@ private fun Ready(run: SmsRun, savedSim: Int, onSend: (Int?) -> Unit, onClose: (
     val chosen = sims.firstOrNull { it.id == sim } ?: sims.firstOrNull()
 
     if (run.queue.isEmpty()) {
-        Title("Everyone is up to date", "No reminders are due today. Weekly donors get theirs on their day of the week, monthly donors on their day of the month.")
+        Title("Everyone is up to date", "No welcome or reminder SMS is waiting. Weekly donors get theirs on their day of the week, monthly donors on their day of the month.")
         OutlinedButton(onClick = onClose, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("Close") }
         return
     }
 
     val n = run.queue.size
+    val welcomes = run.queue.count { it.welcome }
+    val reminders = n - welcomes
     Title(
         "Send SMS reminders",
-        "$n donor${if (n == 1) "'s" else "s'"} reminder day has come (weekly: their weekday; monthly: their date). Each gets their usual reminder as a normal SMS from this phone.",
+        listOfNotNull(
+            if (welcomes > 0) "$welcomes new donor${if (welcomes == 1) " gets their" else "s get their"} welcome SMS." else null,
+            if (reminders > 0) "$reminders donor${if (reminders == 1) "'s" else "s'"} reminder day has come (weekly: their weekday; monthly: their date)." else null,
+            "Each goes out as a normal SMS from this phone. Any that fail stay on the list for next time.",
+        ).joinToString(" "),
     )
     run.queue.take(5).forEach { d ->
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -133,7 +139,7 @@ private fun Ready(run: SmsRun, savedSim: Int, onSend: (Int?) -> Unit, onClose: (
             Column(Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(d.name, style = MaterialTheme.typography.titleSmall, color = Brand.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(
-                    "${localPhone(d.phone)} · ${if (d.lastReminded == null) "never reminded" else "last ${prettyDate(d.lastReminded)}"}",
+                    "${localPhone(d.phone)} · ${if (d.welcome) "welcome SMS" else if (d.lastReminded == null) "never reminded" else "last ${prettyDate(d.lastReminded)}"}",
                     style = MaterialTheme.typography.bodySmall, color = Brand.Muted,
                 )
             }

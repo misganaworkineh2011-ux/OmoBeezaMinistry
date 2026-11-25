@@ -22,7 +22,7 @@ export async function GET(request: Request): Promise<Response> {
                 (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency = 'monthly') as monthly,
                 (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
                 (select count(*)::int from donors d where d.deleted_at is null and d.status = 'active' and d.phone <> ''
-                   and ${reminderDueSql("d")}) as "smsWaiting",
+                   and (${reminderDueSql("d")} or (d.welcome_pending and coalesce((select (s.data->>'welcomeEnabled')::boolean from settings s where s.key = 'giving'), true)))) as "smsWaiting",
                 (select count(*)::int from donors where deleted_at is null and created_at > now() - interval '24 hours') as today,
                 (select count(*)::int from registrars where status = 'active') as "subAdmins",
                 (select count(*)::int from donors where deleted_at is null and registered_by in (select id from registrars where status = 'active')) as "subRegistered",

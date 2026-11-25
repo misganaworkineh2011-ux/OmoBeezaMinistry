@@ -176,10 +176,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val saved = api().register(d)
-                welcomeSms = null
+                // The welcome SMS is never sent on its own: it waits for "Send SMS reminders".
+                welcomeSms = if (saved.welcomePending) "Welcome SMS ready: it goes out when you press Send SMS reminders on the home screen." else null
                 go(Screen.Saved(saved.donor, saved.created))
                 refresh()
-                if (saved.welcomeSms.isNotBlank()) sendWelcome(saved.donor, saved.welcomeSms)
             } catch (e: ApiException) {
                 if (e.code == "unauthorized") handle(e) else formError = errorText(e.code, e.min ?: settings.minAmount)
             } finally {
@@ -205,20 +205,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 busy = false
             }
         }
-    }
-
-    /** The welcome SMS for a newly registered donor, sent from this phone's SIM. */
-    private suspend fun sendWelcome(donor: Donor, text: String) {
-        val context = getApplication<Application>()
-        if (!PhoneSms.hasTelephony(context)) return
-        if (!PhoneSms.canSend(context)) {
-            welcomeSms = "Welcome SMS not sent: allow SMS first (Send SMS reminders on the home screen)."
-            return
-        }
-        welcomeSms = "Sending the welcome SMS…"
-        val error = PhoneSms.send(context, donor.phone, text, prefs.smsSim.takeIf { it >= 0 })
-        runCatching { api().reportSms(donor.id, error, "welcome") }
-        welcomeSms = if (error == null) "Welcome SMS sent from this phone." else "Welcome SMS not sent: $error"
     }
 
     /** Open the sheet and load the donors whose reminder day has come (weekly: their weekday; monthly: their date). */
@@ -262,9 +248,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     run = run.copy(current = d.name)
                     sms = run
                     val error = PhoneSms.send(context, d.phone, d.message, simId)
-                    // Tell the website (a sent one counts as this week's or this month's reminder).
+                    // Tell the website. Only a sent one counts; a failed one stays in the list for next time.
                     for (attempt in 1..3) {
-                        val reported = runCatching { api().reportSms(d.id, error) }.isSuccess
+                        val reported = runCatching { api().reportSms(d.id, error, d.kind) }.isSuccess
                         if (reported) break
                         delay(2_000L * attempt)
                     }
