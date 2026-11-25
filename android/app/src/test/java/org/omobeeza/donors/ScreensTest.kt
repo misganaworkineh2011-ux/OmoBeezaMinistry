@@ -91,7 +91,7 @@ class ScreensTest {
         SubAdmin(2, "Dawit Mekonnen", "+251922000222", 10, "active", 10),
         SubAdmin(3, "Selam Haile", "+251933000333", 30, "paused", 3),
     )
-    private val settingsWithLinks = GivingSettings(yebunaUrl = "https://ye-buna.com/omobeeza", linkBase = "https://www.omobeezaministry.org/give")
+    private val settingsWithLinks = GivingSettings(yebunaUrl = "https://ye-buna.com/pay/omobeeza-choice", linkBase = "https://www.omobeezaministry.org/give")
 
     @Test fun subAdmins() = paparazzi.snapshot {
         OmoTheme { SubAdminsScreen(subs, false, false, null, SnackbarHostState(), {}, {}, { _, _, _ -> }, { _, _ -> }, { emptyList() }) }

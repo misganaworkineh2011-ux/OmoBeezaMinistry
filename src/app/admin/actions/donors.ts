@@ -12,6 +12,7 @@ import {
   DONOR_STATUSES,
   TEMPLATE_KEYS,
   isEmail,
+  isRetiredLink,
   normalizePhone,
   normalizeTelegram,
   asFrequency,
@@ -149,6 +150,7 @@ export async function saveGiving(input: GivingSettings): Promise<Result> {
   await requireUser();
   const url = s(input.yebunaUrl, 300);
   if (url && !/^https:\/\/[^\s]+$/.test(url)) return { ok: false, error: "The Ye-Buna link must start with https://" };
+  if (isRetiredLink(url)) return { ok: false, error: "That is the old general Ye-Buna page, which is no longer used. Use the any-amount page (https://ye-buna.com/pay/omobeeza-choice)." };
   const amounts = [...new Set((input.amounts ?? []).map((n) => Math.round(Number(n))).filter((n) => n > 0))].sort((a, b) => a - b).slice(0, 12);
   if (amounts.length === 0) return { ok: false, error: "Add at least one suggested amount." };
   const amountLinks: Record<string, string> = {};

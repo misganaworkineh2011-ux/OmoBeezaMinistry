@@ -130,10 +130,17 @@ const TEMPLATES_V1: Partial<Record<TemplateKey, string>> = {
 };
 
 /** Saved settings → settings, with untouched old templates upgraded. */
+/** The old general Ye-Buna page (ye-buna.com/omobeeza or /pay/omobeeza): never linked to. */
+const RETIRED_LINKS = /^https?:\/\/(www\.)?ye-buna\.com\/(pay\/)?omobeeza\/?(\?.*)?$/i;
+export const isRetiredLink = (url: string) => RETIRED_LINKS.test(url.trim());
+
 export function withDefaults(saved: Partial<GivingSettings>): GivingSettings {
   const out: GivingSettings = { ...DEFAULT_GIVING, ...saved };
-  // Settings saved before the "any amount" page existed have an empty link.
-  if (!out.yebunaUrl) out.yebunaUrl = DEFAULT_GIVING.yebunaUrl;
+  // Settings saved before the "any amount" page existed have an empty link or
+  // the ministry's old general page, which is no longer used anywhere: both
+  // become the any-amount page.
+  if (!out.yebunaUrl || RETIRED_LINKS.test(out.yebunaUrl)) out.yebunaUrl = DEFAULT_GIVING.yebunaUrl;
+  out.amountLinks = Object.fromEntries(Object.entries(out.amountLinks ?? {}).filter(([, link]) => !RETIRED_LINKS.test(link)));
   for (const key of TEMPLATE_KEYS) {
     if (saved[key] !== undefined && saved[key] === TEMPLATES_V1[key]) out[key] = DEFAULT_GIVING[key];
   }
