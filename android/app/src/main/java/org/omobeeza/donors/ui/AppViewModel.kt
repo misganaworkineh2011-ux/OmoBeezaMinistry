@@ -28,6 +28,7 @@ sealed interface Screen {
     data object SignIn : Screen
     data object Home : Screen
     data object Register : Screen
+    data class Edit(val donor: Donor) : Screen
     data class Saved(val donor: Donor, val created: Boolean) : Screen
     data object Settings : Screen
     data object SubAdmins : Screen
@@ -108,7 +109,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun back(): Boolean {
         when (screen) {
-            Screen.Register, Screen.Settings, Screen.SubAdmins, is Screen.Saved -> go(Screen.Home)
+            Screen.Register, Screen.Settings, Screen.SubAdmins, is Screen.Saved, is Screen.Edit -> go(Screen.Home)
             else -> return false
         }
         return true
@@ -187,6 +188,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Save changes to a donor's details, then back to the list. */
+    fun updateDonor(id: Int, d: NewDonor) {
+        busy = true
+        formError = null
+        viewModelScope.launch {
+            try {
+                val saved = api().updateDonor(id, d)
+                donors = donors.map { if (it.id == id) saved else it }
+                message = "${saved.name}'s details saved."
+                go(Screen.Home)
+                refresh()
+            } catch (e: ApiException) {
+                if (e.code == "unauthorized") handle(e) else formError = e.serverMessage ?: errorText(e.code, e.min ?: settings.minAmount)
+            } finally {
+                busy = false
+            }
+        }
+    }
+
     /** The welcome SMS for a newly registered donor, sent from this phone's SIM. */
     private suspend fun sendWelcome(donor: Donor, text: String) {
         val context = getApplication<Application>()
@@ -201,7 +221,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         welcomeSms = if (error == null) "Welcome SMS sent from this phone." else "Welcome SMS not sent: $error"
     }
 
-    /** Open the sheet and load the donors who haven't had a reminder in 7 days. */
+    /** Open the sheet and load the donors whose reminder day has come (weekly: their weekday; monthly: their date). */
     fun openSms() {
         if (sms?.phase == SmsRun.Phase.Sending) return
         sms = SmsRun(SmsRun.Phase.Loading)
@@ -242,7 +262,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     run = run.copy(current = d.name)
                     sms = run
                     val error = PhoneSms.send(context, d.phone, d.message, simId)
-                    // Tell the website (a sent one counts as this week's reminder).
+                    // Tell the website (a sent one counts as this week's or this month's reminder).
                     for (attempt in 1..3) {
                         val reported = runCatching { api().reportSms(d.id, error) }.isSuccess
                         if (reported) break

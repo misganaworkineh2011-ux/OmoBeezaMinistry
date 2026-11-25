@@ -73,10 +73,10 @@ export default function GivingSettingsForm({
           </div>
           <Notice msg={msg} />
           <div className="a-field">
-            <label htmlFor="g-url">Ye-Buna page link</label>
-            <input id="g-url" value={form.yebunaUrl} onChange={(e) => set("yebunaUrl", e.target.value)} placeholder="https://ye-buna.com/your-page" />
+            <label htmlFor="g-url">Ye-Buna link for any amount (donor's choice)</label>
+            <input id="g-url" value={form.yebunaUrl} onChange={(e) => set("yebunaUrl", e.target.value)} placeholder="https://ye-buna.com/pay/omobeeza-choice" />
             <span className="a-hint">
-              Create a page at ye-buna.com, then paste its link here. Used for amounts that have no payment link of their own (below), and for one-time gifts.
+              The page where donors type their own amount. Used for “Give a different amount”, and for amounts that have no payment link of their own (below).
             </span>
             <span className="a-hint">
               If Ye-Buna lets you set a “thank you” or return link, use <strong>{origin}/thank-you</strong>{" "}

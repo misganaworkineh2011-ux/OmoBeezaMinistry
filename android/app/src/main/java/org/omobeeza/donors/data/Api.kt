@@ -10,7 +10,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /** An error from the website, with its short code (e.g. "invalid_phone"). */
-class ApiException(val code: String, val status: Int = 0, val min: Int? = null) : Exception(code)
+class ApiException(val code: String, val status: Int = 0, val min: Int? = null, val serverMessage: String? = null) : Exception(code)
 
 /**
  * Talks to the ministry website's app endpoints (/api/mobile/…), signed in
@@ -83,7 +83,11 @@ class Api(baseUrl: String, private val token: String?) {
         return Registered(Donor.from(o.getJSONObject("donor")), o.optBoolean("created", true), o.optString("welcome_sms"))
     }
 
-    /** Active donors who haven't had a reminder in 7 days, each with their message. */
+    /** Change a donor's details (admin app). */
+    suspend fun updateDonor(id: Int, d: NewDonor): Donor =
+        Donor.from(request("PATCH", "/api/mobile/donors/$id", donorJson(d).put("status", d.status)).getJSONObject("donor"))
+
+    /** Active donors whose reminder day has come (their weekday, or their day of the month), each with their message. */
     suspend fun smsQueue(): List<QueuedSms> {
         val list = request("GET", "/api/mobile/sms").optJSONArray("donors") ?: JSONArray()
         return List(list.length()) {
@@ -211,7 +215,7 @@ class Api(baseUrl: String, private val token: String?) {
                                 json == null -> "not_api"
                                 else -> "server"
                             }
-                        throw ApiException(code, status, json?.optInt("min")?.takeIf { it > 0 })
+                        throw ApiException(code, status, json?.optInt("min")?.takeIf { it > 0 }, json?.optString("message")?.takeIf { it.isNotBlank() })
                     }
                     return@withContext json
                 } catch (e: IOException) {

@@ -5,7 +5,7 @@
 // automatically), or by SMS (sent from the ministry phone with the app).
 
 export interface GivingSettings {
-  /** The ministry's Ye-Buna page, e.g. https://ye-buna.com/omobeeza */
+  /** The Ye-Buna page where people give an amount of their own choice. */
   yebunaUrl: string;
   /** Suggested amounts in birr (weekly and monthly). */
   amounts: number[];
@@ -64,7 +64,7 @@ export const TEMPLATE_KEYS = [
 export type TemplateKey = (typeof TEMPLATE_KEYS)[number];
 
 export const DEFAULT_GIVING: GivingSettings = {
-  yebunaUrl: "",
+  yebunaUrl: "https://ye-buna.com/pay/omobeeza-choice",
   amounts: [50, 100, 250, 500, 1000, 2000, 5000, 10000],
   amountLinks: {
     "50": "https://ye-buna.com/pay/omobeeza-50",
@@ -132,6 +132,8 @@ const TEMPLATES_V1: Partial<Record<TemplateKey, string>> = {
 /** Saved settings → settings, with untouched old templates upgraded. */
 export function withDefaults(saved: Partial<GivingSettings>): GivingSettings {
   const out: GivingSettings = { ...DEFAULT_GIVING, ...saved };
+  // Settings saved before the "any amount" page existed have an empty link.
+  if (!out.yebunaUrl) out.yebunaUrl = DEFAULT_GIVING.yebunaUrl;
   for (const key of TEMPLATE_KEYS) {
     if (saved[key] !== undefined && saved[key] === TEMPLATES_V1[key]) out[key] = DEFAULT_GIVING[key];
   }
@@ -276,4 +278,28 @@ export function periodWords(frequency: string, locale: string): { period: string
 export function ethiopiaToday(now = new Date()): { weekday: number; monthDay: number } {
   const d = new Date(now.getTime() + 3 * 3_600_000);
   return { weekday: d.getUTCDay(), monthDay: d.getUTCDate() };
+}
+
+const ETHIOPIA_TODAY = "(now() at time zone 'Africa/Addis_Ababa')::date";
+
+/**
+ * SQL: the donor's latest reminder day up to and including today (Ethiopia
+ * time). Weekly donors: the last <reminder_day> weekday; monthly donors: the
+ * last <month_day> of a month (month_day is 1–28, so it exists every month).
+ * `a` is the donors table alias.
+ */
+export function lastDueSql(a = "d"): string {
+  return `(case when ${a}.frequency = 'monthly'
+      then (date_trunc('month', ${ETHIOPIA_TODAY} - (${a}.month_day - 1))::date + (${a}.month_day - 1))
+      else ${ETHIOPIA_TODAY} - ((extract(dow from ${ETHIOPIA_TODAY})::int - ${a}.reminder_day + 7) % 7)
+    end)`;
+}
+
+/**
+ * SQL: the donor's reminder day has come (this week for weekly donors, this
+ * month for monthly ones) and they haven't been reminded since it (nor
+ * registered on or after it). A missed day is caught up on the next run.
+ */
+export function reminderDueSql(a = "d"): string {
+  return `((coalesce(${a}.last_reminded_at, ${a}.created_at) at time zone 'Africa/Addis_Ababa')::date < ${lastDueSql(a)})`;
 }

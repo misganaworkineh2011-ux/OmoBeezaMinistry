@@ -25,13 +25,15 @@ data class GivingSettings(
 
 /**
  * Where a donor pays [amount] birr ("" = no Ye-Buna link set up): the ministry's
- * own address (…/give/250), which forwards to that amount's Ye-Buna page or the
- * general one. Older websites without /give get the Ye-Buna link itself.
+ * own address (…/give/250 or …/give), which forwards to the Ye-Buna page.
+ * Older websites without /give get the Ye-Buna link itself.
  */
 fun GivingSettings.payLink(amount: Int): String {
-    val yebuna = amountLinks[amount] ?: yebunaUrl
-    if (yebuna.isBlank()) return ""
-    return if (linkBase.isNotBlank()) "$linkBase/$amount" else yebuna
+    // An amount with its own Ye-Buna page → …/give/250. Any other amount (one the
+    // donor chose themselves) → …/give, the page where they type the amount.
+    amountLinks[amount]?.let { return if (linkBase.isNotBlank()) "$linkBase/$amount" else it }
+    if (yebunaUrl.isBlank()) return ""
+    return linkBase.ifBlank { yebunaUrl }
 }
 
 data class Stats(
@@ -40,7 +42,7 @@ data class Stats(
     /** Active monthly donors' amounts added up (birr a month). */
     val monthly: Int = 0,
     val paid7: Int = 0,
-    /** Active donors with a phone who haven't had a reminder in 7 days. */
+    /** Active donors with a phone whose reminder day (weekday or day of the month) has come. */
     val smsWaiting: Int = 0,
     val today: Int = 0,
     /** Active sub-admins, the donors they registered, and their targets added up. */
@@ -172,6 +174,8 @@ data class NewDonor(
     val frequency: String = "weekly",
     /** Day of the month (1–28) for monthly donors. */
     val monthDay: Int = 1,
+    /** "active", "paused" or "stopped" (only sent when editing). */
+    val status: String = "active",
 )
 
 internal fun JSONObject.optStringOrNull(key: String): String? =

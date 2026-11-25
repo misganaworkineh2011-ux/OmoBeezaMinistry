@@ -4,6 +4,7 @@ import { readGivingNow } from "@/lib/data/giving";
 import { withAppUser } from "@/lib/mobile";
 import { botUsername } from "@/lib/telegram";
 import { publicOrigin } from "@/lib/origin";
+import { reminderDueSql } from "@/lib/giving";
 
 // GET /api/mobile/home — who is signed in, the giving settings the register
 // form needs, and the numbers for the app's home screen.
@@ -20,8 +21,8 @@ export async function GET(request: Request): Promise<Response> {
                 (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency <> 'monthly') as weekly,
                 (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency = 'monthly') as monthly,
                 (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
-                (select count(*)::int from donors where deleted_at is null and status = 'active' and phone <> ''
-                   and (last_reminded_at is null or last_reminded_at < now() - (case when frequency = 'monthly' then interval '25 days' else interval '7 days' end))) as "smsWaiting",
+                (select count(*)::int from donors d where d.deleted_at is null and d.status = 'active' and d.phone <> ''
+                   and ${reminderDueSql("d")}) as "smsWaiting",
                 (select count(*)::int from donors where deleted_at is null and created_at > now() - interval '24 hours') as today,
                 (select count(*)::int from registrars where status = 'active') as "subAdmins",
                 (select count(*)::int from donors where deleted_at is null and registered_by in (select id from registrars where status = 'active')) as "subRegistered",

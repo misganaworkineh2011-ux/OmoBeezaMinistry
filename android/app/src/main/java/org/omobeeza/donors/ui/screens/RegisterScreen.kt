@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.omobeeza.donors.data.DAYS_AM
 import org.omobeeza.donors.data.DAYS_EN
+import org.omobeeza.donors.data.Donor
+import org.omobeeza.donors.data.localPhone
 import org.omobeeza.donors.data.GivingSettings
 import org.omobeeza.donors.data.NewDonor
 import org.omobeeza.donors.data.payLink
@@ -86,26 +88,34 @@ fun RegisterScreen(
     onSave: (NewDonor) -> Unit,
     /** The line under the summary (null = none). */
     welcomeNote: String? = "A welcome SMS is sent from this phone when you save (if turned on in the dashboard).",
+    /** The donor being edited (null = registering a new one). */
+    editing: Donor? = null,
 ) {
-    var amount by rememberSaveable { mutableIntStateOf(settings.amounts.getOrElse(1) { settings.amounts.firstOrNull() ?: 100 }) }
-    var custom by rememberSaveable { mutableStateOf("") }
-    var day by rememberSaveable { mutableIntStateOf(settings.defaultDay) }
-    var frequency by rememberSaveable { mutableStateOf(settings.defaultFrequency) }
-    var monthDay by rememberSaveable { mutableIntStateOf(settings.defaultMonthDay.coerceIn(1, 28)) }
-    var locale by rememberSaveable { mutableStateOf("en") }
-    var name by rememberSaveable { mutableStateOf("") }
-    var nickname by rememberSaveable { mutableStateOf("") }
-    var phone by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var notes by rememberSaveable { mutableStateOf("") }
-    var telegram by rememberSaveable { mutableStateOf("") }
-    var consent by rememberSaveable { mutableStateOf(false) }
+    val e = editing
+    val preset = e != null && e.amount in settings.amounts
+    var amount by rememberSaveable { mutableIntStateOf(if (e != null && preset) e.amount else settings.amounts.getOrElse(1) { settings.amounts.firstOrNull() ?: 100 }) }
+    var custom by rememberSaveable { mutableStateOf(if (e != null && !preset) e.amount.toString() else "") }
+    var day by rememberSaveable { mutableIntStateOf(e?.reminderDay ?: settings.defaultDay) }
+    var frequency by rememberSaveable { mutableStateOf(e?.frequency ?: settings.defaultFrequency) }
+    var monthDay by rememberSaveable { mutableIntStateOf((e?.monthDay ?: settings.defaultMonthDay).coerceIn(1, 28)) }
+    var locale by rememberSaveable { mutableStateOf(e?.locale ?: "en") }
+    var name by rememberSaveable { mutableStateOf(e?.name ?: "") }
+    var nickname by rememberSaveable { mutableStateOf(e?.nickname ?: "") }
+    var phone by rememberSaveable { mutableStateOf(e?.phone?.let { localPhone(it) } ?: "") }
+    var email by rememberSaveable { mutableStateOf(e?.email ?: "") }
+    var notes by rememberSaveable { mutableStateOf(e?.notes ?: "") }
+    var telegram by rememberSaveable { mutableStateOf(e?.telegramUsername?.takeIf { it.isNotBlank() }?.let { "@$it" } ?: "") }
+    var status by rememberSaveable { mutableStateOf(e?.status ?: "active") }
+    // Someone already registered agreed when they signed up.
+    var consent by rememberSaveable { mutableStateOf(e != null) }
     var tried by rememberSaveable { mutableStateOf(false) }
 
     val weekly = custom.toIntOrNull() ?: amount
     val monthly = frequency == "monthly"
     val nameError = if (tried && name.isBlank()) "Enter the donor's name." else null
-    val phoneError = if (tried && normalizePhone(phone) == null) "Enter a valid Ethiopian mobile number (09… or 07…)." else null
+    // Editing a website donor who gave only an email: the phone may stay empty.
+    val phoneOk = normalizePhone(phone) != null || (e != null && phone.isBlank() && email.isNotBlank())
+    val phoneError = if (tried && !phoneOk) "Enter a valid Ethiopian mobile number (09… or 07…)." else null
     val emailError = if (tried && email.isNotBlank() && !Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) "Enter a valid email, or leave it empty." else null
     val telegramError = if (tried && telegram.isNotBlank() && normalizeTelegram(telegram) == null) "Like @abebe_k: 5–32 letters, numbers or _." else null
     val amountError = if (tried && weekly < settings.minAmount) "At least ${settings.minAmount} birr." else null
@@ -116,8 +126,8 @@ fun RegisterScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White) }
                 Column(Modifier.padding(start = 4.dp)) {
-                    Text("New donor", style = MaterialTheme.typography.headlineSmall, color = Color.White)
-                    Text("Monthly or weekly giving in birr", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
+                    Text(if (e != null) "Edit donor" else "New donor", style = MaterialTheme.typography.headlineSmall, color = Color.White)
+                    Text(if (e != null) e.name else "Monthly or weekly giving in birr", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.7f))
                 }
             }
         }
@@ -197,6 +207,28 @@ fun RegisterScreen(
             Spacer(Modifier.height(8.dp))
             Field(notes, { notes = it }, "Notes (optional)", Icons.Rounded.Create, singleLine = false, minLines = 2, placeholder = "Church, how you met, …")
 
+            if (e != null) {
+                Spacer(Modifier.height(18.dp))
+                SectionLabel("Reminders")
+                Spacer(Modifier.height(10.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("active" to "Active", "paused" to "Paused", "stopped" to "Stopped").forEach { (value, label) ->
+                        DayChip(label, status == value) { status = value }
+                    }
+                }
+                Text(
+                    when (status) {
+                        "paused" -> "No reminders until you set them back to Active."
+                        "stopped" -> "They stopped giving: no more reminders."
+                        else -> "They get their reminders as usual."
+                    },
+                    Modifier.padding(start = 6.dp, top = 6.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Brand.Muted,
+                )
+            }
+
+            if (e == null) {
             Spacer(Modifier.height(14.dp))
             Row(
                 Modifier
@@ -210,6 +242,7 @@ fun RegisterScreen(
             ) {
                 Checkbox(consent, { consent = it }, colors = CheckboxDefaults.colors(checkedColor = Brand.Blue))
                 Text("The donor agreed to receive a ${if (monthly) "monthly" else "weekly"} SMS reminder (they can stop at any time).", style = MaterialTheme.typography.bodyMedium, color = Brand.Ink)
+            }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -234,7 +267,7 @@ fun RegisterScreen(
                     lineHeight = 26.sp,
                     color = Brand.Ink,
                 )
-                welcomeNote?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Brand.Muted) }
+                (if (e != null) null else welcomeNote)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Brand.Muted) }
             }
             if (serverError != null) {
                 Spacer(Modifier.height(12.dp))
@@ -245,13 +278,13 @@ fun RegisterScreen(
 
         Box(Modifier.fillMaxWidth().background(Brand.Sand).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 12.dp)) {
             GoldButton(
-                "Save donor",
+                if (e != null) "Save changes" else "Save donor",
                 onClick = {
                     tried = true
-                    val ok = name.isNotBlank() && normalizePhone(phone) != null && weekly >= settings.minAmount && consent &&
+                    val ok = name.isNotBlank() && phoneOk && weekly >= settings.minAmount && consent &&
                         (email.isBlank() || Regex("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$").matches(email.trim())) &&
                         (telegram.isBlank() || normalizeTelegram(telegram) != null)
-                    if (ok) onSave(NewDonor(name.trim(), nickname.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim(), frequency, monthDay))
+                    if (ok) onSave(NewDonor(name.trim(), nickname.trim(), phone, email.trim(), weekly, day, locale, notes.trim(), telegram.trim(), frequency, monthDay, status))
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Rounded.Check,

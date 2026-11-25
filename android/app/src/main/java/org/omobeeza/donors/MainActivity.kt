@@ -74,7 +74,7 @@ fun Root(session: SessionViewModel = viewModel()) {
 
 private fun depth(s: Screen): Int = when (s) {
     Screen.SignIn, Screen.Home -> 0
-    Screen.Register, Screen.Settings, Screen.SubAdmins -> 1
+    Screen.Register, Screen.Settings, Screen.SubAdmins, is Screen.Edit -> 1
     is Screen.Saved -> 2
 }
 
@@ -124,9 +124,17 @@ fun App(vm: AppViewModel = viewModel(), onSignedOut: (notice: String?) -> Unit =
                 onSms = vm::openSms,
                 onSubAdmins = vm::openSubAdmins,
                 payLink = { vm.settings.payLink(it.amount) },
+                onEdit = { vm.go(Screen.Edit(it)) },
             )
 
             Screen.Register -> RegisterScreen(vm.settings, vm.busy, vm.formError, onBack = { vm.back() }, onSave = vm::register)
+
+            is Screen.Edit -> RegisterScreen(
+                vm.settings, vm.busy, vm.formError,
+                onBack = { vm.back() },
+                onSave = { vm.updateDonor(screen.donor.id, it) },
+                editing = screen.donor,
+            )
 
             is Screen.Saved -> SavedScreen(
                 donor = screen.donor,

@@ -60,7 +60,10 @@ export function giveLink(
   locale: string,
   amount?: number,
 ): string {
-  if (yebunaLink(giving, amount)) return `${publicOrigin()}/give${amount ? `/${amount}` : ""}`;
+  // An amount with its own Ye-Buna page: /give/250. Any other amount (donors who
+  // typed their own): /give, the page where they enter it themselves.
+  if (amount && giving.amountLinks?.[String(amount)]) return `${publicOrigin()}/give/${amount}`;
+  if (yebunaLink(giving)) return `${publicOrigin()}/give`;
   return `${publicOrigin()}${locale === "am" ? "/am" : ""}/donations`;
 }
 

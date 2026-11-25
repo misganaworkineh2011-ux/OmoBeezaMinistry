@@ -117,7 +117,7 @@ private fun Ready(run: SmsRun, savedSim: Int, onSend: (Int?) -> Unit, onClose: (
     val chosen = sims.firstOrNull { it.id == sim } ?: sims.firstOrNull()
 
     if (run.queue.isEmpty()) {
-        Title("Everyone is up to date", "Every active donor has had a reminder in the last 7 days.")
+        Title("Everyone is up to date", "No reminders are due today. Weekly donors get theirs on their day of the week, monthly donors on their day of the month.")
         OutlinedButton(onClick = onClose, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp)) { Text("Close") }
         return
     }
@@ -125,7 +125,7 @@ private fun Ready(run: SmsRun, savedSim: Int, onSend: (Int?) -> Unit, onClose: (
     val n = run.queue.size
     Title(
         "Send SMS reminders",
-        "$n donor${if (n == 1) " hasn't" else "s haven't"} had a reminder in the last 7 days. Each gets their usual reminder as a normal SMS from this phone.",
+        "$n donor${if (n == 1) "'s" else "s'"} reminder day has come (weekly: their weekday; monthly: their date). Each gets their usual reminder as a normal SMS from this phone.",
     )
     run.queue.take(5).forEach { d ->
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

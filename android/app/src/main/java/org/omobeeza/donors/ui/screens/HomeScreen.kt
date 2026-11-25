@@ -32,6 +32,7 @@ import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.DateRange
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Info
@@ -125,6 +126,8 @@ fun HomeScreen(
     onSubAdmins: () -> Unit = {},
     /** Each donor's Ye-Buna payment link ("" = none). */
     payLink: (Donor) -> String = { "" },
+    /** Open the edit form for a donor (null = no editing). */
+    onEdit: ((Donor) -> Unit)? = null,
 ) {
     var selected by remember { mutableStateOf<Donor?>(null) }
 
@@ -235,6 +238,17 @@ fun HomeScreen(
     selected?.let { d ->
         val sheet = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(onDismissRequest = { selected = null }, sheetState = sheet, containerColor = Brand.Sand) {
+            if (onEdit != null) {
+                GoldButton(
+                    "Edit details",
+                    onClick = {
+                        selected = null
+                        onEdit(d)
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 6.dp),
+                    icon = Icons.Rounded.Edit,
+                )
+            }
             DonorDetails(d, payLink(d))
         }
     }
@@ -265,7 +279,7 @@ private fun SmsBanner(waiting: Int, onClick: () -> Unit) {
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text("Send SMS reminders", style = MaterialTheme.typography.titleSmall, color = Color.White)
             Text(
-                if (waiting > 0) "$waiting donor${if (waiting == 1) "" else "s"} not reminded in 7 days" else "From this phone, to donors not reminded in 7 days",
+                if (waiting > 0) "$waiting donor${if (waiting == 1) "" else "s"} due for a reminder" else "From this phone, on each donor's weekly or monthly day",
                 style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.GoldLight)
