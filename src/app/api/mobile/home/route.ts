@@ -12,17 +12,22 @@ import { reminderDueSql } from "@/lib/giving";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Welcome messages turned on in Giving & reminders (on unless switched off).
+const WELCOME_ON = "coalesce((select (s.data->>'welcomeEnabled')::boolean from settings s where s.key = 'giving'), true)";
+
 export async function GET(request: Request): Promise<Response> {
   return withAppUser(request, async (user) => {
     const [giving, stats, bot] = await Promise.all([
       readGivingNow(),
-      queryOne<{ active: number; weekly: number; monthly: number; paid7: number; smsWaiting: number; today: number; subAdmins: number; subRegistered: number; subTarget: number }>(
+      queryOne<{ active: number; weekly: number; monthly: number; paid7: number; smsWaiting: number; smsWelcome: number; today: number; subAdmins: number; subRegistered: number; subTarget: number }>(
         `select (select count(*)::int from donors where deleted_at is null and status = 'active') as active,
                 (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency <> 'monthly') as weekly,
                 (select coalesce(sum(amount), 0)::int from donors where deleted_at is null and status = 'active' and frequency = 'monthly') as monthly,
                 (select count(distinct donor_id)::int from donor_payments where paid_on > current_date - 7) as paid7,
                 (select count(*)::int from donors d where d.deleted_at is null and d.status = 'active' and d.phone <> ''
-                   and (${reminderDueSql("d")} or (d.welcome_pending and coalesce((select (s.data->>'welcomeEnabled')::boolean from settings s where s.key = 'giving'), true)))) as "smsWaiting",
+                   and (${reminderDueSql("d")} or (d.welcome_pending and ${WELCOME_ON}))) as "smsWaiting",
+                (select count(*)::int from donors d where d.deleted_at is null and d.status = 'active' and d.phone <> ''
+                   and d.welcome_pending and ${WELCOME_ON}) as "smsWelcome",
                 (select count(*)::int from donors where deleted_at is null and created_at > now() - interval '24 hours') as today,
                 (select count(*)::int from registrars where status = 'active') as "subAdmins",
                 (select count(*)::int from donors where deleted_at is null and registered_by in (select id from registrars where status = 'active')) as "subRegistered",

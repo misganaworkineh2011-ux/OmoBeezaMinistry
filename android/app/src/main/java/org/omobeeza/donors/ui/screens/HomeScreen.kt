@@ -219,7 +219,7 @@ fun HomeScreen(
                         LinearProgressIndicator(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)), color = Brand.Gold, trackColor = Brand.GoldSoft)
                     }
                     Spacer(Modifier.height(12.dp))
-                    SmsBanner(stats.smsWaiting, onSms)
+                    SmsBanner(stats.smsWaiting, stats.smsWelcome, onSms)
                     Spacer(Modifier.height(10.dp))
                     SubAdminsBanner(stats, onSubAdmins)
                 }
@@ -268,7 +268,9 @@ private fun StatTile(value: String, label: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun SmsBanner(waiting: Int, onClick: () -> Unit) {
+private fun SmsBanner(waiting: Int, welcomes: Int, onClick: () -> Unit) {
+    val reminders = (waiting - welcomes).coerceAtLeast(0)
+    val plural = { n: Int, one: String, many: String -> "$n ${if (n == 1) one else many}" }
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Brand.Navy).clickable(onClick = onClick).padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -279,7 +281,12 @@ private fun SmsBanner(waiting: Int, onClick: () -> Unit) {
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
             Text("Send SMS reminders", style = MaterialTheme.typography.titleSmall, color = Color.White)
             Text(
-                if (waiting > 0) "$waiting donor${if (waiting == 1) "" else "s"} due for a reminder" else "From this phone, on each donor's weekly or monthly day",
+                when {
+                    welcomes > 0 && reminders > 0 -> "${plural(welcomes, "welcome SMS", "welcome SMS")} and ${plural(reminders, "reminder", "reminders")} waiting"
+                    welcomes > 0 -> "${plural(welcomes, "new donor's welcome SMS", "new donors' welcome SMS")} waiting"
+                    reminders > 0 -> "${plural(reminders, "donor", "donors")} due for a reminder"
+                    else -> "From this phone, on each donor's weekly or monthly day"
+                },
                 style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = Brand.GoldLight)

@@ -41,6 +41,7 @@ class Api(baseUrl: String, private val token: String?) {
                 monthly = st.optInt("monthly"),
                 paid7 = st.optInt("paid7"),
                 smsWaiting = st.optInt("smsWaiting"),
+                smsWelcome = st.optInt("smsWelcome"),
                 today = st.optInt("today"),
                 subAdmins = st.optInt("subAdmins"),
                 subRegistered = st.optInt("subRegistered"),

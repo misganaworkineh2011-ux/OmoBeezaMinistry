@@ -44,6 +44,8 @@ data class Stats(
     val paid7: Int = 0,
     /** Active donors with a phone whose reminder day (weekday or day of the month) has come. */
     val smsWaiting: Int = 0,
+    /** Of those, new donors waiting for their welcome SMS (one that failed stays waiting). */
+    val smsWelcome: Int = 0,
     val today: Int = 0,
     /** Active sub-admins, the donors they registered, and their targets added up. */
     val subAdmins: Int = 0,
